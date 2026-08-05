@@ -19,6 +19,7 @@ type Config struct {
 	JWTSecret   string
 	UserKey     string
 	PasswordKey string
+	EncryptionKey string
 }
 
 func Load() *Config {
@@ -37,6 +38,7 @@ func Load() *Config {
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		UserKey:     os.Getenv("USER_KEY"),
 		PasswordKey: os.Getenv("PASSWORD_KEY"),
+		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
 	}
 }
 

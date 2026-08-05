@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"erm-dokter/internal/domain"
 	"erm-dokter/internal/middleware"
@@ -51,15 +52,29 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	noRawat := r.URL.Query().Get("no_rawat")
+	noRawat := r.PathValue("no_rawat")
 	if noRawat == "" {
 		response.Error(w, http.StatusBadRequest, "Parameter no_rawat wajib diisi", nil)
 		return
 	}
 
-	kunjungan, err := h.rawatJalanUsecase.DetailKunjungan(r.Context(), noRawat)
+	claim := middleware.GetUserClaim(r.Context())
+	kodeDokter := ""
+	if claim != nil {
+		kodeDokter = claim.KodeDokter
+	}
+
+	kunjungan, err := h.rawatJalanUsecase.DetailKunjungan(r.Context(), noRawat, kodeDokter)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, err.Error(), nil)
+		if strings.HasPrefix(err.Error(), "FORBIDDEN:") {
+			response.Error(w, http.StatusForbidden, strings.TrimPrefix(err.Error(), "FORBIDDEN: "), nil)
+			return
+		}
+		if strings.HasPrefix(err.Error(), "NOT_FOUND:") {
+			response.Error(w, http.StatusNotFound, strings.TrimPrefix(err.Error(), "NOT_FOUND: "), nil)
+			return
+		}
+		response.Error(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 

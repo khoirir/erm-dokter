@@ -6,15 +6,18 @@ import (
 	"math"
 
 	"erm-dokter/internal/domain"
+	"erm-dokter/pkg/crypto"
 )
 
 type rawatJalanUsecase struct {
 	rawatJalanRepo domain.RawatJalanRepository
+	encryptionKey  string
 }
 
-func NewRawatJalanUsecase(repo domain.RawatJalanRepository) domain.RawatJalanUsecase {
+func NewRawatJalanUsecase(repo domain.RawatJalanRepository, encryptionKey string) domain.RawatJalanUsecase {
 	return &rawatJalanUsecase{
 		rawatJalanRepo: repo,
+		encryptionKey:  encryptionKey,
 	}
 }
 
@@ -40,6 +43,13 @@ func (u *rawatJalanUsecase) DaftarAntreanDokter(ctx context.Context, filter doma
 		return nil, domain.MetaPaginasi{}, err
 	}
 
+	for i := range daftarAntrean {
+		encrypted, err := crypto.Encrypt(daftarAntrean[i].NoRawat, u.encryptionKey)
+		if err == nil {
+			daftarAntrean[i].DetailURL = "/api/v1/rawat-jalan/detail/" + encrypted
+		}
+	}
+
 	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Batas)))
 
 	meta := domain.MetaPaginasi{
@@ -52,10 +62,27 @@ func (u *rawatJalanUsecase) DaftarAntreanDokter(ctx context.Context, filter doma
 	return daftarAntrean, meta, nil
 }
 
-func (u *rawatJalanUsecase) DetailKunjungan(ctx context.Context, noRawat string) (*domain.KunjunganRawatJalan, error) {
-	if noRawat == "" {
+func (u *rawatJalanUsecase) DetailKunjungan(ctx context.Context, encryptedNoRawat string, kodeDokter string) (*domain.KunjunganRawatJalan, error) {
+	if encryptedNoRawat == "" {
 		return nil, errors.New("nomor rawat tidak boleh kosong")
 	}
 
-	return u.rawatJalanRepo.DetailKunjungan(ctx, noRawat)
+	noRawat, err := crypto.Decrypt(encryptedNoRawat, u.encryptionKey)
+	if err != nil {
+		return nil, errors.New("nomor rawat tidak valid")
+	}
+
+	kunjungan, err := u.rawatJalanRepo.DetailKunjungan(ctx, noRawat)
+	if err != nil {
+		return nil, err
+	}
+
+	if kunjungan == nil {
+		return nil, errors.New("NOT_FOUND: Data kunjungan pasien tidak ditemukan")
+	}
+
+	if kunjungan.KodeDokterAsal != kodeDokter && kunjungan.KodeDokterRujukan != kodeDokter {
+		return nil, errors.New("FORBIDDEN: Anda tidak memiliki hak akses ke rekam medis pasien ini")
+	}
+	return kunjungan, nil
 }

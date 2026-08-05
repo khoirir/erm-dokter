@@ -13,11 +13,11 @@ import (
 
 func RegisterRawatJalanRoutes(mux *http.ServeMux, db *sql.DB, cfg *config.Config) {
 	repo := repository.NewRawatJalanRepository(db)
-	uc := usecase.NewRawatJalanUsecase(repo)
+	uc := usecase.NewRawatJalanUsecase(repo, cfg.EncryptionKey)
 	h := handler.NewRawatJalanHandler(uc)
 
 	authMiddleware := middleware.JWTMiddleware(cfg.JWTSecret)
 
 	mux.HandleFunc("POST /api/v1/rawat-jalan/antrean", authMiddleware(h.DaftarAntreanDokter))
-	mux.HandleFunc("GET /api/v1/rawat-jalan/detail", authMiddleware(h.DetailKunjungan))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/detail/{no_rawat}", authMiddleware(h.DetailKunjungan))
 }

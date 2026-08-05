@@ -53,6 +53,7 @@ type FilterAntreanDokter struct {
 
 type KunjunganRawatJalan struct {
 	NoRawat           string            `json:"no_rawat"`
+	DetailURL         string            `json:"detail_url,omitempty"`
 	NoRegistrasi      string            `json:"no_registrasi"`
 	TanggalRegistrasi string            `json:"tanggal_registrasi"`
 	JamRegistrasi     string            `json:"jam_registrasi"`
@@ -62,10 +63,14 @@ type KunjunganRawatJalan struct {
 	TanggalLahir      string            `json:"tanggal_lahir"`
 	Umur              string            `json:"umur"`
 	Alamat            string            `json:"alamat"`
-	KodePoli          string            `json:"kode_poli"`
-	NamaPoli          string            `json:"nama_poli"`
-	KodeDokter        string            `json:"kode_dokter"`
-	NamaDokter        string            `json:"nama_dokter"`
+	KodePoliAsal      string            `json:"kode_poli_asal"`
+	NamaPoliAsal      string            `json:"nama_poli_asal"`
+	KodeDokterAsal    string            `json:"kode_dokter_asal"`
+	NamaDokterAsal    string            `json:"nama_dokter_asal"`
+	KodePoliRujukan   string            `json:"kode_poli_rujukan,omitempty"`
+	NamaPoliRujukan   string            `json:"nama_poli_rujukan,omitempty"`
+	KodeDokterRujukan string            `json:"kode_dokter_rujukan,omitempty"`
+	NamaDokterRujukan string            `json:"nama_dokter_rujukan,omitempty"`
 	KodePenjamin      string            `json:"kode_penjamin"`
 	NamaPenjamin      string            `json:"nama_penjamin"`
 	StatusPemeriksaan StatusPemeriksaan `json:"status_pemeriksaan"`
@@ -93,5 +98,5 @@ type RawatJalanRepository interface {
 
 type RawatJalanUsecase interface {
 	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, MetaPaginasi, error)
-	DetailKunjungan(ctx context.Context, noRawat string) (*KunjunganRawatJalan, error)
+	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 }

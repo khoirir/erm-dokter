@@ -10,8 +10,8 @@ POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "DRDEDEN",
-  "password": "DRDEDEN123"
+  "username": "DRZAIN",
+  "password": "DRZAIN123"
 }
 
 ### 3. RAWAT JALAN - Uji Coba Tanpa Token (Harus Respon 401 Unauthorized)
@@ -29,12 +29,12 @@ Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
 {
-  "tanggal": "2026-04-20",
+  "tanggal": "2026-04-21",
   "halaman": 1,
   "batas": 50
 }
 
 ### 5. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
-GET {{baseUrl}}/api/v1/rawat-jalan/detail?no_rawat=2026/04/20/035996
+GET {{baseUrl}}/api/v1/rawat-jalan/detail/lhTuhHcSzdNNWo6E48a_Q72eHILdZNGcXJy7Y2cdrcRdnh2tNmfuTxXjE_fl
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
