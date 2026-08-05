@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:8082
+
+### 1. Healthcheck API (Publik - Tanpa Token)
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 2. AUTH - Login Dokter (Otomatis Simpan Token)
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "DRDEDEN",
+  "password": "DRDEDEN123"
+}
+
+### 3. RAWAT JALAN - Uji Coba Tanpa Token (Harus Respon 401 Unauthorized)
+POST {{baseUrl}}/api/v1/rawat-jalan/antrean
+Content-Type: application/json
+
+{
+  "halaman": 1,
+  "batas": 10
+}
+
+### 4. RAWAT JALAN - Daftar Antrean (Otomatis Ambil Token dari Hasil Login)
+POST {{baseUrl}}/api/v1/rawat-jalan/antrean
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "tanggal": "2026-04-20",
+  "halaman": 1,
+  "batas": 50
+}
+
+### 5. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
+GET {{baseUrl}}/api/v1/rawat-jalan/detail?no_rawat=2026/04/20/035996
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
