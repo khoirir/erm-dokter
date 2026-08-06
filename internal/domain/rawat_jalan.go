@@ -6,40 +6,6 @@ import (
 	"erm-dokter/internal/dto"
 )
 
-type StatusPemeriksaan string
-
-const (
-	StatusBelum          StatusPemeriksaan = "Belum"
-	StatusSudah          StatusPemeriksaan = "Sudah"
-	StatusBatal          StatusPemeriksaan = "Batal"
-	StatusBerkasDiterima StatusPemeriksaan = "Berkas Diterima"
-	StatusDirujuk        StatusPemeriksaan = "Dirujuk"
-	StatusMeninggal      StatusPemeriksaan = "Meninggal"
-	StatusDirawat        StatusPemeriksaan = "Dirawat"
-	StatusPulangPaksa    StatusPemeriksaan = "Pulang Paksa"
-)
-
-type StatusLanjut string
-
-const (
-	StatusLanjutRawatJalan StatusLanjut = "Ralan"
-	StatusLanjutRawatInap  StatusLanjut = "Ranap"
-)
-
-type StatusBayar string
-
-const (
-	StatusBayarSudah StatusBayar = "Sudah Bayar"
-	StatusBayarBelum StatusBayar = "Belum Bayar"
-)
-
-type JenisAntrean string
-
-const (
-	JenisAntreanRujukan      JenisAntrean = "Rujukan"
-	JenisAntreanTidakRujukan JenisAntrean = "Bukan Rujukan"
-)
-
 type KunjunganRawatJalan struct {
 	NoRawat           string            `json:"no_rawat"`
 	DetailURL         string            `json:"detail_url,omitempty"`
