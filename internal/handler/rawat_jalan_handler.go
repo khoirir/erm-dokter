@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"erm-dokter/internal/domain"
 	"erm-dokter/internal/middleware"
@@ -66,14 +65,6 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 
 	kunjungan, err := h.rawatJalanUsecase.DetailKunjungan(r.Context(), noRawat, kodeDokter)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "FORBIDDEN:") {
-			response.Error(w, http.StatusForbidden, strings.TrimPrefix(err.Error(), "FORBIDDEN: "), nil)
-			return
-		}
-		if strings.HasPrefix(err.Error(), "NOT_FOUND:") {
-			response.Error(w, http.StatusNotFound, strings.TrimPrefix(err.Error(), "NOT_FOUND: "), nil)
-			return
-		}
 		response.Error(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -84,4 +75,14 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 	}
 
 	response.Success(w, "Berhasil mengambil detail kunjungan", kunjungan)
+}
+
+func (h *RawatJalanHandler) GetReferensiFilter(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response.Error(w, http.StatusMethodNotAllowed, "Method tidak diizinkan", nil)
+		return
+	}
+
+	referensi := h.rawatJalanUsecase.GetReferensiFilter(r.Context())
+	response.Success(w, "Berhasil mengambil referensi filter", referensi)
 }

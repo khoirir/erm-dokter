@@ -72,17 +72,32 @@ func (u *rawatJalanUsecase) DetailKunjungan(ctx context.Context, encryptedNoRawa
 		return nil, errors.New("nomor rawat tidak valid")
 	}
 
-	kunjungan, err := u.rawatJalanRepo.DetailKunjungan(ctx, noRawat)
-	if err != nil {
-		return nil, err
-	}
+	return u.rawatJalanRepo.DetailKunjungan(ctx, noRawat, kodeDokter)
+}
 
-	if kunjungan == nil {
-		return nil, errors.New("NOT_FOUND: Data kunjungan pasien tidak ditemukan")
+func (u *rawatJalanUsecase) GetReferensiFilter(ctx context.Context) domain.ReferensiFilterRawatJalan {
+	return domain.ReferensiFilterRawatJalan{
+		StatusPemeriksaan: []domain.OpsiReferensi{
+			{Value: string(domain.StatusBelum), Label: "Belum Periksa"},
+			{Value: string(domain.StatusSudah), Label: "Sudah Periksa"},
+			{Value: string(domain.StatusBatal), Label: "Batal Periksa"},
+			{Value: string(domain.StatusBerkasDiterima), Label: "Berkas Diterima"},
+			{Value: string(domain.StatusDirujuk), Label: "Dirujuk"},
+			{Value: string(domain.StatusMeninggal), Label: "Meninggal"},
+			{Value: string(domain.StatusDirawat), Label: "Dirawat"},
+			{Value: string(domain.StatusPulangPaksa), Label: "Pulang Paksa"},
+		},
+		StatusLanjut: []domain.OpsiReferensi{
+			{Value: string(domain.StatusLanjutRawatJalan), Label: "Rawat Jalan"},
+			{Value: string(domain.StatusLanjutRawatInap), Label: "Rawat Inap"},
+		},
+		StatusBayar: []domain.OpsiReferensi{
+			{Value: string(domain.StatusBayarSudah), Label: "Sudah Bayar"},
+			{Value: string(domain.StatusBayarBelum), Label: "Belum Bayar"},
+		},
+		JenisAntrean: []domain.OpsiReferensi{
+			{Value: string(domain.JenisAntreanRujukan), Label: "Rujukan"},
+			{Value: string(domain.JenisAntreanTidakRujukan), Label: "Bukan Rujukan"},
+		},
 	}
-
-	if kunjungan.KodeDokterAsal != kodeDokter && kunjungan.KodeDokterRujukan != kodeDokter {
-		return nil, errors.New("FORBIDDEN: Anda tidak memiliki hak akses ke rekam medis pasien ini")
-	}
-	return kunjungan, nil
 }

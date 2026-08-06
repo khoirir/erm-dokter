@@ -15,6 +15,7 @@ func SetupRouter(db *sql.DB, cfg *config.Config) *http.ServeMux {
 	mux.HandleFunc("GET /health", healthHandler.HealthCheck)
 
 	RegisterAuthRoutes(mux, db, cfg)
+	RegisterPenjaminRoutes(mux, db, cfg)
 	RegisterRawatJalanRoutes(mux, db, cfg)
 
 	return mux

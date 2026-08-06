@@ -18,6 +18,7 @@ func RegisterRawatJalanRoutes(mux *http.ServeMux, db *sql.DB, cfg *config.Config
 
 	authMiddleware := middleware.JWTMiddleware(cfg.JWTSecret)
 
+	mux.HandleFunc("GET /api/v1/rawat-jalan/referensi-filter", authMiddleware(h.GetReferensiFilter))
 	mux.HandleFunc("POST /api/v1/rawat-jalan/antrean", authMiddleware(h.DaftarAntreanDokter))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/detail/{no_rawat}", authMiddleware(h.DetailKunjungan))
 }

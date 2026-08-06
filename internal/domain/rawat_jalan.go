@@ -38,6 +38,18 @@ const (
 	JenisAntreanTidakRujukan JenisAntrean = "Bukan Rujukan"
 )
 
+type OpsiReferensi struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+type ReferensiFilterRawatJalan struct {
+	StatusPemeriksaan []OpsiReferensi `json:"status_pemeriksaan"`
+	StatusLanjut      []OpsiReferensi `json:"status_lanjut"`
+	StatusBayar       []OpsiReferensi `json:"status_bayar"`
+	JenisAntrean      []OpsiReferensi `json:"jenis_antrean"`
+}
+
 type FilterAntreanDokter struct {
 	KodeDokter        string            `json:"kode_dokter"`
 	Tanggal           string            `json:"tanggal"`
@@ -93,10 +105,11 @@ func (k *KunjunganRawatJalan) FormatNoRekamMedis() string {
 
 type RawatJalanRepository interface {
 	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
-	DetailKunjungan(ctx context.Context, noRawat string) (*KunjunganRawatJalan, error)
+	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 }
 
 type RawatJalanUsecase interface {
 	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, MetaPaginasi, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
+	GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan
 }

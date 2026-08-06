@@ -19,15 +19,125 @@ func NewRawatJalanRepository(db *sql.DB) domain.RawatJalanRepository {
 	}
 }
 
+const baseSelectKunjunganQuery = `
+	SELECT 
+		r.no_rawat,
+		r.no_reg AS no_registrasi,
+		DATE_FORMAT(r.tgl_registrasi, '%Y-%m-%d') AS tanggal_registrasi,
+		r.jam_reg AS jam_registrasi,
+		r.no_rkm_medis AS no_rekam_medis,
+		p.nm_pasien AS nama_pasien,
+		p.jk AS jenis_kelamin,
+		DATE_FORMAT(p.tgl_lahir, '%Y-%m-%d') AS tanggal_lahir,
+		r.almt_pj AS alamat,
+		r.kd_poli AS kode_poli_asal,
+		pol.nm_poli AS nama_poli_asal,
+		r.kd_dokter AS kode_dokter_asal,
+		d.nm_dokter AS nama_dokter_asal,
+		'' AS kode_poli_rujukan,
+		'' AS nama_poli_rujukan,
+		'' AS kode_dokter_rujukan,
+		'' AS nama_dokter_rujukan,
+		r.kd_pj AS kode_penjamin,
+		pj.png_jawab AS nama_penjamin,
+		r.stts AS status_pemeriksaan,
+		r.status_lanjut,
+		r.status_bayar,
+		'Bukan Rujukan' AS jenis_antrean
+	FROM reg_periksa r
+	INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
+	INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
+	INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
+	INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
+	WHERE r.kd_dokter = ?
+	UNION ALL
+	SELECT 
+		r.no_rawat,
+		r.no_reg AS no_registrasi,
+		DATE_FORMAT(r.tgl_registrasi, '%Y-%m-%d') AS tanggal_registrasi,
+		r.jam_reg AS jam_registrasi,
+		r.no_rkm_medis AS no_rekam_medis,
+		p.nm_pasien AS nama_pasien,
+		p.jk AS jenis_kelamin,
+		DATE_FORMAT(p.tgl_lahir, '%Y-%m-%d') AS tanggal_lahir,
+		r.almt_pj AS alamat,
+		r.kd_poli AS kode_poli_asal,
+		pol.nm_poli AS nama_poli_asal,
+		r.kd_dokter AS kode_dokter_asal,
+		d.nm_dokter AS nama_dokter_asal,
+		rip.kd_poli AS kode_poli_rujukan,
+		pol_rip.nm_poli AS nama_poli_rujukan,
+		rip.kd_dokter AS kode_dokter_rujukan,
+		d_rip.nm_dokter AS nama_dokter_rujukan,
+		r.kd_pj AS kode_penjamin,
+		pj.png_jawab AS nama_penjamin,
+		r.stts AS status_pemeriksaan,
+		r.status_lanjut,
+		r.status_bayar,
+		'Rujukan' AS jenis_antrean
+	FROM rujukan_internal_poli rip
+	INNER JOIN reg_periksa r ON rip.no_rawat = r.no_rawat
+	INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
+	INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
+	INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
+	INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
+	INNER JOIN poliklinik pol_rip ON rip.kd_poli = pol_rip.kd_poli
+	INNER JOIN dokter d_rip ON rip.kd_dokter = d_rip.kd_dokter
+	WHERE rip.kd_dokter = ?
+`
+
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanKunjungan(s scanner) (*domain.KunjunganRawatJalan, error) {
+	var k domain.KunjunganRawatJalan
+	err := s.Scan(
+		&k.NoRawat,
+		&k.NoRegistrasi,
+		&k.TanggalRegistrasi,
+		&k.JamRegistrasi,
+		&k.NoRekamMedis,
+		&k.NamaPasien,
+		&k.JenisKelamin,
+		&k.TanggalLahir,
+		&k.Alamat,
+		&k.KodePoliAsal,
+		&k.NamaPoliAsal,
+		&k.KodeDokterAsal,
+		&k.NamaDokterAsal,
+		&k.KodePoliRujukan,
+		&k.NamaPoliRujukan,
+		&k.KodeDokterRujukan,
+		&k.NamaDokterRujukan,
+		&k.KodePenjamin,
+		&k.NamaPenjamin,
+		&k.StatusPemeriksaan,
+		&k.StatusLanjut,
+		&k.StatusBayar,
+		&k.JenisAntrean,
+	)
+	if err != nil {
+		return nil, err
+	}
+	k.JenisKelamin = k.FormatJenisKelamin()
+	k.Umur = k.FormatUmur()
+	k.NoRekamMedis = k.FormatNoRekamMedis()
+	return &k, nil
+}
+
 func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter domain.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, int, error) {
 	var (
 		conditions []string
 		args       []interface{}
 	)
-	args = append(args, filter.KodeDokter)
-
-	conditions = append(conditions, "(r.kd_dokter = ? OR rip.kd_dokter = ?)")
 	args = append(args, filter.KodeDokter, filter.KodeDokter)
+
+	if filter.JenisAntrean == domain.JenisAntreanRujukan {
+		conditions = append(conditions, "t.jenis_antrean = 'Rujukan'")
+	} else if filter.JenisAntrean == domain.JenisAntreanTidakRujukan {
+		conditions = append(conditions, "t.jenis_antrean = 'Bukan Rujukan'")
+	}
 
 	if filter.Tanggal != "" {
 		tglAwal := strings.TrimSpace(filter.Tanggal)
@@ -37,31 +147,22 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 			tglAwal = strings.TrimSpace(tglParts[0])
 			tglAkhir = strings.TrimSpace(tglParts[1])
 		}
-		conditions = append(conditions, "r.tgl_registrasi BETWEEN ? AND ?")
+		conditions = append(conditions, "t.tanggal_registrasi BETWEEN ? AND ?")
 		args = append(args, tglAwal, tglAkhir)
 	}
 
 	if filter.KodePenjamin != "" {
-		conditions = append(conditions, "r.kd_pj = ?")
+		conditions = append(conditions, "t.kode_penjamin = ?")
 		args = append(args, filter.KodePenjamin)
 	}
 
 	if filter.StatusPemeriksaan != "" {
-		conditions = append(conditions, "r.stts = ?")
+		conditions = append(conditions, "t.status_pemeriksaan = ?")
 		args = append(args, filter.StatusPemeriksaan)
 	}
 
-	if filter.JenisAntrean == domain.JenisAntreanRujukan {
-		conditions = append(conditions, "rip.kd_dokter = ?")
-		args = append(args, filter.KodeDokter)
-	}
-	if filter.JenisAntrean == domain.JenisAntreanTidakRujukan {
-		conditions = append(conditions, "r.kd_dokter = ? AND (rip.kd_dokter IS NULL OR rip.kd_dokter <> ?)")
-		args = append(args, filter.KodeDokter, filter.KodeDokter)
-	}
-
 	if filter.KataKunci != "" {
-		conditions = append(conditions, "(p.nm_pasien LIKE ? OR r.no_rkm_medis LIKE ? OR r.no_rawat LIKE ?)")
+		conditions = append(conditions, "(t.nama_pasien LIKE ? OR t.no_rekam_medis LIKE ? OR t.no_rawat LIKE ?)")
 		keywordPattern := "%" + filter.KataKunci + "%"
 		args = append(args, keywordPattern, keywordPattern, keywordPattern)
 	}
@@ -71,15 +172,11 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := `
+	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*) 
-		FROM reg_periksa r
-		INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
-		LEFT JOIN rujukan_internal_poli rip ON r.no_rawat = rip.no_rawat AND rip.kd_dokter = ?
-		INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
-		INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
-		INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
-	` + whereClause
+		FROM (%s) AS t
+		%s
+	`, baseSelectKunjunganQuery, whereClause)
 
 	var totalData int
 	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalData)
@@ -93,40 +190,11 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 
 	offset := (filter.Halaman - 1) * filter.Batas
 
-	dataQuery := `
-		SELECT 
-			r.no_rawat,
-			r.no_reg AS no_registrasi,
-			DATE_FORMAT(r.tgl_registrasi, '%Y-%m-%d') AS tanggal_registrasi,
-			r.jam_reg AS jam_registrasi,
-			r.no_rkm_medis AS no_rekam_medis,
-			p.nm_pasien AS nama_pasien,
-			p.jk AS jenis_kelamin,
-			DATE_FORMAT(p.tgl_lahir, '%Y-%m-%d') AS tanggal_lahir,
-			r.almt_pj AS alamat,
-			r.kd_poli AS kode_poli_asal,
-			pol.nm_poli AS nama_poli_asal,
-			r.kd_dokter AS kode_dokter_asal,
-			d.nm_dokter AS nama_dokter_asal,
-			COALESCE(rip.kd_poli, '') AS kode_poli_rujukan,
-			COALESCE(pol_rip.nm_poli, '') AS nama_poli_rujukan,
-			COALESCE(rip.kd_dokter, '') AS kode_dokter_rujukan,
-			COALESCE(d_rip.nm_dokter, '') AS nama_dokter_rujukan,
-			r.kd_pj AS kode_penjamin,
-			pj.png_jawab AS nama_penjamin,
-			r.stts AS status_pemeriksaan,
-			r.status_lanjut,
-			r.status_bayar,
-			'' AS jenis_antrean
-		FROM reg_periksa r
-		INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
-		LEFT JOIN rujukan_internal_poli rip ON r.no_rawat = rip.no_rawat AND rip.kd_dokter = ?
-		INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
-		INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
-		INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
-		LEFT JOIN poliklinik pol_rip ON rip.kd_poli = pol_rip.kd_poli
-		LEFT JOIN dokter d_rip ON rip.kd_dokter = d_rip.kd_dokter
-	` + whereClause
+	dataQuery := fmt.Sprintf(`
+		SELECT * 
+		FROM (%s) AS t
+		%s
+	`, baseSelectKunjunganQuery, whereClause)
 
 	sortDir := "ASC"
 	if strings.ToUpper(filter.SortOrder) == "DESC" {
@@ -134,16 +202,18 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 	}
 	switch filter.OrderBy {
 	case "waktu_registrasi":
-		dataQuery += fmt.Sprintf(" ORDER BY r.tgl_registrasi %s, r.jam_reg %s", sortDir, sortDir)
+		dataQuery += fmt.Sprintf(" ORDER BY t.tanggal_registrasi %s, t.jam_registrasi %s", sortDir, sortDir)
 	case "nama_pasien":
-		dataQuery += fmt.Sprintf(" ORDER BY p.nm_pasien %s", sortDir)
+		dataQuery += fmt.Sprintf(" ORDER BY t.nama_pasien %s", sortDir)
 	default:
-		dataQuery += fmt.Sprintf(" ORDER BY r.tgl_registrasi %s, r.jam_reg %s", sortDir, sortDir)
+		dataQuery += fmt.Sprintf(" ORDER BY t.tanggal_registrasi %s, t.jam_registrasi %s", sortDir, sortDir)
 	}
 
 	dataQuery += " LIMIT ? OFFSET ?"
-	args = append(args, filter.Batas, offset)
-	rows, err := r.db.QueryContext(ctx, dataQuery, args...)
+	dataArgs := make([]interface{}, len(args))
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, filter.Batas, offset)
+	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("gagal query data antrean: %w", err)
 	}
@@ -151,139 +221,30 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 
 	var daftarAntrean []domain.KunjunganRawatJalan
 	for rows.Next() {
-		var kunjungan domain.KunjunganRawatJalan
-		err := rows.Scan(
-			&kunjungan.NoRawat,
-			&kunjungan.NoRegistrasi,
-			&kunjungan.TanggalRegistrasi,
-			&kunjungan.JamRegistrasi,
-			&kunjungan.NoRekamMedis,
-			&kunjungan.NamaPasien,
-			&kunjungan.JenisKelamin,
-			&kunjungan.TanggalLahir,
-			&kunjungan.Alamat,
-			&kunjungan.KodePoliAsal,
-			&kunjungan.NamaPoliAsal,
-			&kunjungan.KodeDokterAsal,
-			&kunjungan.NamaDokterAsal,
-			&kunjungan.KodePoliRujukan,
-			&kunjungan.NamaPoliRujukan,
-			&kunjungan.KodeDokterRujukan,
-			&kunjungan.NamaDokterRujukan,
-			&kunjungan.KodePenjamin,
-			&kunjungan.NamaPenjamin,
-			&kunjungan.StatusPemeriksaan,
-			&kunjungan.StatusLanjut,
-			&kunjungan.StatusBayar,
-			&kunjungan.JenisAntrean,
-		)
+		kunjungan, err := scanKunjungan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("gagal scan data antrean: %w", err)
 		}
-				// Logika Sederhana & Pasti Akurat di Go:
-		if kunjungan.KodeDokterRujukan == filter.KodeDokter {
-			// Pasien ini memang rujukan masuk KE dokter yang login
-			kunjungan.JenisAntrean = domain.JenisAntreanRujukan
-		} else {
-			// Pasien ini Bukan Rujukan untuk dokter yang login (atau dirujuk ke dr lain)
-			kunjungan.JenisAntrean = domain.JenisAntreanTidakRujukan
-			kunjungan.KodePoliRujukan = ""
-			kunjungan.NamaPoliRujukan = ""
-			kunjungan.KodeDokterRujukan = ""
-			kunjungan.NamaDokterRujukan = ""
-		}
-
-		kunjungan.JenisKelamin = kunjungan.FormatJenisKelamin()
-		kunjungan.Umur = kunjungan.FormatUmur()
-		kunjungan.NoRekamMedis = kunjungan.FormatNoRekamMedis()
-		daftarAntrean = append(daftarAntrean, kunjungan)
+		daftarAntrean = append(daftarAntrean, *kunjungan)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("gagal iterasi data antrean: %w", err)
-	}
 	return daftarAntrean, totalData, nil
 }
 
-func (r *rawatJalanRepository) DetailKunjungan(ctx context.Context, noRawat string) (*domain.KunjunganRawatJalan, error) {
-	query := `
-		SELECT 
-			r.no_rawat,
-			r.no_reg AS no_registrasi,
-			DATE_FORMAT(r.tgl_registrasi, '%Y-%m-%d') AS tanggal_registrasi,
-			r.jam_reg AS jam_registrasi,
-			r.no_rkm_medis AS no_rekam_medis,
-			p.nm_pasien AS nama_pasien,
-			p.jk AS jenis_kelamin,
-			DATE_FORMAT(p.tgl_lahir, '%Y-%m-%d') AS tanggal_lahir,
-			r.almt_pj AS alamat,
-			r.kd_poli AS kode_poli_asal,
-			pol.nm_poli AS nama_poli_asal,
-			r.kd_dokter AS kode_dokter_asal,
-			d.nm_dokter AS nama_dokter_asal,
-			COALESCE(rip.kd_poli, '') AS kode_poli_rujukan,
-			COALESCE(pol_rip.nm_poli, '') AS nama_poli_rujukan,
-			COALESCE(rip.kd_dokter, '') AS kode_dokter_rujukan,
-			COALESCE(d_rip.nm_dokter, '') AS nama_dokter_rujukan,
-			r.kd_pj AS kode_penjamin,
-			pj.png_jawab AS nama_penjamin,
-			r.stts AS status_pemeriksaan,
-			r.status_lanjut,
-			r.status_bayar,
-			CASE 
-				WHEN rip.no_rawat IS NOT NULL THEN 'Rujukan'
-				ELSE 'Bukan Rujukan'
-			END AS jenis_antrean
-		FROM reg_periksa r
-		INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
-		LEFT JOIN rujukan_internal_poli rip ON r.no_rawat = rip.no_rawat
-		INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
-		INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
-		INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
-		LEFT JOIN poliklinik pol_rip ON rip.kd_poli = pol_rip.kd_poli
-		LEFT JOIN dokter d_rip ON rip.kd_dokter = d_rip.kd_dokter
-		WHERE r.stts <> 'Batal' AND r.no_rawat = ?
+func (r *rawatJalanRepository) DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*domain.KunjunganRawatJalan, error) {
+	query := fmt.Sprintf(`
+		SELECT * 
+		FROM (%s) AS t 
+		WHERE t.status_pemeriksaan <> 'Batal' AND t.no_rawat = ? 
 		LIMIT 1
-	`
-
-	var kunjungan domain.KunjunganRawatJalan
-
-	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(
-		&kunjungan.NoRawat,
-		&kunjungan.NoRegistrasi,
-		&kunjungan.TanggalRegistrasi,
-		&kunjungan.JamRegistrasi,
-		&kunjungan.NoRekamMedis,
-		&kunjungan.NamaPasien,
-		&kunjungan.JenisKelamin,
-		&kunjungan.TanggalLahir,
-		&kunjungan.Alamat,
-		&kunjungan.KodePoliAsal,
-		&kunjungan.NamaPoliAsal,
-		&kunjungan.KodeDokterAsal,
-		&kunjungan.NamaDokterAsal,
-		&kunjungan.KodePoliRujukan,
-		&kunjungan.NamaPoliRujukan,
-		&kunjungan.KodeDokterRujukan,
-		&kunjungan.NamaDokterRujukan,
-		&kunjungan.KodePenjamin,
-		&kunjungan.NamaPenjamin,
-		&kunjungan.StatusPemeriksaan,
-		&kunjungan.StatusLanjut,
-		&kunjungan.StatusBayar,
-		&kunjungan.JenisAntrean,
-	)
-
+	`, baseSelectKunjunganQuery)
+	row := r.db.QueryRowContext(ctx, query, kodeDokter, kodeDokter, noRawat)
+	kunjungan, err := scanKunjungan(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("gagal query detail kunjungan: %w", err)
 	}
-
-	kunjungan.Umur = kunjungan.FormatUmur()
-	kunjungan.JenisKelamin = kunjungan.FormatJenisKelamin()
-	kunjungan.NoRekamMedis = kunjungan.FormatNoRekamMedis()
-	return &kunjungan, nil
+	return kunjungan, nil
 }
