@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"erm-dokter/internal/domain"
+	"erm-dokter/internal/dto"
 )
 
 type rawatJalanRepository struct {
@@ -126,16 +127,17 @@ func scanKunjungan(s scanner) (*domain.KunjunganRawatJalan, error) {
 	return &k, nil
 }
 
-func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter domain.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, int, error) {
+func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, int, error) {
 	var (
 		conditions []string
 		args       []interface{}
 	)
 	args = append(args, filter.KodeDokter, filter.KodeDokter)
 
-	if filter.JenisAntrean == domain.JenisAntreanRujukan {
+	switch filter.JenisAntrean {
+	case string(domain.JenisAntreanRujukan):
 		conditions = append(conditions, "t.jenis_antrean = 'Rujukan'")
-	} else if filter.JenisAntrean == domain.JenisAntreanTidakRujukan {
+	case string(domain.JenisAntreanTidakRujukan):
 		conditions = append(conditions, "t.jenis_antrean = 'Bukan Rujukan'")
 	}
 
@@ -226,6 +228,10 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 			return nil, 0, fmt.Errorf("gagal scan data antrean: %w", err)
 		}
 		daftarAntrean = append(daftarAntrean, *kunjungan)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error saat iterasi data antrean: %w", err)
 	}
 
 	return daftarAntrean, totalData, nil

@@ -10,8 +10,8 @@ POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "DRIWAL",
-  "password": "DRIWAL123"
+  "username": "DRHANDI",
+  "password": "1"
 }
 
 ### 3. RAWAT JALAN - Uji Coba Tanpa Token (Harus Respon 401 Unauthorized)
@@ -35,9 +35,23 @@ Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
 {
+  "tanggal": "2025-04-22,2026-04-22",
+  "halaman": 1,
+  "batas": 5000
+}
+
+### 5.1 RAWAT JALAN - Uji Coba Multi-Error Validasi Filter (Harus Respon 400 dengan Map Error)
+POST {{baseUrl}}/api/v1/rawat-jalan/antrean
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
   "tanggal": "2026-04-22",
   "halaman": 1,
-  "batas": 50
+  "batas": 50,
+  "order_by": "salah_kolom",
+  "sort_order": "SALAH_SORT",
+  "jenis_antrean": "AntreanGhoib"
 }
 
 ### 6. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)

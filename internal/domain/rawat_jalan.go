@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+
+	"erm-dokter/internal/dto"
 )
 
 type StatusPemeriksaan string
@@ -37,31 +39,6 @@ const (
 	JenisAntreanRujukan      JenisAntrean = "Rujukan"
 	JenisAntreanTidakRujukan JenisAntrean = "Bukan Rujukan"
 )
-
-type OpsiReferensi struct {
-	Value string `json:"value"`
-	Label string `json:"label"`
-}
-
-type ReferensiFilterRawatJalan struct {
-	StatusPemeriksaan []OpsiReferensi `json:"status_pemeriksaan"`
-	StatusLanjut      []OpsiReferensi `json:"status_lanjut"`
-	StatusBayar       []OpsiReferensi `json:"status_bayar"`
-	JenisAntrean      []OpsiReferensi `json:"jenis_antrean"`
-}
-
-type FilterAntreanDokter struct {
-	KodeDokter        string            `json:"kode_dokter"`
-	Tanggal           string            `json:"tanggal"`
-	KodePenjamin      string            `json:"kode_penjamin"`
-	StatusPemeriksaan StatusPemeriksaan `json:"status_pemeriksaan"`
-	JenisAntrean      JenisAntrean      `json:"jenis_antrean"`
-	KataKunci         string            `json:"keyword"`
-	OrderBy           string            `json:"order_by"`
-	SortOrder         string            `json:"sort_order"`
-	Halaman           int               `json:"halaman"`
-	Batas             int               `json:"batas"`
-}
 
 type KunjunganRawatJalan struct {
 	NoRawat           string            `json:"no_rawat"`
@@ -104,12 +81,13 @@ func (k *KunjunganRawatJalan) FormatNoRekamMedis() string {
 }
 
 type RawatJalanRepository interface {
-	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
+	DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 }
 
 type RawatJalanUsecase interface {
-	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, MetaPaginasi, error)
+	DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]KunjunganRawatJalan, dto.MetaPaginasi, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
-	GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan
+	GetReferensiFilter(ctx context.Context) dto.ReferensiFilterRawatJalan
 }
+

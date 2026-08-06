@@ -1,22 +1,29 @@
 package routes
 
 import (
-	"database/sql"
 	"net/http"
 
-	"erm-dokter/internal/config"
 	"erm-dokter/internal/handler"
+	"erm-dokter/internal/middleware"
 )
 
-func SetupRouter(db *sql.DB, cfg *config.Config) *http.ServeMux {
+type Handlers struct {
+	Health     *handler.HealthHandler
+	Auth       *handler.AuthHandler
+	Penjamin   *handler.PenjaminHandler
+	RawatJalan *handler.RawatJalanHandler
+}
+
+func SetupRouter(handlers *Handlers, jwtSecret string) *http.ServeMux {
 	mux := http.NewServeMux()
+	authMW := middleware.JWTMiddleware(jwtSecret)
 
-	healthHandler := handler.NewHealthHandler()
-	mux.HandleFunc("GET /health", healthHandler.HealthCheck)
+	mux.HandleFunc("GET /health", handlers.Health.HealthCheck)
 
-	RegisterAuthRoutes(mux, db, cfg)
-	RegisterPenjaminRoutes(mux, db, cfg)
-	RegisterRawatJalanRoutes(mux, db, cfg)
+	RegisterAuthRoutes(mux, handlers.Auth)
+	RegisterPenjaminRoutes(mux, handlers.Penjamin, authMW)
+	RegisterRawatJalanRoutes(mux, handlers.RawatJalan, authMW)
 
 	return mux
 }
+

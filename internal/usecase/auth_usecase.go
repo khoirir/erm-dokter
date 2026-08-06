@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/domain"
+	"erm-dokter/internal/dto"
 	"erm-dokter/pkg/token"
 
 	"github.com/go-playground/validator/v10"
@@ -25,11 +26,12 @@ func NewAuthUsecase(repo domain.AuthRepository, jwtSecret string) domain.AuthUse
 	}
 }
 
-func (u *authUsecase) Login(ctx context.Context, req domain.LoginRequest) (*domain.LoginResponse, error) {
+func (u *authUsecase) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
 	if err := u.validate.Struct(req); err != nil {
 		return nil, errors.New("username dan password wajib diisi")
 	}
-	user, err := u.authRepo.CariByUsername(ctx, req.Username)
+
+	user, err := u.authRepo.VerifikasiLogin(ctx, req.Username, req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -38,18 +40,14 @@ func (u *authUsecase) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, errors.New("username atau password salah")
 	}
 
-	if req.Password != user.Password {
-		return nil, errors.New("username atau password salah")
-	}
-
-	tkn, err := token.GenerateToken(user.KodeDokter, user.NamaUser, u.jwtSecret, 24*time.Hour)
+	tkn, err := token.GenerateToken(user.IDUser, user.NamaUser, u.jwtSecret, 24*time.Hour)
 	if err != nil {
 		return nil, errors.New("gagal membuat token autentikasi")
 	}
 
-	return &domain.LoginResponse{
+	return &dto.LoginResponse{
 		Token:      tkn,
-		KodeDokter: user.KodeDokter,
+		KodeDokter: user.IDUser,
 		NamaDokter: user.NamaUser,
 	}, nil
 }

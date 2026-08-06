@@ -5,27 +5,26 @@ import (
 	"net/http"
 
 	"erm-dokter/internal/domain"
+	"erm-dokter/internal/dto"
 	"erm-dokter/internal/middleware"
+	"erm-dokter/pkg/crypto"
 	"erm-dokter/pkg/response"
 )
 
 type RawatJalanHandler struct {
 	rawatJalanUsecase domain.RawatJalanUsecase
+	encryptionKey     string
 }
 
-func NewRawatJalanHandler(usecase domain.RawatJalanUsecase) *RawatJalanHandler {
+func NewRawatJalanHandler(usecase domain.RawatJalanUsecase, encryptionKey string) *RawatJalanHandler {
 	return &RawatJalanHandler{
 		rawatJalanUsecase: usecase,
+		encryptionKey:     encryptionKey,
 	}
 }
 
 func (h *RawatJalanHandler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		response.Error(w, http.StatusMethodNotAllowed, "Method tidak diizinkan", nil)
-		return
-	}
-
-	var filter domain.FilterAntreanDokter
+	var filter dto.FilterAntreanDokter
 	if err := json.NewDecoder(r.Body).Decode(&filter); err != nil && err.Error() != "EOF" {
 		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
 		return
@@ -38,22 +37,32 @@ func (h *RawatJalanHandler) DaftarAntreanDokter(w http.ResponseWriter, r *http.R
 
 	daftarAntrean, meta, err := h.rawatJalanUsecase.DaftarAntreanDokter(r.Context(), filter)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error(), nil)
+		handleError(w, err)
 		return
+	}
+
+	// Enkripsi no_rawat dan buat detail URL (transport concern)
+	for i := range daftarAntrean {
+		encrypted, err := crypto.Encrypt(daftarAntrean[i].NoRawat, h.encryptionKey)
+		if err == nil {
+			daftarAntrean[i].DetailURL = "/api/v1/rawat-jalan/detail/" + encrypted
+		}
 	}
 
 	response.SuccessWithMeta(w, "Berhasil mengambil daftar antrean dokter", daftarAntrean, meta)
 }
 
 func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		response.Error(w, http.StatusMethodNotAllowed, "Method tidak diizinkan", nil)
+	encryptedNoRawat := r.PathValue("no_rawat")
+	if encryptedNoRawat == "" {
+		response.Error(w, http.StatusBadRequest, "Parameter no_rawat wajib diisi", nil)
 		return
 	}
 
-	noRawat := r.PathValue("no_rawat")
-	if noRawat == "" {
-		response.Error(w, http.StatusBadRequest, "Parameter no_rawat wajib diisi", nil)
+	// Dekripsi no_rawat dari URL (transport concern)
+	noRawat, err := crypto.Decrypt(encryptedNoRawat, h.encryptionKey)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Parameter no_rawat tidak valid", nil)
 		return
 	}
 
@@ -65,7 +74,7 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 
 	kunjungan, err := h.rawatJalanUsecase.DetailKunjungan(r.Context(), noRawat, kodeDokter)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error(), nil)
+		handleError(w, err)
 		return
 	}
 
@@ -78,11 +87,7 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *RawatJalanHandler) GetReferensiFilter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		response.Error(w, http.StatusMethodNotAllowed, "Method tidak diizinkan", nil)
-		return
-	}
-
 	referensi := h.rawatJalanUsecase.GetReferensiFilter(r.Context())
 	response.Success(w, "Berhasil mengambil referensi filter", referensi)
 }
+

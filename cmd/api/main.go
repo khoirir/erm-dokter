@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"erm-dokter/internal/config"
+	"erm-dokter/internal/di"
 	"erm-dokter/internal/routes"
 	"erm-dokter/pkg/database"
 	"erm-dokter/pkg/logger"
@@ -19,16 +25,43 @@ func main() {
 	)
 	if err != nil {
 		log.Error("Database MySQL connection failed: %v", err)
-	} else {
-		defer db.Close()
+		os.Exit(1)
 	}
+	defer db.Close()
+	log.Info("Berhasil terhubung ke database MySQL")
 
-	mux := routes.SetupRouter(db, cfg)
+	handlers := di.ProvideHandlers(db, cfg)
+	mux := routes.SetupRouter(handlers, cfg.JWTSecret)
 
 	serverAddr := fmt.Sprintf(":%s", cfg.AppPort)
-	log.Info("Starting server '%s' (%s mode) on %s...", cfg.AppName, cfg.AppEnv, serverAddr)
-
-	if err := http.ListenAndServe(serverAddr, mux); err != nil {
-		log.Error("Failed to start server: %v", err)
+	srv := &http.Server{
+		Addr:         serverAddr,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	go func() {
+		log.Info("Starting server '%s' (%s mode) on %s...", cfg.AppName, cfg.AppEnv, serverAddr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("Failed to start server: %v", err)
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Info("Shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Server forced to shutdown: %v", err)
+		os.Exit(1)
+	}
+
+	log.Info("Server stopped gracefully")
 }

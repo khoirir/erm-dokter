@@ -2,28 +2,21 @@ package domain
 
 import (
 	"context"
+
+	"erm-dokter/internal/dto"
 )
 
 type User struct {
-	KodeDokter string `json:"kode_dokter"`
+	IDUser string `json:"id_user"`
 	NamaUser   string `json:"nama_user"`
-	Password   string `json:"-"`
-}
-
-type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
-}
-
-type LoginResponse struct {
-	Token      string `json:"token"`
-	KodeDokter string `json:"kode_dokter"`
-	NamaDokter string `json:"nama_dokter"`
 }
 
 type AuthRepository interface {
-	CariByUsername(ctx context.Context, username string) (*User, error)
+	VerifikasiLogin(ctx context.Context, username string, password string) (*User, error)
 }
+
 type AuthUsecase interface {
-	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
+	Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error)
 }
+
+

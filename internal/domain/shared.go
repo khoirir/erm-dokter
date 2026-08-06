@@ -45,7 +45,7 @@ func HitungUmur(tglLahirStr string) Umur {
 
 func FormatUmur(tglLahirStr string) string {
 	u := HitungUmur(tglLahirStr)
-	return fmt.Sprintf("%d Th %d Bln %d Hari", u.Tahun, u.Bulan, u.Hari)
+	return fmt.Sprintf("%d Th %d Bl %d Hr", u.Tahun, u.Bulan, u.Hari)
 }
 
 func FormatJenisKelamin(jk string) string {
@@ -67,9 +67,3 @@ func FormatNoRekamMedis(noRM string) string {
 	return noRM
 }
 
-type MetaPaginasi struct {
-	TotalData    int `json:"total_data"`
-	TotalHalaman int `json:"total_halaman"`
-	HalamanAktif int `json:"halaman_aktif"`
-	BatasData    int `json:"batas_data"`
-}

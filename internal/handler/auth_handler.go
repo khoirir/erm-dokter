@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"erm-dokter/internal/domain"
+	"erm-dokter/internal/dto"
 	"erm-dokter/pkg/response"
 )
 
@@ -19,12 +20,7 @@ func NewAuthHandler(usecase domain.AuthUsecase) *AuthHandler {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		response.Error(w, http.StatusMethodNotAllowed, "Method tidak diizinkan", nil)
-		return
-	}
-
-	var req domain.LoginRequest
+	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
 		return

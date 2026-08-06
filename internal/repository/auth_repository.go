@@ -22,23 +22,27 @@ func NewAuthRepository(db *sql.DB, userKey, passwordKey string) domain.AuthRepos
 	}
 }
 
-func (r *authRepository) CariByUsername(ctx context.Context, username string) (*domain.User, error) {
-	query := fmt.Sprintf(`
+func (r *authRepository) VerifikasiLogin(ctx context.Context, username string, password string) (*domain.User, error) {
+	query := `
 		SELECT 
-			AES_DECRYPT(u.id_user, '%[1]s') AS kode_dokter,
-			COALESCE(d.nm_dokter, AES_DECRYPT(u.id_user, '%[1]s')) AS nama_user,
-			AES_DECRYPT(u.password, '%[2]s') AS password
+			AES_DECRYPT(u.id_user, ?) AS kode_dokter,
+			d.nm_dokter AS nama_user
 		FROM user u
-		LEFT JOIN dokter d ON AES_DECRYPT(u.id_user, '%[1]s') = d.kd_dokter
-		WHERE u.id_user = AES_ENCRYPT(?, '%[1]s')
+		INNER JOIN dokter d ON AES_DECRYPT(u.id_user, ?) = d.kd_dokter
+		WHERE u.id_user = AES_ENCRYPT(?, ?)
+		  AND u.password = AES_ENCRYPT(?, ?)
 		LIMIT 1
-	`, r.userKey, r.passwordKey)
+	`
 
 	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, username).Scan(
-		&user.KodeDokter,
+	err := r.db.QueryRowContext(ctx, query,
+		r.userKey,
+		r.userKey,
+		username, r.userKey,
+		password, r.passwordKey,
+	).Scan(
+		&user.IDUser,
 		&user.NamaUser,
-		&user.Password,
 	)
 
 	if err == sql.ErrNoRows {
@@ -46,7 +50,7 @@ func (r *authRepository) CariByUsername(ctx context.Context, username string) (*
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("gagal mencari user di database: %w", err)
+		return nil, fmt.Errorf("gagal memverifikasi login: %w", err)
 	}
 
 	return &user, nil

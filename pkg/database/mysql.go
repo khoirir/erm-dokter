@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -25,6 +24,5 @@ func InitMySQL(host, port, user, password, dbname string) (*sql.DB, error) {
 		return nil, fmt.Errorf("gagal ping ke database MySQL: %w", err)
 	}
 
-	log.Println("[INFO]\tBerhasil terhubung ke database MySQL")
 	return db, nil
 }
