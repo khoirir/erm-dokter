@@ -7,8 +7,8 @@ import (
 )
 
 type User struct {
-	IDUser string `json:"id_user"`
-	NamaUser   string `json:"nama_user"`
+	IDUser   string `json:"id_user"`
+	NamaUser string `json:"nama_user"`
 }
 
 type AuthRepository interface {
@@ -18,5 +18,3 @@ type AuthRepository interface {
 type AuthUsecase interface {
 	Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error)
 }
-
-

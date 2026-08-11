@@ -1,11 +1,8 @@
 package routes
 
-import (
-	"net/http"
+func (c *RouteConfig) setupPenjaminRoutes() {
+	auth := c.AuthMiddleware
+	timeout := c.TimeoutMiddleware
 
-	"erm-dokter/internal/handler"
-)
-
-func RegisterPenjaminRoutes(mux *http.ServeMux, h *handler.PenjaminHandler, authMW func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("GET /api/v1/penjamin", authMW(h.DaftarPenjamin))
-}
+	c.Mux.HandleFunc("GET /api/v1/penjamin", auth(timeout(c.PenjaminHandler.DaftarPenjamin)))
+}

@@ -11,7 +11,6 @@ import (
 
 	"erm-dokter/internal/config"
 	"erm-dokter/internal/di"
-	"erm-dokter/internal/routes"
 	"erm-dokter/pkg/database"
 	"erm-dokter/pkg/logger"
 )
@@ -19,6 +18,11 @@ import (
 func main() {
 	cfg := config.Load()
 	log := logger.New()
+
+	if err := cfg.Validate(); err != nil {
+		log.Error("Konfigurasi tidak valid: %v", err)
+		os.Exit(1)
+	}
 
 	db, err := database.InitMySQL(
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPass, cfg.DBName,
@@ -30,13 +34,14 @@ func main() {
 	defer db.Close()
 	log.Info("Berhasil terhubung ke database MySQL")
 
-	handlers := di.ProvideHandlers(db, cfg)
-	mux := routes.SetupRouter(handlers, cfg.JWTSecret)
+	routeConfig := di.ProvideRouteConfig(db, cfg, log)
+	routeConfig.Setup()
+	handler := routeConfig.BuildHandler(cfg.CORSOrigin)
 
 	serverAddr := fmt.Sprintf(":%s", cfg.AppPort)
 	srv := &http.Server{
 		Addr:         serverAddr,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

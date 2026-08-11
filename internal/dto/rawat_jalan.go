@@ -47,6 +47,10 @@ func (f *FilterAntreanDokter) Sanitize() {
 	} else {
 		f.SortOrder = strings.ToUpper(strings.TrimSpace(f.SortOrder))
 	}
+	if strings.TrimSpace(f.Tanggal) == "" {
+		today := time.Now().Format("2006-01-02")
+		f.Tanggal = today + "," + today
+	}
 }
 
 var validStatusPemeriksaan = map[string]bool{
@@ -94,8 +98,8 @@ func validasiTanggal(tanggal string, errs ValidationError) {
 	const layout = "2006-01-02"
 	parts := strings.Split(tanggal, ",")
 
-	if len(parts) > 2 {
-		errs["tanggal"] = "format tanggal tidak valid (gunakan YYYY-MM-DD atau YYYY-MM-DD,YYYY-MM-DD)"
+	if len(parts) != 2 {
+		errs["tanggal"] = "format tanggal wajib menggunakan rentang 2 tanggal (contoh: YYYY-MM-DD,YYYY-MM-DD)"
 		return
 	}
 
@@ -105,14 +109,13 @@ func validasiTanggal(tanggal string, errs ValidationError) {
 		return
 	}
 
-	if len(parts) == 2 {
-		tglAkhir, err := time.Parse(layout, strings.TrimSpace(parts[1]))
-		if err != nil {
-			errs["tanggal"] = "format tanggal akhir tidak valid (gunakan YYYY-MM-DD)"
-			return
-		}
-		if tglAwal.After(tglAkhir) {
-			errs["tanggal"] = "tanggal awal harus lebih kecil atau sama dengan tanggal akhir"
-		}
+	tglAkhir, err := time.Parse(layout, strings.TrimSpace(parts[1]))
+	if err != nil {
+		errs["tanggal"] = "format tanggal akhir tidak valid (gunakan YYYY-MM-DD)"
+		return
+	}
+
+	if tglAwal.After(tglAkhir) {
+		errs["tanggal"] = "tanggal awal harus lebih kecil atau sama dengan tanggal akhir"
 	}
 }

@@ -28,7 +28,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authUsecase.Login(r.Context(), req)
 	if err != nil {
-		response.Error(w, http.StatusUnauthorized, err.Error(), nil)
+		handleError(w, err)
 		return
 	}
 

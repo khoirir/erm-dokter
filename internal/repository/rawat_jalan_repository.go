@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -20,7 +21,7 @@ func NewRawatJalanRepository(db *sql.DB) domain.RawatJalanRepository {
 	}
 }
 
-const baseSelectKunjunganQuery = `
+const selectKunjunganBukanRujukan = `
 	SELECT 
 		r.no_rawat,
 		r.no_reg AS no_registrasi,
@@ -50,8 +51,9 @@ const baseSelectKunjunganQuery = `
 	INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
 	INNER JOIN dokter d ON r.kd_dokter = d.kd_dokter
 	INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
-	WHERE r.kd_dokter = ?
-	UNION ALL
+`
+
+const selectKunjunganRujukan = `
 	SELECT 
 		r.no_rawat,
 		r.no_reg AS no_registrasi,
@@ -84,8 +86,12 @@ const baseSelectKunjunganQuery = `
 	INNER JOIN penjab pj ON r.kd_pj = pj.kd_pj
 	INNER JOIN poliklinik pol_rip ON rip.kd_poli = pol_rip.kd_poli
 	INNER JOIN dokter d_rip ON rip.kd_dokter = d_rip.kd_dokter
-	WHERE rip.kd_dokter = ?
 `
+
+var orderByMapping = map[string]func(string) string{
+	"nama_pasien":      func(dir string) string { return fmt.Sprintf("t.nama_pasien %s", dir) },
+	"waktu_registrasi": func(dir string) string { return fmt.Sprintf("t.tanggal_registrasi %s, t.jam_registrasi %s", dir, dir) },
+}
 
 type scanner interface {
 	Scan(dest ...any) error
@@ -127,61 +133,75 @@ func scanKunjungan(s scanner) (*domain.KunjunganRawatJalan, error) {
 	return &k, nil
 }
 
-func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, int, error) {
-	var (
-		conditions []string
-		args       []interface{}
-	)
-	args = append(args, filter.KodeDokter, filter.KodeDokter)
+// buildBranchConditions membangun WHERE clause dengan filter yang di-push langsung ke tiap branch query.
+// dokterCol menentukan kolom dokter yang difilter: "r.kd_dokter" untuk reguler, "rip.kd_dokter" untuk rujukan.
+func buildBranchConditions(dokterCol string, filter dto.FilterAntreanDokter) (string, []interface{}) {
+	var conditions []string
+	var args []interface{}
 
-	switch filter.JenisAntrean {
-	case string(domain.JenisAntreanRujukan):
-		conditions = append(conditions, "t.jenis_antrean = 'Rujukan'")
-	case string(domain.JenisAntreanTidakRujukan):
-		conditions = append(conditions, "t.jenis_antrean = 'Bukan Rujukan'")
-	}
+	conditions = append(conditions, dokterCol+" = ?")
+	args = append(args, filter.KodeDokter)
 
 	if filter.Tanggal != "" {
-		tglAwal := strings.TrimSpace(filter.Tanggal)
-		tglAkhir := tglAwal
 		tglParts := strings.Split(filter.Tanggal, ",")
-		if len(tglParts) == 2 && strings.TrimSpace(tglParts[0]) != "" && strings.TrimSpace(tglParts[1]) != "" {
-			tglAwal = strings.TrimSpace(tglParts[0])
-			tglAkhir = strings.TrimSpace(tglParts[1])
-		}
-		conditions = append(conditions, "t.tanggal_registrasi BETWEEN ? AND ?")
+		tglAwal := strings.TrimSpace(tglParts[0])
+		tglAkhir := strings.TrimSpace(tglParts[1])
+		conditions = append(conditions, "r.tgl_registrasi BETWEEN ? AND ?")
 		args = append(args, tglAwal, tglAkhir)
 	}
 
 	if filter.KodePenjamin != "" {
-		conditions = append(conditions, "t.kode_penjamin = ?")
+		conditions = append(conditions, "r.kd_pj = ?")
 		args = append(args, filter.KodePenjamin)
 	}
 
 	if filter.StatusPemeriksaan != "" {
-		conditions = append(conditions, "t.status_pemeriksaan = ?")
+		conditions = append(conditions, "r.stts = ?")
 		args = append(args, filter.StatusPemeriksaan)
 	}
 
 	if filter.KataKunci != "" {
-		conditions = append(conditions, "(t.nama_pasien LIKE ? OR t.no_rekam_medis LIKE ? OR t.no_rawat LIKE ?)")
+		conditions = append(conditions, "(p.nm_pasien LIKE ? OR r.no_rkm_medis LIKE ? OR r.no_rawat LIKE ?)")
 		keywordPattern := "%" + filter.KataKunci + "%"
 		args = append(args, keywordPattern, keywordPattern, keywordPattern)
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = " WHERE " + strings.Join(conditions, " AND ")
-	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
+}
 
-	countQuery := fmt.Sprintf(`
-		SELECT COUNT(*) 
-		FROM (%s) AS t
-		%s
-	`, baseSelectKunjunganQuery, whereClause)
+// buildBaseQuery membangun query dasar berdasarkan filter jenis antrean.
+// Jika filter spesifik (Rujukan/Bukan Rujukan), hanya 1 query tanpa UNION ALL.
+// Jika filter kosong (semua), gabungkan keduanya dengan UNION ALL.
+func buildBaseQuery(filter dto.FilterAntreanDokter) (string, []interface{}) {
+	switch filter.JenisAntrean {
+	case string(domain.JenisAntreanTidakRujukan):
+		where, args := buildBranchConditions("r.kd_dokter", filter)
+		return selectKunjunganBukanRujukan + where, args
+
+	case string(domain.JenisAntreanRujukan):
+		where, args := buildBranchConditions("rip.kd_dokter", filter)
+		return selectKunjunganRujukan + where, args
+
+	default:
+		where1, args1 := buildBranchConditions("r.kd_dokter", filter)
+		where2, args2 := buildBranchConditions("rip.kd_dokter", filter)
+
+		query1 := selectKunjunganBukanRujukan + where1
+		query2 := selectKunjunganRujukan + where2
+
+		combinedQuery := fmt.Sprintf("%s UNION ALL %s", query1, query2)
+		combinedArgs := append(args1, args2...)
+		return combinedQuery, combinedArgs
+	}
+}
+
+func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, int, error) {
+	baseQuery, baseArgs := buildBaseQuery(filter)
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS t", baseQuery)
 
 	var totalData int
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalData)
+	err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData)
 	if err != nil {
 		return nil, 0, fmt.Errorf("gagal menghitung total antrean: %w", err)
 	}
@@ -192,29 +212,18 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 
 	offset := (filter.Halaman - 1) * filter.Batas
 
-	dataQuery := fmt.Sprintf(`
-		SELECT * 
-		FROM (%s) AS t
-		%s
-	`, baseSelectKunjunganQuery, whereClause)
-
-	sortDir := "ASC"
-	if strings.ToUpper(filter.SortOrder) == "DESC" {
-		sortDir = "DESC"
+	builder, exists := orderByMapping[filter.OrderBy]
+	if !exists {
+		builder = orderByMapping["waktu_registrasi"]
 	}
-	switch filter.OrderBy {
-	case "waktu_registrasi":
-		dataQuery += fmt.Sprintf(" ORDER BY t.tanggal_registrasi %s, t.jam_registrasi %s", sortDir, sortDir)
-	case "nama_pasien":
-		dataQuery += fmt.Sprintf(" ORDER BY t.nama_pasien %s", sortDir)
-	default:
-		dataQuery += fmt.Sprintf(" ORDER BY t.tanggal_registrasi %s, t.jam_registrasi %s", sortDir, sortDir)
-	}
+	orderClause := " ORDER BY " + builder(filter.SortOrder)
 
-	dataQuery += " LIMIT ? OFFSET ?"
-	dataArgs := make([]interface{}, len(args))
-	copy(dataArgs, args)
+	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t %s LIMIT ? OFFSET ?", baseQuery, orderClause)
+
+	dataArgs := make([]interface{}, len(baseArgs))
+	copy(dataArgs, baseArgs)
 	dataArgs = append(dataArgs, filter.Batas, offset)
+
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("gagal query data antrean: %w", err)
@@ -238,15 +247,20 @@ func (r *rawatJalanRepository) DaftarAntreanDokter(ctx context.Context, filter d
 }
 
 func (r *rawatJalanRepository) DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*domain.KunjunganRawatJalan, error) {
+	filter := dto.FilterAntreanDokter{KodeDokter: kodeDokter}
+	baseQuery, baseArgs := buildBaseQuery(filter)
+
 	query := fmt.Sprintf(`
 		SELECT * 
 		FROM (%s) AS t 
 		WHERE t.status_pemeriksaan <> 'Batal' AND t.no_rawat = ? 
 		LIMIT 1
-	`, baseSelectKunjunganQuery)
-	row := r.db.QueryRowContext(ctx, query, kodeDokter, kodeDokter, noRawat)
+	`, baseQuery)
+
+	args := append(baseArgs, noRawat)
+	row := r.db.QueryRowContext(ctx, query, args...)
 	kunjungan, err := scanKunjungan(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

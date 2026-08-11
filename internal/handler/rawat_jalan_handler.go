@@ -41,7 +41,6 @@ func (h *RawatJalanHandler) DaftarAntreanDokter(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Enkripsi no_rawat dan buat detail URL (transport concern)
 	for i := range daftarAntrean {
 		encrypted, err := crypto.Encrypt(daftarAntrean[i].NoRawat, h.encryptionKey)
 		if err == nil {
@@ -55,14 +54,13 @@ func (h *RawatJalanHandler) DaftarAntreanDokter(w http.ResponseWriter, r *http.R
 func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 	encryptedNoRawat := r.PathValue("no_rawat")
 	if encryptedNoRawat == "" {
-		response.Error(w, http.StatusBadRequest, "Parameter no_rawat wajib diisi", nil)
+		response.Error(w, http.StatusBadRequest, "Nomor rawat pasien tidak ditemukan", nil)
 		return
 	}
 
-	// Dekripsi no_rawat dari URL (transport concern)
 	noRawat, err := crypto.Decrypt(encryptedNoRawat, h.encryptionKey)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "Parameter no_rawat tidak valid", nil)
+		response.Error(w, http.StatusBadRequest, "Tautan kunjungan tidak valid atau kadaluarsa", nil)
 		return
 	}
 
@@ -83,11 +81,10 @@ func (h *RawatJalanHandler) DetailKunjungan(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	response.Success(w, "Berhasil mengambil detail kunjungan", kunjungan)
+	response.Success(w, "Berhasil mengambil detail kunjungan pasien", kunjungan)
 }
 
 func (h *RawatJalanHandler) GetReferensiFilter(w http.ResponseWriter, r *http.Request) {
 	referensi := h.rawatJalanUsecase.GetReferensiFilter(r.Context())
 	response.Success(w, "Berhasil mengambil referensi filter", referensi)
 }
-

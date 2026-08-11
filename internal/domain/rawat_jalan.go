@@ -56,4 +56,3 @@ type RawatJalanUsecase interface {
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	GetReferensiFilter(ctx context.Context) dto.ReferensiFilterRawatJalan
 }
-

@@ -1,6 +1,5 @@
 package domain
 
-// StatusPemeriksaan menentukan status pemeriksaan pasien
 type StatusPemeriksaan string
 
 const (
@@ -14,7 +13,6 @@ const (
 	StatusPulangPaksa    StatusPemeriksaan = "Pulang Paksa"
 )
 
-// StatusLanjut menentukan jenis perawatan lanjutan
 type StatusLanjut string
 
 const (
@@ -22,7 +20,6 @@ const (
 	StatusLanjutRawatInap  StatusLanjut = "Ranap"
 )
 
-// StatusBayar menentukan status pembayaran
 type StatusBayar string
 
 const (
@@ -30,7 +27,6 @@ const (
 	StatusBayarBelum StatusBayar = "Belum Bayar"
 )
 
-// JenisAntrean menentukan jenis antrean pasien
 type JenisAntrean string
 
 const (
@@ -38,7 +34,6 @@ const (
 	JenisAntreanTidakRujukan JenisAntrean = "Bukan Rujukan"
 )
 
-// Kesadaran menentukan tingkat kesadaran pasien
 type Kesadaran string
 
 const (

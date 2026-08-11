@@ -6,20 +6,24 @@ import (
 
 	"erm-dokter/internal/domain"
 	"erm-dokter/internal/dto"
+	"erm-dokter/pkg/logger"
 )
 
 type rawatJalanUsecase struct {
 	rawatJalanRepo domain.RawatJalanRepository
+	Log            *logger.Logger
 }
 
-func NewRawatJalanUsecase(repo domain.RawatJalanRepository) domain.RawatJalanUsecase {
+func NewRawatJalanUsecase(repo domain.RawatJalanRepository, log *logger.Logger) domain.RawatJalanUsecase {
 	return &rawatJalanUsecase{
 		rawatJalanRepo: repo,
+		Log:            log,
 	}
 }
 
 func (u *rawatJalanUsecase) DaftarAntreanDokter(ctx context.Context, filter dto.FilterAntreanDokter) ([]domain.KunjunganRawatJalan, dto.MetaPaginasi, error) {
 	if errs := filter.Validate(); errs != nil {
+		u.Log.Warn("Filter validasi gagal: %+v", errs)
 		return nil, dto.MetaPaginasi{}, errs
 	}
 
@@ -29,6 +33,7 @@ func (u *rawatJalanUsecase) DaftarAntreanDokter(ctx context.Context, filter dto.
 
 	daftarAntrean, totalData, err := u.rawatJalanRepo.DaftarAntreanDokter(ctx, filter)
 	if err != nil {
+		u.Log.Error("Gagal query antrean dokter %s: %v", filter.KodeDokter, err)
 		return nil, dto.MetaPaginasi{}, err
 	}
 
@@ -49,7 +54,13 @@ func (u *rawatJalanUsecase) DetailKunjungan(ctx context.Context, noRawat string,
 		return nil, domain.NewBusinessError("nomor rawat tidak boleh kosong")
 	}
 
-	return u.rawatJalanRepo.DetailKunjungan(ctx, noRawat, kodeDokter)
+	kunjungan, err := u.rawatJalanRepo.DetailKunjungan(ctx, noRawat, kodeDokter)
+	if err != nil {
+		u.Log.Error("Gagal query detail kunjungan %s: %v", noRawat, err)
+		return nil, err
+	}
+
+	return kunjungan, nil
 }
 
 func (u *rawatJalanUsecase) GetReferensiFilter(ctx context.Context) dto.ReferensiFilterRawatJalan {
@@ -78,4 +89,3 @@ func (u *rawatJalanUsecase) GetReferensiFilter(ctx context.Context) dto.Referens
 		},
 	}
 }
-

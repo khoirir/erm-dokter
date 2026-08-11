@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"erm-dokter/internal/domain"
 	"erm-dokter/internal/dto"
+	"erm-dokter/pkg/logger"
 	"erm-dokter/pkg/token"
 
 	"github.com/go-playground/validator/v10"
@@ -14,37 +15,44 @@ import (
 
 type authUsecase struct {
 	authRepo  domain.AuthRepository
+	Log       *logger.Logger
+	Validate  *validator.Validate
 	jwtSecret string
-	validate  *validator.Validate
 }
 
-func NewAuthUsecase(repo domain.AuthRepository, jwtSecret string) domain.AuthUsecase {
+func NewAuthUsecase(repo domain.AuthRepository, jwtSecret string, validate *validator.Validate, log *logger.Logger) domain.AuthUsecase {
 	return &authUsecase{
 		authRepo:  repo,
 		jwtSecret: jwtSecret,
-		validate:  validator.New(),
+		Validate:  validate,
+		Log:       log,
 	}
 }
 
 func (u *authUsecase) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
-	if err := u.validate.Struct(req); err != nil {
-		return nil, errors.New("username dan password wajib diisi")
+	if err := u.Validate.Struct(req); err != nil {
+		u.Log.Warn("Invalid request body: %+v", err)
+		return nil, domain.NewBusinessError("username dan password wajib diisi")
 	}
 
 	user, err := u.authRepo.VerifikasiLogin(ctx, req.Username, req.Password)
 	if err != nil {
-		return nil, err
+		u.Log.Error("Gagal memverifikasi login: %v", err)
+		return nil, fmt.Errorf("gagal memverifikasi login: %w", err)
 	}
 
 	if user == nil {
-		return nil, errors.New("username atau password salah")
+		u.Log.Warn("Login gagal untuk username: %s", req.Username)
+		return nil, domain.NewBusinessError("username atau password salah")
 	}
 
 	tkn, err := token.GenerateToken(user.IDUser, user.NamaUser, u.jwtSecret, 24*time.Hour)
 	if err != nil {
-		return nil, errors.New("gagal membuat token autentikasi")
+		u.Log.Error("Gagal membuat token: %v", err)
+		return nil, fmt.Errorf("gagal membuat token: %w", err)
 	}
 
+	u.Log.Info("Login berhasil untuk dokter: %s", user.IDUser)
 	return &dto.LoginResponse{
 		Token:      tkn,
 		KodeDokter: user.IDUser,

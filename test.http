@@ -35,9 +35,9 @@ Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
 {
-  "tanggal": "2025-04-22,2026-04-22",
+  "tanggal": "2026-04-22,2026-04-22",
   "halaman": 1,
-  "batas": 5000
+  "batas": 50
 }
 
 ### 5.1 RAWAT JALAN - Uji Coba Multi-Error Validasi Filter (Harus Respon 400 dengan Map Error)
