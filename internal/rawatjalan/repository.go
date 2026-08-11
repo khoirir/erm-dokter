@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"erm-dokter/internal/shared"
 )
 
 type Repository interface {
@@ -173,11 +171,11 @@ func buildBranchConditions(dokterCol string, filter FilterAntreanDokter) (string
 
 func buildBaseQuery(filter FilterAntreanDokter) (string, []interface{}) {
 	switch filter.JenisAntrean {
-	case string(shared.JenisAntreanTidakRujukan):
+	case string(JenisAntreanTidakRujukan):
 		where, args := buildBranchConditions("r.kd_dokter", filter)
 		return selectKunjunganBukanRujukan + where, args
 
-	case string(shared.JenisAntreanRujukan):
+	case string(JenisAntreanRujukan):
 		where, args := buildBranchConditions("rip.kd_dokter", filter)
 		return selectKunjunganRujukan + where, args
 

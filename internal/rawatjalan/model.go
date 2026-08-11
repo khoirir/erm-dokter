@@ -31,10 +31,10 @@ type KunjunganRawatJalan struct {
 	NamaDokterRujukan string                   `json:"nama_dokter_rujukan,omitempty"`
 	KodePenjamin      string                   `json:"kode_penjamin"`
 	NamaPenjamin      string                   `json:"nama_penjamin"`
-	StatusPemeriksaan shared.StatusPemeriksaan `json:"status_pemeriksaan"`
-	StatusLanjut      shared.StatusLanjut      `json:"status_lanjut"`
-	StatusBayar       shared.StatusBayar       `json:"status_bayar"`
-	JenisAntrean      shared.JenisAntrean      `json:"jenis_antrean"`
+	StatusPemeriksaan StatusPemeriksaan   `json:"status_pemeriksaan"`
+	StatusLanjut      shared.StatusLanjut `json:"status_lanjut"`
+	StatusBayar       StatusBayar         `json:"status_bayar"`
+	JenisAntrean      JenisAntrean        `json:"jenis_antrean"`
 }
 
 func (k *KunjunganRawatJalan) FormatJenisKelamin() string {

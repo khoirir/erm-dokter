@@ -72,26 +72,26 @@ func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokte
 func (s *service) GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan {
 	return ReferensiFilterRawatJalan{
 		StatusPemeriksaan: []OpsiReferensi{
-			{Value: string(shared.StatusBelum), Label: "Belum Periksa"},
-			{Value: string(shared.StatusSudah), Label: "Sudah Periksa"},
-			{Value: string(shared.StatusBatal), Label: "Batal Periksa"},
-			{Value: string(shared.StatusBerkasDiterima), Label: "Berkas Diterima"},
-			{Value: string(shared.StatusDirujuk), Label: "Dirujuk"},
-			{Value: string(shared.StatusMeninggal), Label: "Meninggal"},
-			{Value: string(shared.StatusDirawat), Label: "Dirawat"},
-			{Value: string(shared.StatusPulangPaksa), Label: "Pulang Paksa"},
+			{Value: string(StatusBelum), Label: "Belum Periksa"},
+			{Value: string(StatusSudah), Label: "Sudah Periksa"},
+			{Value: string(StatusBatal), Label: "Batal Periksa"},
+			{Value: string(StatusBerkasDiterima), Label: "Berkas Diterima"},
+			{Value: string(StatusDirujuk), Label: "Dirujuk"},
+			{Value: string(StatusMeninggal), Label: "Meninggal"},
+			{Value: string(StatusDirawat), Label: "Dirawat"},
+			{Value: string(StatusPulangPaksa), Label: "Pulang Paksa"},
 		},
 		StatusLanjut: []OpsiReferensi{
 			{Value: string(shared.StatusLanjutRawatJalan), Label: "Rawat Jalan"},
 			{Value: string(shared.StatusLanjutRawatInap), Label: "Rawat Inap"},
 		},
 		StatusBayar: []OpsiReferensi{
-			{Value: string(shared.StatusBayarSudah), Label: "Sudah Bayar"},
-			{Value: string(shared.StatusBayarBelum), Label: "Belum Bayar"},
+			{Value: string(StatusBayarSudah), Label: "Sudah Bayar"},
+			{Value: string(StatusBayarBelum), Label: "Belum Bayar"},
 		},
 		JenisAntrean: []OpsiReferensi{
-			{Value: string(shared.JenisAntreanRujukan), Label: "Rujukan"},
-			{Value: string(shared.JenisAntreanTidakRujukan), Label: "Bukan Rujukan"},
+			{Value: string(JenisAntreanRujukan), Label: "Rujukan"},
+			{Value: string(JenisAntreanTidakRujukan), Label: "Bukan Rujukan"},
 		},
 	}
 }
