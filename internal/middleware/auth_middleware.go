@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"erm-dokter/pkg/response"
-	"erm-dokter/pkg/token"
+	"erm-dokter/internal/pkg/response"
+	"erm-dokter/internal/pkg/token"
 )
 
 type contextKey string

@@ -4,15 +4,15 @@ import (
 	"database/sql"
 
 	"erm-dokter/internal/config"
-	"erm-dokter/internal/handler"
+	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/routes"
-	"erm-dokter/pkg/logger"
+	"erm-dokter/internal/shared/apperror"
 
 	"github.com/go-playground/validator/v10"
 )
 
 func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *routes.RouteConfig {
-	handler.SetLogger(log)
+	apperror.SetLogger(log)
 	validate := validator.New()
 
 	return routes.NewRouteConfig(

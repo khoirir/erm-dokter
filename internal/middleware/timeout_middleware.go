@@ -6,11 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"erm-dokter/pkg/response"
+	"erm-dokter/internal/pkg/response"
 )
 
-// timeoutResponseWriter adalah wrapper thread-safe untuk http.ResponseWriter.
-// Memastikan hanya satu goroutine yang bisa menulis response.
 type timeoutResponseWriter struct {
 	http.ResponseWriter
 	mu          sync.Mutex
@@ -37,8 +35,6 @@ func (tw *timeoutResponseWriter) Write(b []byte) (int, error) {
 	return tw.ResponseWriter.Write(b)
 }
 
-// markWritten menandai bahwa response sudah ditulis.
-// Mengembalikan true jika berhasil menandai (belum pernah ditulis sebelumnya).
 func (tw *timeoutResponseWriter) markWritten() bool {
 	tw.mu.Lock()
 	defer tw.mu.Unlock()
@@ -68,7 +64,6 @@ func TimeoutMiddleware(timeout time.Duration) func(http.HandlerFunc) http.Handle
 				return
 			case <-ctx.Done():
 				if ctx.Err() == context.DeadlineExceeded {
-					// Hanya tulis timeout response jika handler belum menulis apapun
 					if tw.markWritten() {
 						response.Error(w, http.StatusGatewayTimeout, "Request timeout", nil)
 					}

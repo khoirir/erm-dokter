@@ -1,7 +1,7 @@
 package di
 
-import "erm-dokter/internal/handler"
+import "erm-dokter/internal/health"
 
-func provideHealth() *handler.HealthHandler {
-	return handler.NewHealthHandler()
+func provideHealth() *health.Handler {
+	return health.NewHandler()
 }

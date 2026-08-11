@@ -55,7 +55,7 @@ Content-Type: application/json
 }
 
 ### 6. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
-GET {{baseUrl}}/api/v1/rawat-jalan/detail/zEHeUb12ojDNfzppR_shjerisPbYGHnQ97FjZWMXVawwnqQ2_zc_NCDzRBc7
+GET {{baseUrl}}/api/v1/rawat-jalan/detail/EvwlP5uXP0V0jgsao_0rllaVI4qFELJ-_C9xmB7_65jd30OAHf0dWRd_IXyi
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 

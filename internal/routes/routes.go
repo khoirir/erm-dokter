@@ -4,25 +4,28 @@ import (
 	"net/http"
 	"time"
 
-	"erm-dokter/internal/handler"
+	"erm-dokter/internal/auth"
+	"erm-dokter/internal/health"
 	"erm-dokter/internal/middleware"
+	"erm-dokter/internal/penjamin"
+	"erm-dokter/internal/rawatjalan"
 )
 
 type RouteConfig struct {
 	Mux               *http.ServeMux
-	HealthHandler     *handler.HealthHandler
-	AuthHandler       *handler.AuthHandler
-	PenjaminHandler   *handler.PenjaminHandler
-	RawatJalanHandler *handler.RawatJalanHandler
+	HealthHandler     *health.Handler
+	AuthHandler       *auth.Handler
+	PenjaminHandler   *penjamin.Handler
+	RawatJalanHandler *rawatjalan.Handler
 	AuthMiddleware    func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware func(http.HandlerFunc) http.HandlerFunc
 }
 
 func NewRouteConfig(
-	healthHandler *handler.HealthHandler,
-	authHandler *handler.AuthHandler,
-	penjaminHandler *handler.PenjaminHandler,
-	rawatJalanHandler *handler.RawatJalanHandler,
+	healthHandler *health.Handler,
+	authHandler *auth.Handler,
+	penjaminHandler *penjamin.Handler,
+	rawatJalanHandler *rawatjalan.Handler,
 	jwtSecret string,
 ) *RouteConfig {
 	return &RouteConfig{
@@ -37,13 +40,12 @@ func NewRouteConfig(
 }
 
 func (c *RouteConfig) Setup() {
-	c.SetupGuestRoute()
-	c.SetupAuthRoute()
-}
+	loginRateLimit := middleware.RateLimitMiddleware(10, 1*time.Minute)
 
-func (c *RouteConfig) SetupAuthRoute() {
-	c.setupPenjaminRoutes()
-	c.setupRawatJalanRoutes()
+	c.HealthHandler.RegisterRoutes(c.Mux)
+	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit)
+	c.PenjaminHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {

@@ -11,8 +11,8 @@ import (
 
 	"erm-dokter/internal/config"
 	"erm-dokter/internal/di"
-	"erm-dokter/pkg/database"
-	"erm-dokter/pkg/logger"
+	"erm-dokter/internal/pkg/database"
+	"erm-dokter/internal/pkg/logger"
 )
 
 func main() {

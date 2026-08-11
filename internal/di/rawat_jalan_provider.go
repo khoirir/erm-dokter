@@ -4,14 +4,12 @@ import (
 	"database/sql"
 
 	"erm-dokter/internal/config"
-	"erm-dokter/internal/handler"
-	"erm-dokter/internal/repository"
-	"erm-dokter/internal/usecase"
-	"erm-dokter/pkg/logger"
+	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatjalan"
 )
 
-func provideRawatJalan(db *sql.DB, cfg *config.Config, log *logger.Logger) *handler.RawatJalanHandler {
-	repo := repository.NewRawatJalanRepository(db)
-	uc := usecase.NewRawatJalanUsecase(repo, log)
-	return handler.NewRawatJalanHandler(uc, cfg.EncryptionKey)
+func provideRawatJalan(db *sql.DB, cfg *config.Config, log *logger.Logger) *rawatjalan.Handler {
+	repo := rawatjalan.NewRepository(db)
+	svc := rawatjalan.NewService(repo, log)
+	return rawatjalan.NewHandler(svc, cfg.EncryptionKey)
 }

@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// statusResponseWriter adalah wrapper untuk menangkap status code response.
 type statusResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -18,7 +17,6 @@ func (sw *statusResponseWriter) WriteHeader(code int) {
 	sw.ResponseWriter.WriteHeader(code)
 }
 
-// LoggingMiddleware mencatat setiap incoming request: method, path, status code, duration, dan client IP.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	logger := log.New(os.Stdout, "[HTTP]\t", log.Ldate|log.Ltime)
 

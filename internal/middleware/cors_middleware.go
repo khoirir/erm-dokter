@@ -4,8 +4,6 @@ import (
 	"net/http"
 )
 
-// CORSMiddleware menambahkan header CORS ke setiap response.
-// Mendukung preflight OPTIONS request.
 func CORSMiddleware(allowOrigin string) func(http.Handler) http.Handler {
 	if allowOrigin == "" {
 		allowOrigin = "*"
@@ -18,7 +16,6 @@ func CORSMiddleware(allowOrigin string) func(http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 
-			// Handle preflight request
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
