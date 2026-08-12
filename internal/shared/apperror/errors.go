@@ -31,6 +31,16 @@ func (v ValidationError) Error() string {
 	return strings.Join(errs, "; ")
 }
 
+type UnauthorizedError struct {
+	Message string
+}
+func (e *UnauthorizedError) Error() string {
+	return e.Message
+}
+func NewUnauthorizedError(msg string) error {
+	return &UnauthorizedError{Message: msg}
+}
+
 var log *logger.Logger
 
 func SetLogger(l *logger.Logger) {
@@ -40,12 +50,15 @@ func SetLogger(l *logger.Logger) {
 func HandleError(w http.ResponseWriter, err error) {
 	var validationErr ValidationError
 	var businessErr *BusinessError
+	var unauthorizedErr *UnauthorizedError
 
 	switch {
 	case errors.As(err, &validationErr):
 		response.Error(w, http.StatusBadRequest, "Validasi gagal", validationErr)
 	case errors.As(err, &businessErr):
 		response.Error(w, http.StatusBadRequest, businessErr.Message, nil)
+	case errors.As(err, &unauthorizedErr):
+		response.Error(w, http.StatusUnauthorized, unauthorizedErr.Message, nil)
 	default:
 		if log != nil {
 			log.Error("Internal server error: %v", err)

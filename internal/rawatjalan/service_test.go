@@ -10,13 +10,13 @@ import (
 )
 
 type mockRepository struct {
-	daftarAntreanFunc   func(ctx context.Context, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error)
+	daftarAntreanFunc   func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error)
 	detailKunjunganFunc func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error)
 }
 
-func (m *mockRepository) DaftarAntreanDokter(ctx context.Context, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
+func (m *mockRepository) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
 	if m.daftarAntreanFunc != nil {
-		return m.daftarAntreanFunc(ctx, filter)
+		return m.daftarAntreanFunc(ctx, kodeDokter, filter)
 	}
 	return []rawatjalan.KunjunganRawatJalan{}, 0, nil
 }
@@ -38,7 +38,7 @@ func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
 		SortOrder: "SALAH",
 	}
 
-	_, _, err := uc.DaftarAntreanDokter(context.Background(), filter)
+	_, _, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
 	if err == nil {
 		t.Fatal("expected validation error, got nil")
 	}
@@ -63,7 +63,7 @@ func TestDaftarAntreanDokter_MinKeywordLength(t *testing.T) {
 
 	filter := rawatjalan.FilterAntreanDokter{KataKunci: "ab"}
 
-	_, _, err := uc.DaftarAntreanDokter(context.Background(), filter)
+	_, _, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
 	if err == nil {
 		t.Fatal("expected business error for short keyword, got nil")
 	}
@@ -79,7 +79,7 @@ func TestDaftarAntreanDokter_MinKeywordLength(t *testing.T) {
 
 func TestDaftarAntreanDokter_Success(t *testing.T) {
 	repo := &mockRepository{
-		daftarAntreanFunc: func(ctx context.Context, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
+		daftarAntreanFunc: func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
 			return []rawatjalan.KunjunganRawatJalan{
 				{NoRawat: "2025/04/22/000001", NamaPasien: "Budi"},
 				{NoRawat: "2025/04/22/000002", NamaPasien: "Ani"},
@@ -89,9 +89,9 @@ func TestDaftarAntreanDokter_Success(t *testing.T) {
 	log := logger.New()
 	uc := rawatjalan.NewService(repo, log)
 
-	filter := rawatjalan.FilterAntreanDokter{KodeDokter: "DK001"}
+	filter := rawatjalan.FilterAntreanDokter{}
 
-	data, meta, err := uc.DaftarAntreanDokter(context.Background(), filter)
+	data, meta, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -105,16 +105,16 @@ func TestDaftarAntreanDokter_Success(t *testing.T) {
 
 func TestDaftarAntreanDokter_Pagination(t *testing.T) {
 	repo := &mockRepository{
-		daftarAntreanFunc: func(ctx context.Context, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
+		daftarAntreanFunc: func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
 			return []rawatjalan.KunjunganRawatJalan{{NoRawat: "001", NamaPasien: "Budi"}}, 15, nil
 		},
 	}
 	log := logger.New()
 	uc := rawatjalan.NewService(repo, log)
 
-	filter := rawatjalan.FilterAntreanDokter{KodeDokter: "DK001", Halaman: 2, Batas: 5}
+	filter := rawatjalan.FilterAntreanDokter{Halaman: 2, Batas: 5}
 
-	_, meta, err := uc.DaftarAntreanDokter(context.Background(), filter)
+	_, meta, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

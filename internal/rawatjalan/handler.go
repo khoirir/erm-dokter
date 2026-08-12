@@ -25,7 +25,7 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/rawat-jalan/referensi-filter", authMiddleware(timeoutMiddleware(h.GetReferensiFilter)))
 	mux.HandleFunc("POST /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
-	mux.HandleFunc("GET /api/v1/rawat-jalan/detail/{no_rawat}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/detail/{id}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
 }
 
 func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
@@ -35,12 +35,13 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claim := middleware.GetUserClaim(r.Context())
-	if claim != nil && filter.KodeDokter == "" {
-		filter.KodeDokter = claim.KodeDokter
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
 	}
 
-	daftarAntrean, meta, err := h.rawatJalanService.DaftarAntreanDokter(r.Context(), filter)
+	daftarAntrean, meta, err := h.rawatJalanService.DaftarAntreanDokter(r.Context(), kodeDokter, filter)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -49,7 +50,7 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 	for i := range daftarAntrean {
 		encrypted, err := crypto.Encrypt(daftarAntrean[i].NoRawat, h.encryptionKey)
 		if err == nil {
-			daftarAntrean[i].DetailKey = encrypted
+			daftarAntrean[i].Id = encrypted
 		}
 	}
 
@@ -57,22 +58,22 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
-	encryptedNoRawat := r.PathValue("no_rawat")
-	if encryptedNoRawat == "" {
-		response.Error(w, http.StatusBadRequest, "Nomor rawat pasien tidak ditemukan", nil)
+	id := r.PathValue("id")
+	if id == "" {
+		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak ditemukan", nil)
 		return
 	}
 
-	noRawat, err := crypto.Decrypt(encryptedNoRawat, h.encryptionKey)
+	noRawat, err := crypto.Decrypt(id, h.encryptionKey)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "Tautan kunjungan tidak valid atau kadaluarsa", nil)
+		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak valid atau kadaluarsa", nil)
 		return
 	}
 
-	claim := middleware.GetUserClaim(r.Context())
-	kodeDokter := ""
-	if claim != nil {
-		kodeDokter = claim.KodeDokter
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
 	}
 
 	kunjungan, err := h.rawatJalanService.DetailKunjungan(r.Context(), noRawat, kodeDokter)
@@ -85,6 +86,7 @@ func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusNotFound, "Detail kunjungan pasien tidak ditemukan", nil)
 		return
 	}
+	kunjungan.Id = id
 
 	response.Success(w, "Berhasil mengambil detail kunjungan pasien", kunjungan)
 }

@@ -8,8 +8,6 @@ import (
 	"erm-dokter/internal/auth"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/shared/apperror"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type mockAuthRepository struct {
@@ -25,9 +23,8 @@ func (m *mockAuthRepository) VerifikasiLogin(ctx context.Context, username, pass
 
 func TestLogin_EmptyUsername(t *testing.T) {
 	repo := &mockAuthRepository{}
-	validate := validator.New()
 	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", validate, log)
+	uc := auth.NewService(repo, "test-secret", log)
 
 	_, err := uc.Login(context.Background(), auth.LoginRequest{
 		Username: "",
@@ -40,9 +37,8 @@ func TestLogin_EmptyUsername(t *testing.T) {
 
 func TestLogin_EmptyPassword(t *testing.T) {
 	repo := &mockAuthRepository{}
-	validate := validator.New()
 	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", validate, log)
+	uc := auth.NewService(repo, "test-secret", log)
 
 	_, err := uc.Login(context.Background(), auth.LoginRequest{
 		Username: "dokter1",
@@ -59,9 +55,8 @@ func TestLogin_WrongCredentials(t *testing.T) {
 			return nil, nil
 		},
 	}
-	validate := validator.New()
 	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", validate, log)
+	uc := auth.NewService(repo, "test-secret", log)
 
 	_, err := uc.Login(context.Background(), auth.LoginRequest{
 		Username: "dokter1",
@@ -83,9 +78,8 @@ func TestLogin_Success(t *testing.T) {
 			return &auth.User{IDUser: "DK001", NamaUser: "Dr. Budi"}, nil
 		},
 	}
-	validate := validator.New()
 	log := logger.New()
-	uc := auth.NewService(repo, "test-secret-key-12345", validate, log)
+	uc := auth.NewService(repo, "test-secret-key-12345", log)
 
 	resp, err := uc.Login(context.Background(), auth.LoginRequest{
 		Username: "dokter1",
@@ -108,9 +102,8 @@ func TestLogin_DatabaseError(t *testing.T) {
 			return nil, errors.New("connection refused")
 		},
 	}
-	validate := validator.New()
 	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", validate, log)
+	uc := auth.NewService(repo, "test-secret", log)
 
 	_, err := uc.Login(context.Background(), auth.LoginRequest{
 		Username: "dokter1",

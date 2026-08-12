@@ -3,11 +3,12 @@ package pemeriksaan
 import (
 	"context"
 	"database/sql"
+	"erm-dokter/internal/shared"
 	"fmt"
 )
 
 type Repository interface {
-	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut string) ([]Pemeriksaan, error)
+	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]Pemeriksaan, error)
 	DetailPemeriksaan(ctx context.Context, noRawat string, tanggalPemriksaan string, jamPemeriksaan string) (*Pemeriksaan, error)
 	// UpdatePemeriksaan(ctx context.Context, noRawat string, pemeriksaan *Pemeriksaan) error
 }
@@ -84,15 +85,15 @@ const selectPemeriksaanRanap = `
 	WHERE pr.no_rawat = ?
 `
 
-func (r *repository) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut string) ([]Pemeriksaan, error) {
+func (r *repository) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]Pemeriksaan, error) {
 	var query string
 	var args []interface{}
 
 	switch statusLanjut {
-	case "rawat_jalan":
+	case shared.StatusLanjutRawatJalan:
 		query = selectPemeriksaanRalan + " ORDER BY pr.tgl_perawatan DESC, pr.jam_rawat DESC"
 		args = append(args, noRawat)
-	case "rawat_inap":
+	case shared.StatusLanjutRawatInap:
 		query = selectPemeriksaanRanap + " ORDER BY pr.tgl_perawatan DESC, pr.jam_rawat DESC"
 		args = append(args, noRawat)
 	default:

@@ -7,6 +7,7 @@ import (
 
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/pkg/token"
+	"erm-dokter/internal/shared/apperror"
 )
 
 type contextKey string
@@ -40,9 +41,16 @@ func JWTMiddleware(jwtSecret string) func(http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func GetUserClaim(ctx context.Context) *token.Claims {
-	if claims, ok := ctx.Value(UserClaimKey).(*token.Claims); ok {
-		return claims
+func GetKodeDokter(ctx context.Context) (string, error) {
+	claims, ok := ctx.Value(UserClaimKey).(*token.Claims)
+	if !ok || claims == nil {
+		return "", apperror.NewUnauthorizedError("kredensial login tidak ditemukan")
 	}
-	return nil
+
+	if strings.TrimSpace(claims.KodeDokter) == "" {
+		return "", apperror.NewUnauthorizedError("identitas dokter pada akun ini tidak valid")
+	}
+
+	return claims.KodeDokter, nil
 }
+

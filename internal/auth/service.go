@@ -8,8 +8,6 @@ import (
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/pkg/token"
 	"erm-dokter/internal/shared/apperror"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type Service interface {
@@ -19,23 +17,20 @@ type Service interface {
 type service struct {
 	repo      Repository
 	log       *logger.Logger
-	validate  *validator.Validate
 	jwtSecret string
 }
 
-func NewService(repo Repository, jwtSecret string, validate *validator.Validate, log *logger.Logger) Service {
+func NewService(repo Repository, jwtSecret string, log *logger.Logger) Service {
 	return &service{
 		repo:      repo,
 		jwtSecret: jwtSecret,
-		validate:  validate,
 		log:       log,
 	}
 }
 
 func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
-	if err := s.validate.Struct(req); err != nil {
-		s.log.Warn("Invalid request body: %+v", err)
-		return nil, apperror.NewBusinessError("username dan password wajib diisi")
+	if errs := req.Validate(); errs != nil {
+		return nil, errs
 	}
 
 	user, err := s.repo.VerifikasiLogin(ctx, req.Username, req.Password)

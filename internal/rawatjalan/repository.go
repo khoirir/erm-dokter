@@ -9,7 +9,7 @@ import (
 )
 
 type Repository interface {
-	DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
+	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 }
 
@@ -135,12 +135,12 @@ func scanKunjungan(s scanner) (*KunjunganRawatJalan, error) {
 	return &k, nil
 }
 
-func buildBranchConditions(dokterCol string, filter FilterAntreanDokter) (string, []interface{}) {
+func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAntreanDokter) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
 
 	conditions = append(conditions, dokterCol+" = ?")
-	args = append(args, filter.KodeDokter)
+	args = append(args, kodeDokter)
 
 	if filter.Tanggal != "" {
 		tglParts := strings.Split(filter.Tanggal, ",")
@@ -160,6 +160,11 @@ func buildBranchConditions(dokterCol string, filter FilterAntreanDokter) (string
 		args = append(args, filter.StatusPemeriksaan)
 	}
 
+	if filter.StatusLanjut != "" {
+		conditions = append(conditions, "r.status_lanjut = ?")
+		args = append(args, filter.StatusLanjut)
+	}
+
 	if filter.KataKunci != "" {
 		conditions = append(conditions, "(p.nm_pasien LIKE ? OR r.no_rkm_medis LIKE ? OR r.no_rawat LIKE ?)")
 		keywordPattern := "%" + filter.KataKunci + "%"
@@ -169,19 +174,19 @@ func buildBranchConditions(dokterCol string, filter FilterAntreanDokter) (string
 	return " WHERE " + strings.Join(conditions, " AND "), args
 }
 
-func buildBaseQuery(filter FilterAntreanDokter) (string, []interface{}) {
+func buildBaseQuery(kodeDokter string, filter FilterAntreanDokter) (string, []interface{}) {
 	switch filter.JenisAntrean {
 	case string(JenisAntreanTidakRujukan):
-		where, args := buildBranchConditions("r.kd_dokter", filter)
+		where, args := buildBranchConditions("r.kd_dokter", kodeDokter, filter)
 		return selectKunjunganBukanRujukan + where, args
 
 	case string(JenisAntreanRujukan):
-		where, args := buildBranchConditions("rip.kd_dokter", filter)
+		where, args := buildBranchConditions("rip.kd_dokter", kodeDokter, filter)
 		return selectKunjunganRujukan + where, args
 
 	default:
-		where1, args1 := buildBranchConditions("r.kd_dokter", filter)
-		where2, args2 := buildBranchConditions("rip.kd_dokter", filter)
+		where1, args1 := buildBranchConditions("r.kd_dokter", kodeDokter, filter)
+		where2, args2 := buildBranchConditions("rip.kd_dokter", kodeDokter, filter)
 
 		query1 := selectKunjunganBukanRujukan + where1
 		query2 := selectKunjunganRujukan + where2
@@ -192,8 +197,8 @@ func buildBaseQuery(filter FilterAntreanDokter) (string, []interface{}) {
 	}
 }
 
-func (r *repository) DaftarAntreanDokter(ctx context.Context, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error) {
-	baseQuery, baseArgs := buildBaseQuery(filter)
+func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error) {
+	baseQuery, baseArgs := buildBaseQuery(kodeDokter, filter)
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS t", baseQuery)
 
@@ -244,8 +249,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, filter FilterAntre
 }
 
 func (r *repository) DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error) {
-	filter := FilterAntreanDokter{KodeDokter: kodeDokter}
-	baseQuery, baseArgs := buildBaseQuery(filter)
+	baseQuery, baseArgs := buildBaseQuery(kodeDokter, FilterAntreanDokter{})
 
 	query := fmt.Sprintf(`
 		SELECT * 

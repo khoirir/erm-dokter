@@ -37,7 +37,8 @@ Content-Type: application/json
 {
   "tanggal": "2026-04-22,2026-04-22",
   "halaman": 1,
-  "batas": 50
+  "batas": 50,
+  "status_lanjut": "Ranap"
 }
 
 ### 5.1 RAWAT JALAN - Uji Coba Multi-Error Validasi Filter (Harus Respon 400 dengan Map Error)
@@ -55,7 +56,7 @@ Content-Type: application/json
 }
 
 ### 6. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
-GET {{baseUrl}}/api/v1/rawat-jalan/detail/EvwlP5uXP0V0jgsao_0rllaVI4qFELJ-_C9xmB7_65jd30OAHf0dWRd_IXyi
+GET {{baseUrl}}/api/v1/rawat-jalan/detail/i8C-I9_VP-6V8cy3_DMhRJFxXUhwWBlcY74jtG6eZZ57Nf1VKH3wVuNemOCK
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -63,3 +64,20 @@ Accept: application/json
 GET {{baseUrl}}/api/v1/penjamin
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
+
+### 8. PEMERIKSAAN - Daftar Pemeriksaan Pasien (Semua / Default Ralan + Ranap)
+# Parameter `id` diisi oleh ID terenkripsi kunjungan pasien (no_rawat)
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 8.1 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Jalan / Ralan saja)
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 8.2 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Inap / Ranap saja)
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+

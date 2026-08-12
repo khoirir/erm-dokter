@@ -5,6 +5,7 @@ import (
 )
 
 type Pemeriksaan struct {
+	Id                  string              `json:"id"`
 	NoRawat             string              `json:"no_rawat"`
 	TanggalPemeriksaan  string              `json:"tanggal_pemeriksaan"`
 	JamPemeriksaan      string              `json:"jam_pemeriksaan"`

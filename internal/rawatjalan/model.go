@@ -10,27 +10,27 @@ import (
 )
 
 type KunjunganRawatJalan struct {
-	NoRawat           string                   `json:"no_rawat"`
-	DetailKey         string                   `json:"detail_key,omitempty"`
-	NoRegistrasi      string                   `json:"no_registrasi"`
-	TanggalRegistrasi string                   `json:"tanggal_registrasi"`
-	JamRegistrasi     string                   `json:"jam_registrasi"`
-	NoRekamMedis      string                   `json:"no_rekam_medis"`
-	NamaPasien        string                   `json:"nama_pasien"`
-	JenisKelamin      string                   `json:"jenis_kelamin"`
-	TanggalLahir      string                   `json:"tanggal_lahir"`
-	Umur              string                   `json:"umur"`
-	Alamat            string                   `json:"alamat"`
-	KodePoliAsal      string                   `json:"kode_poli_asal"`
-	NamaPoliAsal      string                   `json:"nama_poli_asal"`
-	KodeDokterAsal    string                   `json:"kode_dokter_asal"`
-	NamaDokterAsal    string                   `json:"nama_dokter_asal"`
-	KodePoliRujukan   string                   `json:"kode_poli_rujukan,omitempty"`
-	NamaPoliRujukan   string                   `json:"nama_poli_rujukan,omitempty"`
-	KodeDokterRujukan string                   `json:"kode_dokter_rujukan,omitempty"`
-	NamaDokterRujukan string                   `json:"nama_dokter_rujukan,omitempty"`
-	KodePenjamin      string                   `json:"kode_penjamin"`
-	NamaPenjamin      string                   `json:"nama_penjamin"`
+	Id                string              `json:"id"`
+	NoRawat           string              `json:"no_rawat"`
+	NoRegistrasi      string              `json:"no_registrasi"`
+	TanggalRegistrasi string              `json:"tanggal_registrasi"`
+	JamRegistrasi     string              `json:"jam_registrasi"`
+	NoRekamMedis      string              `json:"no_rekam_medis"`
+	NamaPasien        string              `json:"nama_pasien"`
+	JenisKelamin      string              `json:"jenis_kelamin"`
+	TanggalLahir      string              `json:"tanggal_lahir"`
+	Umur              string              `json:"umur"`
+	Alamat            string              `json:"alamat"`
+	KodePoliAsal      string              `json:"kode_poli_asal"`
+	NamaPoliAsal      string              `json:"nama_poli_asal"`
+	KodeDokterAsal    string              `json:"kode_dokter_asal"`
+	NamaDokterAsal    string              `json:"nama_dokter_asal"`
+	KodePoliRujukan   string              `json:"kode_poli_rujukan,omitempty"`
+	NamaPoliRujukan   string              `json:"nama_poli_rujukan,omitempty"`
+	KodeDokterRujukan string              `json:"kode_dokter_rujukan,omitempty"`
+	NamaDokterRujukan string              `json:"nama_dokter_rujukan,omitempty"`
+	KodePenjamin      string              `json:"kode_penjamin"`
+	NamaPenjamin      string              `json:"nama_penjamin"`
 	StatusPemeriksaan StatusPemeriksaan   `json:"status_pemeriksaan"`
 	StatusLanjut      shared.StatusLanjut `json:"status_lanjut"`
 	StatusBayar       StatusBayar         `json:"status_bayar"`
@@ -69,11 +69,11 @@ type ReferensiFilterRawatJalan struct {
 }
 
 type FilterAntreanDokter struct {
-	KodeDokter        string `json:"kode_dokter"`
 	Tanggal           string `json:"tanggal"`
 	KodePenjamin      string `json:"kode_penjamin"`
 	StatusPemeriksaan string `json:"status_pemeriksaan"`
 	JenisAntrean      string `json:"jenis_antrean"`
+	StatusLanjut      string `json:"status_lanjut"`
 	KataKunci         string `json:"keyword"`
 	OrderBy           string `json:"order_by"`
 	SortOrder         string `json:"sort_order"`
@@ -104,37 +104,23 @@ func (f *FilterAntreanDokter) Sanitize() {
 	}
 }
 
-var validStatusPemeriksaan = map[string]bool{
-	"Belum": true, "Sudah": true, "Batal": true, "Berkas Diterima": true,
-	"Dirujuk": true, "Meninggal": true, "Dirawat": true, "Pulang Paksa": true,
-}
-
-var validJenisAntrean = map[string]bool{
-	"Rujukan": true, "Bukan Rujukan": true,
-}
-
-var validOrderBy = map[string]bool{
-	"waktu_registrasi": true, "nama_pasien": true,
-}
-
-var validSortOrder = map[string]bool{
-	"ASC": true, "DESC": true,
-}
-
 func (f *FilterAntreanDokter) Validate() apperror.ValidationError {
 	f.Sanitize()
 	errs := make(apperror.ValidationError)
-	if !validSortOrder[f.SortOrder] {
-		errs["sort_order"] = "sort_order harus 'ASC' atau 'DESC'"
+	if !shared.SortOrder(f.SortOrder).IsValid() {
+		errs["sort_order"] = "Jenis pengurutan tidak valid"
 	}
-	if !validOrderBy[f.OrderBy] {
-		errs["order_by"] = "order_by hanya boleh 'waktu_registrasi' atau 'nama_pasien'"
+	if !OrderBy(f.OrderBy).IsValid() {
+		errs["order_by"] = "Jenis pengurutan tidak valid"
 	}
-	if f.JenisAntrean != "" && !validJenisAntrean[f.JenisAntrean] {
-		errs["jenis_antrean"] = "jenis_antrean tidak valid (hanya 'Rujukan' atau 'Bukan Rujukan')"
+	if f.JenisAntrean != "" && !JenisAntrean(f.JenisAntrean).IsValid() {
+		errs["jenis_antrean"] = "Jenis antrean tidak valid"
 	}
-	if f.StatusPemeriksaan != "" && !validStatusPemeriksaan[f.StatusPemeriksaan] {
-		errs["status_pemeriksaan"] = "status_pemeriksaan tidak valid"
+	if f.StatusPemeriksaan != "" && !StatusPemeriksaan(f.StatusPemeriksaan).IsValid() {
+		errs["status_pemeriksaan"] = "Status pemeriksaan tidak valid"
+	}
+	if f.StatusLanjut != "" && !shared.StatusLanjut(f.StatusLanjut).IsValid() {
+		errs["status_lanjut"] = "Status lanjut tidak valid"
 	}
 	if f.Tanggal != "" {
 		validasiTanggal(f.Tanggal, errs)
