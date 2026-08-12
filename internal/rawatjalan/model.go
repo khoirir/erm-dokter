@@ -11,6 +11,7 @@ import (
 
 type KunjunganRawatJalan struct {
 	Id                string              `json:"id"`
+	IdPasien          string              `json:"id_pasien"`
 	NoRawat           string              `json:"no_rawat"`
 	NoRegistrasi      string              `json:"no_registrasi"`
 	TanggalRegistrasi string              `json:"tanggal_registrasi"`
@@ -49,13 +50,6 @@ func (k *KunjunganRawatJalan) FormatNoRekamMedis() string {
 	return formatter.FormatNoRekamMedis(k.NoRekamMedis)
 }
 
-type MetaPaginasi struct {
-	TotalData    int `json:"total_data"`
-	TotalHalaman int `json:"total_halaman"`
-	HalamanAktif int `json:"halaman_aktif"`
-	BatasData    int `json:"batas_data"`
-}
-
 type OpsiReferensi struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
@@ -69,16 +63,16 @@ type ReferensiFilterRawatJalan struct {
 }
 
 type FilterAntreanDokter struct {
-	Tanggal           string `json:"tanggal"`
-	KodePenjamin      string `json:"kode_penjamin"`
-	StatusPemeriksaan string `json:"status_pemeriksaan"`
-	JenisAntrean      string `json:"jenis_antrean"`
-	StatusLanjut      string `json:"status_lanjut"`
-	KataKunci         string `json:"keyword"`
-	OrderBy           string `json:"order_by"`
-	SortOrder         string `json:"sort_order"`
-	Halaman           int    `json:"halaman"`
-	Batas             int    `json:"batas"`
+	Tanggal           string              `json:"tanggal,omitempty"`
+	KodePenjamin      string              `json:"kode_penjamin,omitempty"`
+	StatusPemeriksaan StatusPemeriksaan   `json:"status_pemeriksaan,omitempty"`
+	JenisAntrean      JenisAntrean        `json:"jenis_antrean,omitempty"`
+	StatusLanjut      shared.StatusLanjut `json:"status_lanjut,omitempty"`
+	KataKunci         string              `json:"keyword,omitempty"`
+	OrderBy           string              `json:"order_by,omitempty"`
+	SortOrder         string              `json:"sort_order,omitempty"`
+	Halaman           int                 `json:"halaman,omitempty"`
+	Batas             int                 `json:"batas,omitempty"`
 }
 
 func (f *FilterAntreanDokter) Sanitize() {
@@ -86,9 +80,9 @@ func (f *FilterAntreanDokter) Sanitize() {
 		f.Halaman = 1
 	}
 	if f.Batas <= 0 {
-		f.Batas = 10
-	} else if f.Batas > 2000 {
-		f.Batas = 2000
+		f.Batas = 20
+	} else if f.Batas > 1000 {
+		f.Batas = 1000
 	}
 	if f.OrderBy == "" {
 		f.OrderBy = "waktu_registrasi"
@@ -102,6 +96,10 @@ func (f *FilterAntreanDokter) Sanitize() {
 		today := time.Now().Format("2006-01-02")
 		f.Tanggal = today + "," + today
 	}
+}
+
+func (f FilterAntreanDokter) Offset() int {
+	return (f.Halaman - 1) * f.Batas
 }
 
 func (f *FilterAntreanDokter) Validate() apperror.ValidationError {
@@ -123,36 +121,10 @@ func (f *FilterAntreanDokter) Validate() apperror.ValidationError {
 		errs["status_lanjut"] = "Status lanjut tidak valid"
 	}
 	if f.Tanggal != "" {
-		validasiTanggal(f.Tanggal, errs)
+		shared.ValidasiRentangTanggal(f.Tanggal, errs)
 	}
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
-}
-
-func validasiTanggal(tanggal string, errs apperror.ValidationError) {
-	const layout = "2006-01-02"
-	parts := strings.Split(tanggal, ",")
-
-	if len(parts) != 2 {
-		errs["tanggal"] = "format tanggal wajib menggunakan rentang 2 tanggal (contoh: YYYY-MM-DD,YYYY-MM-DD)"
-		return
-	}
-
-	tglAwal, err := time.Parse(layout, strings.TrimSpace(parts[0]))
-	if err != nil {
-		errs["tanggal"] = "format tanggal awal tidak valid (gunakan YYYY-MM-DD)"
-		return
-	}
-
-	tglAkhir, err := time.Parse(layout, strings.TrimSpace(parts[1]))
-	if err != nil {
-		errs["tanggal"] = "format tanggal akhir tidak valid (gunakan YYYY-MM-DD)"
-		return
-	}
-
-	if tglAwal.After(tglAkhir) {
-		errs["tanggal"] = "tanggal awal harus lebih kecil atau sama dengan tanggal akhir"
-	}
 }

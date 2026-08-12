@@ -3,13 +3,16 @@ package pemeriksaan
 import (
 	"context"
 	"database/sql"
-	"erm-dokter/internal/shared"
+	"errors"
 	"fmt"
+	"strings"
+
+	"erm-dokter/internal/shared"
 )
 
 type Repository interface {
-	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]Pemeriksaan, error)
-	DetailPemeriksaan(ctx context.Context, noRawat string, tanggalPemriksaan string, jamPemeriksaan string) (*Pemeriksaan, error)
+	DaftarPemeriksaan(ctx context.Context, listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, int, error)
+	DetailPemeriksaan(ctx context.Context, idPemeriksaan IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
 	// UpdatePemeriksaan(ctx context.Context, noRawat string, pemeriksaan *Pemeriksaan) error
 }
 
@@ -23,10 +26,47 @@ func NewRepository(db *sql.DB) Repository {
 	}
 }
 
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanPemeriksaan(s scanner) (*Pemeriksaan, error) {
+	var p Pemeriksaan
+	err := s.Scan(
+		&p.NoRawat,
+		&p.TanggalPemeriksaan,
+		&p.JamPemeriksaan,
+		&p.SuhuTubuh,
+		&p.Tensi,
+		&p.Nadi,
+		&p.Respirasi,
+		&p.TinggiBadan,
+		&p.BeratBadan,
+		&p.SpO2,
+		&p.Gcs,
+		&p.Kesadaran,
+		&p.Keluhan,
+		&p.Pemeriksaan,
+		&p.Alergi,
+		&p.LingkarPerut,
+		&p.RencanaTindakLanjut,
+		&p.Penilaian,
+		&p.Instruksi,
+		&p.Evaluasi,
+		&p.KodeDokterPetugas,
+		&p.NamaDokterPetugas,
+		&p.StatusLanjut,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 const selectPemeriksaanRalan = `
 	SELECT 
 		pr.no_rawat,
-		DATE_FORMAT(pr.tgl_perawatan, '%Y-%m-%d') AS tanggal_pemeriksaan,
+		DATE_FORMAT(pr.tgl_perawatan, '%%Y-%%m-%%d') AS tanggal_pemeriksaan,
 		pr.jam_rawat AS jam_pemeriksaan,
 		pr.suhu_tubuh,
 		pr.tensi,
@@ -51,13 +91,13 @@ const selectPemeriksaanRalan = `
 	FROM pemeriksaan_ralan pr
 	LEFT JOIN dokter d ON pr.nip = d.kd_dokter
 	LEFT JOIN petugas p ON pr.nip = p.nip
-	WHERE pr.no_rawat = ?
+	WHERE pr.no_rawat IN (%s)
 `
 
 const selectPemeriksaanRanap = `
 	SELECT 
 		pr.no_rawat,
-		DATE_FORMAT(pr.tgl_perawatan, '%Y-%m-%d') AS tanggal_pemeriksaan,
+		DATE_FORMAT(pr.tgl_perawatan, '%%Y-%%m-%%d') AS tanggal_pemeriksaan,
 		pr.jam_rawat AS jam_pemeriksaan,
 		pr.suhu_tubuh,
 		pr.tensi,
@@ -82,76 +122,124 @@ const selectPemeriksaanRanap = `
 	FROM pemeriksaan_ranap pr
 	LEFT JOIN dokter d ON pr.nip = d.kd_dokter
 	LEFT JOIN petugas p ON pr.nip = p.nip
-	WHERE pr.no_rawat = ?
+	WHERE pr.no_rawat IN (%s)
 `
 
-func (r *repository) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]Pemeriksaan, error) {
+func createInPlaceholders(count int) string {
+	if count <= 0 {
+		return "?"
+	}
+	placeholders := make([]string, count)
+	for i := range count {
+		placeholders[i] = "?"
+	}
+	return strings.Join(placeholders, ",")
+}
+
+func buildBaseQuery(listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) (string, []any) {
+	var tglAwal, tglAkhir string
+	useTglFilter := false
+
+	tglParts := strings.Split(filter.Tanggal, ",")
+	if len(tglParts) == 2 {
+		tglAwal = strings.TrimSpace(tglParts[0])
+		tglAkhir = strings.TrimSpace(tglParts[1])
+		useTglFilter = true
+	}
+
+	inClause := createInPlaceholders(len(listNoRawat))
+	sqlRalan := fmt.Sprintf(selectPemeriksaanRalan, inClause)
+	sqlRanap := fmt.Sprintf(selectPemeriksaanRanap, inClause)
+
+	queryWithFilter := func(baseSQL string, args *[]any) string {
+		q := baseSQL
+		for _, nr := range listNoRawat {
+			*args = append(*args, nr)
+		}
+		if useTglFilter {
+			q += " AND pr.tgl_perawatan BETWEEN ? AND ?"
+			*args = append(*args, tglAwal, tglAkhir)
+		}
+		return q
+	}
+
+	var args []any
+	var baseQuery string
+
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		baseQuery = queryWithFilter(sqlRalan, &args)
+	case shared.StatusLanjutRawatInap:
+		baseQuery = queryWithFilter(sqlRanap, &args)
+	default:
+		q1 := queryWithFilter(sqlRalan, &args)
+		q2 := queryWithFilter(sqlRanap, &args)
+		baseQuery = fmt.Sprintf("%s UNION ALL %s", q1, q2)
+	}
+
+	return baseQuery, args
+}
+
+func (r *repository) DaftarPemeriksaan(ctx context.Context, listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, int, error) {
+	baseQuery, baseArgs := buildBaseQuery(listNoRawat, statusLanjut, filter)
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS t", baseQuery)
+	var totalData int
+	if err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData); err != nil || totalData == 0 {
+		return []Pemeriksaan{}, 0, err
+	}
+
+	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t ORDER BY t.tanggal_pemeriksaan DESC, t.jam_pemeriksaan DESC LIMIT ? OFFSET ?", baseQuery)
+
+	dataArgs := append(baseArgs, filter.Batas, filter.Offset())
+
+	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("gagal query data pemeriksaan: %w", err)
+	}
+	defer rows.Close()
+
+	var daftarPemeriksaan []Pemeriksaan
+	for rows.Next() {
+		pemeriksaan, err := scanPemeriksaan(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("gagal scan data pemeriksaan: %w", err)
+		}
+		daftarPemeriksaan = append(daftarPemeriksaan, *pemeriksaan)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error saat iterasi data pemeriksaan: %w", err)
+	}
+
+	return daftarPemeriksaan, totalData, nil
+}
+
+func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error) {
 	var query string
 	var args []interface{}
 
 	switch statusLanjut {
 	case shared.StatusLanjutRawatJalan:
-		query = selectPemeriksaanRalan + " ORDER BY pr.tgl_perawatan DESC, pr.jam_rawat DESC"
-		args = append(args, noRawat)
+		query = selectPemeriksaanRalan + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
+		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
+
 	case shared.StatusLanjutRawatInap:
-		query = selectPemeriksaanRanap + " ORDER BY pr.tgl_perawatan DESC, pr.jam_rawat DESC"
-		args = append(args, noRawat)
+		query = selectPemeriksaanRanap + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
+		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
+
 	default:
-		query = fmt.Sprintf(`
-			SELECT * FROM (
-				%s 
-				UNION ALL 
-				%s
-			) AS t 
-			ORDER BY t.tanggal_pemeriksaan DESC, t.jam_pemeriksaan DESC
-		`, selectPemeriksaanRalan, selectPemeriksaanRanap)
-		args = append(args, noRawat, noRawat)
+		return nil, fmt.Errorf("status lanjut tidak valid (Ralan atau Ranap)")
 	}
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
+	pemeriksaan, err := scanPemeriksaan(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, fmt.Errorf("gagal query daftar pemeriksaan: %w", err)
+		return nil, fmt.Errorf("gagal query detail pemeriksaan: %w", err)
 	}
-	defer rows.Close()
-	var daftarPemeriksaan []Pemeriksaan
-	for rows.Next() {
-		var p Pemeriksaan
-		err := rows.Scan(
-			&p.NoRawat,
-			&p.TanggalPemeriksaan,
-			&p.JamPemeriksaan,
-			&p.SuhuTubuh,
-			&p.Tensi,
-			&p.Nadi,
-			&p.Respirasi,
-			&p.TinggiBadan,
-			&p.BeratBadan,
-			&p.SpO2,
-			&p.Gcs,
-			&p.Kesadaran,
-			&p.Keluhan,
-			&p.Pemeriksaan,
-			&p.Alergi,
-			&p.LingkarPerut,
-			&p.RencanaTindakLanjut,
-			&p.Penilaian,
-			&p.Instruksi,
-			&p.Evaluasi,
-			&p.KodeDokterPetugas,
-			&p.NamaDokterPetugas,
-			&p.StatusLanjut,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("gagal scan data pemeriksaan: %w", err)
-		}
-		daftarPemeriksaan = append(daftarPemeriksaan, p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterasi data pemeriksaan: %w", err)
-	}
-	return daftarPemeriksaan, nil
-}
 
-func (r *repository) DetailPemeriksaan(ctx context.Context, noRawat string, tanggalPemeriksaan string, jamPemeriksaan string) (*Pemeriksaan, error) {
-	return nil, nil
+	return pemeriksaan, nil
 }

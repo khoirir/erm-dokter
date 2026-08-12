@@ -10,8 +10,9 @@ import (
 )
 
 type mockRepository struct {
-	daftarAntreanFunc   func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error)
-	detailKunjunganFunc func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error)
+	daftarAntreanFunc          func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error)
+	detailKunjunganFunc        func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error)
+	riwayatKunjunganPasienFunc func(ctx context.Context, noRM string) ([]rawatjalan.KunjunganRawatJalan, error)
 }
 
 func (m *mockRepository) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
@@ -26,6 +27,13 @@ func (m *mockRepository) DetailKunjungan(ctx context.Context, noRawat string, ko
 		return m.detailKunjunganFunc(ctx, noRawat, kodeDokter)
 	}
 	return nil, nil
+}
+
+func (m *mockRepository) RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]rawatjalan.KunjunganRawatJalan, error) {
+	if m.riwayatKunjunganPasienFunc != nil {
+		return m.riwayatKunjunganPasienFunc(ctx, noRM)
+	}
+	return []rawatjalan.KunjunganRawatJalan{}, nil
 }
 
 func TestDaftarAntreanDokter_ValidationError(t *testing.T) {

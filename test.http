@@ -37,8 +37,7 @@ Content-Type: application/json
 {
   "tanggal": "2026-04-22,2026-04-22",
   "halaman": 1,
-  "batas": 50,
-  "status_lanjut": "Ranap"
+  "batas": 50
 }
 
 ### 5.1 RAWAT JALAN - Uji Coba Multi-Error Validasi Filter (Harus Respon 400 dengan Map Error)
@@ -56,7 +55,7 @@ Content-Type: application/json
 }
 
 ### 6. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
-GET {{baseUrl}}/api/v1/rawat-jalan/detail/i8C-I9_VP-6V8cy3_DMhRJFxXUhwWBlcY74jtG6eZZ57Nf1VKH3wVuNemOCK
+GET {{baseUrl}}/api/v1/rawat-jalan/pUYIoZMNAKcIgdZUG9b5kyeu2Oq3Shnn11APEnbmtbmtcQYqZckh_vCReGa9
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -67,17 +66,39 @@ Accept: application/json
 
 ### 8. PEMERIKSAAN - Daftar Pemeriksaan Pasien (Semua / Default Ralan + Ranap)
 # Parameter `id` diisi oleh ID terenkripsi kunjungan pasien (no_rawat)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua
+POST {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 8.1 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Jalan / Ralan saja)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ralan
+POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 8.2 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Inap / Ranap saja)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap
+POST {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
+
+### 8.3 PEMERIKSAAN - Daftar Riwayat Pemeriksaan Lintas Kunjungan Pasien by IdPasien (No Rekam Medis Enkripsi)
+POST {{baseUrl}}/api/v1/pemeriksaan/pasien/hpWPyOclOMey0g-5fuSE0kDzQqRkVi7ZohYpv-KsLqsia2Yl/Semua
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+    "tanggal": "2026-01-01, 2026-04-30",
+    "halaman": 1,
+    "batas": 20
+}
+
+# Parameter `id` diisi oleh ID terenkripsi item pemeriksaan (NoRawat~Tgl~Jam) yang didapat dari daftar pemeriksaan
+GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9.1 PEMERIKSAAN - Detail 1 Item Pemeriksaan Pasien (Ranap)
+GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
 

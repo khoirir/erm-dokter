@@ -25,7 +25,7 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/rawat-jalan/referensi-filter", authMiddleware(timeoutMiddleware(h.GetReferensiFilter)))
 	mux.HandleFunc("POST /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
-	mux.HandleFunc("GET /api/v1/rawat-jalan/detail/{id}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
 }
 
 func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
@@ -48,23 +48,27 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i := range daftarAntrean {
-		encrypted, err := crypto.Encrypt(daftarAntrean[i].NoRawat, h.encryptionKey)
-		if err == nil {
-			daftarAntrean[i].Id = encrypted
+		kunjungan := &daftarAntrean[i]
+		if encryptedId, err := crypto.Encrypt(kunjungan.NoRawat, h.encryptionKey); err == nil {
+			kunjungan.Id = encryptedId
 		}
+		if encryptedIdPasien, err := crypto.Encrypt(kunjungan.NoRekamMedis, h.encryptionKey); err == nil {
+			kunjungan.IdPasien = encryptedIdPasien
+		}
+		kunjungan.NoRekamMedis = kunjungan.FormatNoRekamMedis()
 	}
 
 	response.SuccessWithMeta(w, "Berhasil mengambil daftar antrean dokter", daftarAntrean, meta)
 }
 
 func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
+	idKunjungan := r.PathValue("id_kunjungan")
+	if idKunjungan == "" {
 		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak ditemukan", nil)
 		return
 	}
 
-	noRawat, err := crypto.Decrypt(id, h.encryptionKey)
+	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak valid atau kadaluarsa", nil)
 		return
@@ -86,7 +90,11 @@ func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusNotFound, "Detail kunjungan pasien tidak ditemukan", nil)
 		return
 	}
-	kunjungan.Id = id
+	kunjungan.Id = idKunjungan
+	if encryptedIdPasien, err := crypto.Encrypt(kunjungan.NoRekamMedis, h.encryptionKey); err == nil {
+		kunjungan.IdPasien = encryptedIdPasien
+	}
+	kunjungan.NoRekamMedis = kunjungan.FormatNoRekamMedis()
 
 	response.Success(w, "Berhasil mengambil detail kunjungan pasien", kunjungan)
 }

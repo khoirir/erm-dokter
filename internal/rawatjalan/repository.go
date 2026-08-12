@@ -11,6 +11,7 @@ import (
 type Repository interface {
 	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
+	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
 }
 
 type repository struct {
@@ -131,16 +132,17 @@ func scanKunjungan(s scanner) (*KunjunganRawatJalan, error) {
 	}
 	k.JenisKelamin = k.FormatJenisKelamin()
 	k.Umur = k.FormatUmur()
-	k.NoRekamMedis = k.FormatNoRekamMedis()
 	return &k, nil
 }
 
-func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAntreanDokter) (string, []interface{}) {
+func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAntreanDokter) (string, []any) {
 	var conditions []string
-	var args []interface{}
+	var args []any
 
-	conditions = append(conditions, dokterCol+" = ?")
-	args = append(args, kodeDokter)
+	if kodeDokter != "" {
+		conditions = append(conditions, dokterCol+" = ?")
+		args = append(args, kodeDokter)
+	}
 
 	if filter.Tanggal != "" {
 		tglParts := strings.Split(filter.Tanggal, ",")
@@ -171,16 +173,20 @@ func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAnt
 		args = append(args, keywordPattern, keywordPattern, keywordPattern)
 	}
 
+	if len(conditions) == 0 {
+		return "", args
+	}
+
 	return " WHERE " + strings.Join(conditions, " AND "), args
 }
 
-func buildBaseQuery(kodeDokter string, filter FilterAntreanDokter) (string, []interface{}) {
+func buildBaseQuery(kodeDokter string, filter FilterAntreanDokter) (string, []any) {
 	switch filter.JenisAntrean {
-	case string(JenisAntreanTidakRujukan):
+	case JenisAntreanTidakRujukan:
 		where, args := buildBranchConditions("r.kd_dokter", kodeDokter, filter)
 		return selectKunjunganBukanRujukan + where, args
 
-	case string(JenisAntreanRujukan):
+	case JenisAntreanRujukan:
 		where, args := buildBranchConditions("rip.kd_dokter", kodeDokter, filter)
 		return selectKunjunganRujukan + where, args
 
@@ -203,16 +209,9 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS t", baseQuery)
 
 	var totalData int
-	err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData)
-	if err != nil {
-		return nil, 0, fmt.Errorf("gagal menghitung total antrean: %w", err)
-	}
-
-	if totalData == 0 {
+	if err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData); err != nil || totalData == 0 {
 		return []KunjunganRawatJalan{}, 0, nil
 	}
-
-	offset := (filter.Halaman - 1) * filter.Batas
 
 	builder, exists := orderByMapping[filter.OrderBy]
 	if !exists {
@@ -222,9 +221,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 
 	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t %s LIMIT ? OFFSET ?", baseQuery, orderClause)
 
-	dataArgs := make([]interface{}, len(baseArgs))
-	copy(dataArgs, baseArgs)
-	dataArgs = append(dataArgs, filter.Batas, offset)
+	dataArgs := append(baseArgs, filter.Batas, filter.Offset())
 
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {
@@ -268,4 +265,37 @@ func (r *repository) DetailKunjungan(ctx context.Context, noRawat string, kodeDo
 		return nil, fmt.Errorf("gagal query detail kunjungan: %w", err)
 	}
 	return kunjungan, nil
+}
+
+func (r *repository) RiwayatKunjunganPasien(ctx context.Context, noRekamMedis string) ([]KunjunganRawatJalan, error) {
+	baseQuery, baseArgs := buildBaseQuery("", FilterAntreanDokter{})
+
+	query := fmt.Sprintf(`
+		SELECT * 
+		FROM (%s) AS t 
+		WHERE t.status_pemeriksaan <> 'Batal' AND t.no_rekam_medis = ? 
+		ORDER BY t.tanggal_registrasi DESC, t.jam_registrasi DESC
+	`, baseQuery)
+
+	args := append(baseArgs, noRekamMedis)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("gagal query riwayat kunjungan pasien: %w", err)
+	}
+	defer rows.Close()
+
+	var listKunjungan []KunjunganRawatJalan
+	for rows.Next() {
+		kunjungan, err := scanKunjungan(rows)
+		if err != nil {
+			return nil, fmt.Errorf("gagal scan riwayat kunjungan: %w", err)
+		}
+		listKunjungan = append(listKunjungan, *kunjungan)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterasi riwayat kunjungan: %w", err)
+	}
+
+	return listKunjungan, nil
 }

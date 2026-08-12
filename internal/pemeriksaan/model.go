@@ -1,11 +1,52 @@
 package pemeriksaan
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+	// "time"
+
 	"erm-dokter/internal/shared"
+	"erm-dokter/internal/shared/apperror"
 )
+
+type IdPemeriksaan struct {
+	NoRawat            string
+	TanggalPemeriksaan string
+	JamPemeriksaan     string
+}
+
+func (id IdPemeriksaan) CompositeKey() string {
+	return fmt.Sprintf("%s~%s~%s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
+}
+
+func ParseIdPemeriksaan(decryptedKey string) (IdPemeriksaan, error) {
+	parts := strings.Split(decryptedKey, "~")
+	if len(parts) != 3 {
+		return IdPemeriksaan{}, errors.New("format ID pemeriksaan tidak valid")
+	}
+	return IdPemeriksaan{
+		NoRawat:            parts[0],
+		TanggalPemeriksaan: parts[1],
+		JamPemeriksaan:     parts[2],
+	}, nil
+}
+
+func (p *Pemeriksaan) ToIdPemeriksaan() IdPemeriksaan {
+	return IdPemeriksaan{
+		NoRawat:            p.NoRawat,
+		TanggalPemeriksaan: p.TanggalPemeriksaan,
+		JamPemeriksaan:     p.JamPemeriksaan,
+	}
+}
+
+func (p *Pemeriksaan) CompositeKey() string {
+	return p.ToIdPemeriksaan().CompositeKey()
+}
 
 type Pemeriksaan struct {
 	Id                  string              `json:"id"`
+	IdKunjungan         string              `json:"id_kunjungan"`
 	NoRawat             string              `json:"no_rawat"`
 	TanggalPemeriksaan  string              `json:"tanggal_pemeriksaan"`
 	JamPemeriksaan      string              `json:"jam_pemeriksaan"`
@@ -29,6 +70,43 @@ type Pemeriksaan struct {
 	KodeDokterPetugas   string              `json:"kode_dokter_petugas"`
 	NamaDokterPetugas   string              `json:"nama_dokter_petugas"`
 	StatusLanjut        shared.StatusLanjut `json:"status_lanjut"`
+}
+
+type FilterDaftarPemeriksaan struct {
+	Tanggal string `json:"tanggal,omitempty"`
+	Halaman int    `json:"halaman,omitempty"`
+	Batas   int    `json:"batas,omitempty"`
+}
+
+func (f *FilterDaftarPemeriksaan) Sanitize() {
+	// if strings.TrimSpace(f.Tanggal) == "" {
+	// 	today := time.Now().Format("2006-01-02")
+	// 	f.Tanggal = today + "," + today
+	// }
+	if f.Halaman <= 0 {
+		f.Halaman = 1
+	}
+	if f.Batas <= 0 {
+		f.Batas = 20
+	} else if f.Batas > 100 {
+		f.Batas = 100
+	}
+}
+
+func (f FilterDaftarPemeriksaan) Offset() int {
+	return (f.Halaman - 1) * f.Batas
+}
+
+func (f *FilterDaftarPemeriksaan) Validate() apperror.ValidationError {
+	f.Sanitize()
+	errs := make(apperror.ValidationError)
+	if f.Tanggal != "" {
+		shared.ValidasiRentangTanggal(f.Tanggal, errs)
+	}
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
 }
 
 type SimpanPemeriksaanRequest struct {

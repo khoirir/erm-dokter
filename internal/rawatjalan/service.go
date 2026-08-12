@@ -10,7 +10,7 @@ import (
 )
 
 type Service interface {
-	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, MetaPaginasi, error)
+	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.MetaPaginasi, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan
 }
@@ -27,25 +27,25 @@ func NewService(repo Repository, log *logger.Logger) Service {
 	}
 }
 
-func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, MetaPaginasi, error) {
+func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.MetaPaginasi, error) {
 	if errs := filter.Validate(); errs != nil {
 		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, MetaPaginasi{}, errs
+		return nil, shared.MetaPaginasi{}, errs
 	}
 
 	if len(filter.KataKunci) > 0 && len(filter.KataKunci) < 3 {
-		return nil, MetaPaginasi{}, apperror.NewBusinessError("kata kunci pencarian minimal 3 karakter")
+		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("kata kunci pencarian minimal 3 karakter")
 	}
 
 	daftarAntrean, totalData, err := s.repo.DaftarAntreanDokter(ctx, kodeDokter, filter)
 	if err != nil {
 		s.log.Error("Gagal query antrean dokter %s: %v", kodeDokter, err)
-		return nil, MetaPaginasi{}, err
+		return nil, shared.MetaPaginasi{}, err
 	}
 
 	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Batas)))
 
-	meta := MetaPaginasi{
+	meta := shared.MetaPaginasi{
 		TotalData:    totalData,
 		TotalHalaman: totalHalaman,
 		HalamanAktif: filter.Halaman,
