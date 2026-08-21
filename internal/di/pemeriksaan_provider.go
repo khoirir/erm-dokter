@@ -13,6 +13,6 @@ func providePemeriksaan(db *sql.DB, cfg *config.Config, log *logger.Logger) *pem
 	repo := pemeriksaan.NewRepository(db)
 	rawatJalanRepo := rawatjalan.NewRepository(db)
 	rawatJalanSvc := rawatjalan.NewService(rawatJalanRepo, log)
-	svc := pemeriksaan.NewService(repo, rawatJalanSvc, log)
+	svc := pemeriksaan.NewService(repo, rawatJalanSvc, cfg.MaxEditRekamMedisJam, log)
 	return pemeriksaan.NewHandler(svc, cfg.EncryptionKey)
 }

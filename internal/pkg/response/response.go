@@ -32,6 +32,10 @@ func Success(w http.ResponseWriter, message string, data any) {
 	JSON(w, http.StatusOK, true, message, data, nil, nil)
 }
 
+func Created(w http.ResponseWriter, message string, data any) {
+	JSON(w, http.StatusCreated, true, message, data, nil, nil)
+}
+
 func SuccessWithMeta(w http.ResponseWriter, message string, data any, meta any) {
 	JSON(w, http.StatusOK, true, message, data, meta, nil)
 }

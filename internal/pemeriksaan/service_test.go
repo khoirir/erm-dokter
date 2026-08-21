@@ -72,7 +72,7 @@ func TestGetDaftarKesadaran(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	daftar := svc.GetDaftarKesadaran(context.Background())
 	if len(daftar) != 11 {
@@ -110,7 +110,7 @@ func TestSimpanPemeriksaan_SuccessRalan(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -125,12 +125,18 @@ func TestSimpanPemeriksaan_SuccessRalan(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	res, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 	if !called {
 		t.Error("expected repository SimpanPemeriksaan to be called")
+	}
+	if res == nil {
+		t.Fatal("expected returned Pemeriksaan object, got nil")
+	}
+	if res.NoRawat != "2026/04/22/036934" {
+		t.Errorf("expected NoRawat '2026/04/22/036934', got '%s'", res.NoRawat)
 	}
 }
 
@@ -138,7 +144,7 @@ func TestSimpanPemeriksaan_ValidationError(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	// Missing required fields (no_rawat, keluhan, dll) and invalid kesadaran
 	req := pemeriksaan.SimpanPemeriksaanRequest{
@@ -146,7 +152,7 @@ func TestSimpanPemeriksaan_ValidationError(t *testing.T) {
 		Kesadaran: "KesadaranPalsu",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected validation error, got nil")
 	}
@@ -171,7 +177,7 @@ func TestSimpanPemeriksaan_InvalidStatusLanjut(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -186,7 +192,7 @@ func TestSimpanPemeriksaan_InvalidStatusLanjut(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", "StatusGhoib", req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", "StatusGhoib", req)
 	if err == nil {
 		t.Fatal("expected error for invalid status lanjut, got nil")
 	}
@@ -200,7 +206,7 @@ func TestSimpanPemeriksaan_RepoError(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -215,7 +221,7 @@ func TestSimpanPemeriksaan_RepoError(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected repo error, got nil")
 	}
@@ -225,7 +231,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	baseReq := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -243,7 +249,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	// 1. Non-numeric
 	reqNonNumeric := baseReq
 	reqNonNumeric.SuhuTubuh = "36.A"
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqNonNumeric)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqNonNumeric)
 	if err == nil {
 		t.Fatal("expected error for non-numeric suhu tubuh, got nil")
 	}
@@ -251,7 +257,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	// 2. Terlalu rendah (< 25)
 	reqTooLow := baseReq
 	reqTooLow.SuhuTubuh = "20.0"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTooLow)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTooLow)
 	if err == nil {
 		t.Fatal("expected error for too low suhu tubuh, got nil")
 	}
@@ -259,7 +265,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	// 3. Terlalu tinggi (> 45)
 	reqTooHigh := baseReq
 	reqTooHigh.SuhuTubuh = "48.5"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTooHigh)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTooHigh)
 	if err == nil {
 		t.Fatal("expected error for too high suhu tubuh, got nil")
 	}
@@ -267,7 +273,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	// 4. Valid dengan koma (otomatis diubah ke titik oleh Sanitize)
 	reqValidComma := baseReq
 	reqValidComma.SuhuTubuh = "36,8"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqValidComma)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqValidComma)
 	if err != nil {
 		t.Fatalf("expected nil error for valid suhu tubuh with comma, got %v", err)
 	}
@@ -277,7 +283,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	baseReq := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -295,7 +301,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 1. Tensi format salah (tanpa slash)
 	reqTensiNoSlash := baseReq
 	reqTensiNoSlash.Tensi = "12080"
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiNoSlash)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiNoSlash)
 	if err == nil {
 		t.Fatal("expected error for tensi without slash, got nil")
 	}
@@ -303,7 +309,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 2. Tensi sistolik <= diastolik
 	reqTensiInvalid := baseReq
 	reqTensiInvalid.Tensi = "80/120"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiInvalid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiInvalid)
 	if err == nil {
 		t.Fatal("expected error for sistolik <= diastolik, got nil")
 	}
@@ -311,7 +317,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 3. Tensi valid
 	reqTensiValid := baseReq
 	reqTensiValid.Tensi = "120/80"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiValid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTensiValid)
 	if err != nil {
 		t.Fatalf("expected nil error for valid tensi, got %v", err)
 	}
@@ -319,7 +325,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 4. Nadi di luar rentang
 	reqNadiInvalid := baseReq
 	reqNadiInvalid.Nadi = "400"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqNadiInvalid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqNadiInvalid)
 	if err == nil {
 		t.Fatal("expected error for nadi > 300, got nil")
 	}
@@ -327,7 +333,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 5. Respirasi di luar rentang
 	reqRespInvalid := baseReq
 	reqRespInvalid.Respirasi = "150"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqRespInvalid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqRespInvalid)
 	if err == nil {
 		t.Fatal("expected error for respirasi > 100, got nil")
 	}
@@ -335,7 +341,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 6. Tinggi badan di luar rentang
 	reqTBInvalid := baseReq
 	reqTBInvalid.TinggiBadan = "350"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTBInvalid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqTBInvalid)
 	if err == nil {
 		t.Fatal("expected error for tinggi badan > 250, got nil")
 	}
@@ -343,7 +349,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 7. Berat badan valid dengan koma (Sanitize)
 	reqBBValid := baseReq
 	reqBBValid.BeratBadan = "65,5"
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqBBValid)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqBBValid)
 	if err != nil {
 		t.Fatalf("expected nil error for valid berat badan, got %v", err)
 	}
@@ -353,7 +359,7 @@ func TestSimpanPemeriksaan_WaktuMasaDepanValidation(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	baseReq := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -372,7 +378,7 @@ func TestSimpanPemeriksaan_WaktuMasaDepanValidation(t *testing.T) {
 	reqFutureDate.TanggalPemeriksaan = besok.Format("2006-01-02")
 	reqFutureDate.JamPemeriksaan = "10:00:00"
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqFutureDate)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqFutureDate)
 	if err == nil {
 		t.Fatal("expected error for future examination date, got nil")
 	}
@@ -391,7 +397,7 @@ func TestSimpanPemeriksaan_WaktuMasaDepanValidation(t *testing.T) {
 	reqFutureTime.TanggalPemeriksaan = nanti.Format("2006-01-02")
 	reqFutureTime.JamPemeriksaan = nanti.Format("15:04:05")
 
-	err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqFutureTime)
+	_, err = svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, reqFutureTime)
 	if err == nil {
 		t.Fatal("expected error for future examination time today, got nil")
 	}
@@ -406,7 +412,7 @@ func TestSimpanPemeriksaan_WaktuSebelumRegistrasi(t *testing.T) {
 		},
 	}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -421,7 +427,7 @@ func TestSimpanPemeriksaan_WaktuSebelumRegistrasi(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected error when examination time is before registration time, got nil")
 	}
@@ -444,7 +450,7 @@ func TestSimpanPemeriksaan_RegistrasiNotFound(t *testing.T) {
 		},
 	}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -459,7 +465,7 @@ func TestSimpanPemeriksaan_RegistrasiNotFound(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected NotFoundError when registration not found, got nil")
 	}
@@ -473,7 +479,7 @@ func TestSimpanPemeriksaan_DuplicateEntry(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	req := pemeriksaan.SimpanPemeriksaanRequest{
 		NoRawat:             "2026/04/22/036934",
@@ -488,7 +494,7 @@ func TestSimpanPemeriksaan_DuplicateEntry(t *testing.T) {
 		Evaluasi:            "Stabil",
 	}
 
-	err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	_, err := svc.SimpanPemeriksaan(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected validation error for duplicate entry, got nil")
 	}
@@ -505,12 +511,13 @@ func TestSimpanPemeriksaan_DuplicateEntry(t *testing.T) {
 
 func TestHapusPemeriksaan_Success(t *testing.T) {
 	hapusCalled := false
+	now := time.Now()
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
 				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: "2026-04-23",
-				JamPemeriksaan:     "12:10:10",
+				TanggalPemeriksaan: now.Format("2006-01-02"),
+				JamPemeriksaan:     now.Format("15:04:05"),
 				KodeDokterPetugas:  "DK001",
 				NamaDokterPetugas:  "dr. Handi",
 			}, nil
@@ -522,12 +529,12 @@ func TestHapusPemeriksaan_Success(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	id := pemeriksaan.IdPemeriksaan{
 		NoRawat:            "2026/04/22/036934",
-		TanggalPemeriksaan: "2026-04-23",
-		JamPemeriksaan:     "12:10:10",
+		TanggalPemeriksaan: now.Format("2006-01-02"),
+		JamPemeriksaan:     now.Format("15:04:05"),
 	}
 
 	err := svc.HapusPemeriksaan(context.Background(), "DK001", id, shared.StatusLanjutRawatJalan)
@@ -540,12 +547,13 @@ func TestHapusPemeriksaan_Success(t *testing.T) {
 }
 
 func TestHapusPemeriksaan_ForbiddenDifferentDoctor(t *testing.T) {
+	now := time.Now()
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
 				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: "2026-04-23",
-				JamPemeriksaan:     "12:10:10",
+				TanggalPemeriksaan: now.Format("2006-01-02"),
+				JamPemeriksaan:     now.Format("15:04:05"),
 				KodeDokterPetugas:  "DK999", // Dokter lain
 				NamaDokterPetugas:  "dr. Lain",
 			}, nil
@@ -553,17 +561,56 @@ func TestHapusPemeriksaan_ForbiddenDifferentDoctor(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	id := pemeriksaan.IdPemeriksaan{
 		NoRawat:            "2026/04/22/036934",
-		TanggalPemeriksaan: "2026-04-23",
-		JamPemeriksaan:     "12:10:10",
+		TanggalPemeriksaan: now.Format("2006-01-02"),
+		JamPemeriksaan:     now.Format("15:04:05"),
 	}
 
 	err := svc.HapusPemeriksaan(context.Background(), "DK001", id, shared.StatusLanjutRawatJalan)
 	if err == nil {
 		t.Fatal("expected ForbiddenError when doctor does not match creator, got nil")
+	}
+
+	forbiddenErr, ok := err.(*apperror.ForbiddenError)
+	if !ok {
+		t.Fatalf("expected *apperror.ForbiddenError, got %T", err)
+	}
+
+	if forbiddenErr.Message == "" {
+		t.Error("expected non-empty forbidden error message")
+	}
+}
+
+func TestHapusPemeriksaan_MelebihiBatasWaktu(t *testing.T) {
+	// Pemeriksaan 50 jam yang lalu (> 48 jam)
+	oldTime := time.Now().Add(-50 * time.Hour)
+	repo := &mockRepository{
+		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
+			return &pemeriksaan.Pemeriksaan{
+				NoRawat:            "2026/04/22/036934",
+				TanggalPemeriksaan: oldTime.Format("2006-01-02"),
+				JamPemeriksaan:     oldTime.Format("15:04:05"),
+				KodeDokterPetugas:  "DK001",
+				NamaDokterPetugas:  "dr. Handi",
+			}, nil
+		},
+	}
+	rjRepo := &mockRawatJalanService{}
+	log := logger.New()
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
+
+	id := pemeriksaan.IdPemeriksaan{
+		NoRawat:            "2026/04/22/036934",
+		TanggalPemeriksaan: oldTime.Format("2006-01-02"),
+		JamPemeriksaan:     oldTime.Format("15:04:05"),
+	}
+
+	err := svc.HapusPemeriksaan(context.Background(), "DK001", id, shared.StatusLanjutRawatJalan)
+	if err == nil {
+		t.Fatal("expected ForbiddenError when examination is older than 48 hours, got nil")
 	}
 
 	forbiddenErr, ok := err.(*apperror.ForbiddenError)
@@ -584,7 +631,7 @@ func TestHapusPemeriksaan_NotFound(t *testing.T) {
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	id := pemeriksaan.IdPemeriksaan{
 		NoRawat:            "2026/04/22/036934",
@@ -602,7 +649,7 @@ func TestHapusPemeriksaan_InvalidStatusLanjut(t *testing.T) {
 	repo := &mockRepository{}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
-	svc := pemeriksaan.NewService(repo, rjRepo, log)
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
 
 	id := pemeriksaan.IdPemeriksaan{
 		NoRawat:            "2026/04/22/036934",

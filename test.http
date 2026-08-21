@@ -113,11 +113,11 @@ Content-Type: application/json
 
 {
   "no_rawat": "2026/04/22/036934",
-  "tanggal_pemeriksaan": "2026-04-23",
-  "jam_pemeriksaan": "14:05:00",
+  "tanggal_pemeriksaan": "2026-08-21",
+  "jam_pemeriksaan": "14:50:00",
   "suhu_tubuh": "37.0",
   "tensi": "110/70",
-  "nadi": "78",
+  "nadi": "79",
   "respirasi": "18",
   "tinggi_badan": "170",
   "berat_badan": "65",
@@ -169,7 +169,17 @@ Content-Type: application/json
   "evaluasi": "Evaluasi"
 }
 
-### 20. Pemeriksaan - Hapus Pemeriksaan (Ralan)
+### 20. Pemeriksaan - Hapus Pemeriksaan Ralan Hak Akses Ditolak
 DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 21. Pemeriksaan - Hapus Pemeriksaan Ranap > 48 jam
+DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 22. Pemeriksaan - Hapus Sukses
+DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/6yE88oLW3teaG8unUZZt3MKMsneON3fRnFtTgGqW5xxcuKLOjUs623xvtfKoL2ooIYnXN1fGu9FH-KWr9LTZ9zw
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json

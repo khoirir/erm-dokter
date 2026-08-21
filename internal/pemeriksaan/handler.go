@@ -186,12 +186,20 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pemeriksaanService.SimpanPemeriksaan(r.Context(), kodeDokter, shared.StatusLanjut(statusLanjut), req); err != nil {
+	pemeriksaan, err := h.pemeriksaanService.SimpanPemeriksaan(r.Context(), kodeDokter, shared.StatusLanjut(statusLanjut), req)
+	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	response.Success(w, "Berhasil menyimpan data pemeriksaan", nil)
+	if pemeriksaan != nil {
+		if encrypted, err := crypto.Encrypt(pemeriksaan.CompositeKey(), h.encryptionKey); err == nil {
+			pemeriksaan.Id = encrypted
+		}
+		pemeriksaan.IdKunjungan = idKunjungan
+	}
+
+	response.Created(w, "Berhasil menyimpan data pemeriksaan", pemeriksaan)
 }
 
 func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
