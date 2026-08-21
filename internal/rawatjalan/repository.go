@@ -12,6 +12,7 @@ type Repository interface {
 	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
+	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
 }
 
 type repository struct {
@@ -299,3 +300,24 @@ func (r *repository) RiwayatKunjunganPasien(ctx context.Context, noRekamMedis st
 
 	return listKunjungan, nil
 }
+
+const selectWaktuRegistrasi = `
+	SELECT 
+		DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
+		jam_reg
+	FROM reg_periksa
+	WHERE no_rawat = ?
+`
+
+func (r *repository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
+	var tglReg, jamReg string
+	err := r.db.QueryRowContext(ctx, selectWaktuRegistrasi, noRawat).Scan(&tglReg, &jamReg)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, fmt.Errorf("gagal query waktu registrasi: %w", err)
+	}
+	return tglReg, jamReg, true, nil
+}
+

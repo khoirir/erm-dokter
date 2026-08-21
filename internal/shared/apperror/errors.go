@@ -34,11 +34,37 @@ func (v ValidationError) Error() string {
 type UnauthorizedError struct {
 	Message string
 }
+
 func (e *UnauthorizedError) Error() string {
 	return e.Message
 }
+
 func NewUnauthorizedError(msg string) error {
 	return &UnauthorizedError{Message: msg}
+}
+
+type NotFoundError struct {
+	Message string
+}
+
+func (e *NotFoundError) Error() string {
+	return e.Message
+}
+
+func NewNotFoundError(msg string) error {
+	return &NotFoundError{Message: msg}
+}
+
+type ForbiddenError struct {
+	Message string
+}
+
+func (e *ForbiddenError) Error() string {
+	return e.Message
+}
+
+func NewForbiddenError(msg string) error {
+	return &ForbiddenError{Message: msg}
 }
 
 var log *logger.Logger
@@ -51,6 +77,8 @@ func HandleError(w http.ResponseWriter, err error) {
 	var validationErr ValidationError
 	var businessErr *BusinessError
 	var unauthorizedErr *UnauthorizedError
+	var notFoundErr *NotFoundError
+	var forbiddenErr *ForbiddenError
 
 	switch {
 	case errors.As(err, &validationErr):
@@ -59,6 +87,10 @@ func HandleError(w http.ResponseWriter, err error) {
 		response.Error(w, http.StatusBadRequest, businessErr.Message, nil)
 	case errors.As(err, &unauthorizedErr):
 		response.Error(w, http.StatusUnauthorized, unauthorizedErr.Message, nil)
+	case errors.As(err, &forbiddenErr):
+		response.Error(w, http.StatusForbidden, forbiddenErr.Message, nil)
+	case errors.As(err, &notFoundErr):
+		response.Error(w, http.StatusNotFound, notFoundErr.Message, nil)
 	default:
 		if log != nil {
 			log.Error("Internal server error: %v", err)

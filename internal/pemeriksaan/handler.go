@@ -3,7 +3,9 @@ package pemeriksaan
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
+	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/shared"
@@ -23,9 +25,12 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("POST /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaan)))
-	mux.HandleFunc("POST /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByPasien)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/referensi-kesadaran", authMiddleware(timeoutMiddleware(h.GetDaftarKesadaran)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaan)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByPasien)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.DetailPemeriksaan)))
+	mux.HandleFunc("POST /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPemeriksaan)))
+	mux.HandleFunc("DELETE /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.HapusPemeriksaan)))
 }
 
 func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
@@ -38,10 +43,14 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var filter FilterDaftarPemeriksaan
-	if err := json.NewDecoder(r.Body).Decode(&filter); err != nil && err.Error() != "EOF" {
-		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
-		return
+	q := r.URL.Query()
+	halaman, _ := strconv.Atoi(q.Get("halaman"))
+	batas, _ := strconv.Atoi(q.Get("batas"))
+
+	filter := FilterDaftarPemeriksaan{
+		Tanggal: q.Get("tanggal"),
+		Halaman: halaman,
+		Batas:   batas,
 	}
 
 	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaan(r.Context(), noRawat, shared.StatusLanjut(statusLanjut), filter)
@@ -71,10 +80,14 @@ func (h *Handler) DaftarPemeriksaanByPasien(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var filter FilterDaftarPemeriksaan
-	if err := json.NewDecoder(r.Body).Decode(&filter); err != nil && err.Error() != "EOF" {
-		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
-		return
+	q := r.URL.Query()
+	halaman, _ := strconv.Atoi(q.Get("halaman"))
+	batas, _ := strconv.Atoi(q.Get("batas"))
+
+	filter := FilterDaftarPemeriksaan{
+		Tanggal: q.Get("tanggal"),
+		Halaman: halaman,
+		Batas:   batas,
 	}
 
 	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaanByRM(r.Context(), noRekamMedis, shared.StatusLanjut(statusLanjut), filter)
@@ -103,24 +116,24 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak valid atau kadaluarsa", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
 		return
 	}
 
 	decrypted, err := crypto.Decrypt(encryptedID, h.encryptionKey)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "ID pemeriksaan tidak valid atau kadaluarsa", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
 		return
 	}
 
 	idPemeriksaan, err := ParseIdPemeriksaan(decrypted)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error(), nil)
+		apperror.HandleError(w, apperror.NewBusinessError(err.Error()))
 		return
 	}
 
 	if idPemeriksaan.NoRawat != noRawat {
-		response.Error(w, http.StatusBadRequest, "ID pemeriksaan tidak cocok dengan ID kunjungan", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak cocok dengan ID kunjungan"))
 		return
 	}
 
@@ -131,7 +144,7 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pemeriksaan == nil {
-		response.Error(w, http.StatusNotFound, "Detail pemeriksaan tidak ditemukan", nil)
+		apperror.HandleError(w, apperror.NewNotFoundError("Detail pemeriksaan tidak ditemukan"))
 		return
 	}
 
@@ -140,3 +153,88 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, "Berhasil mengambil detail pemeriksaan", pemeriksaan)
 }
+
+func (h *Handler) GetDaftarKesadaran(w http.ResponseWriter, r *http.Request) {
+	daftarKesadaran := h.pemeriksaanService.GetDaftarKesadaran(r.Context())
+	response.Success(w, "Berhasil mengambil daftar kesadaran", daftarKesadaran)
+}
+
+func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
+	idKunjungan := r.PathValue("id_kunjungan")
+	statusLanjut := r.PathValue("status_lanjut")
+
+	noRawatURL, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		return
+	}
+
+	var req SimpanPemeriksaanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		return
+	}
+
+	if req.NoRawat != noRawatURL {
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		return
+	}
+
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	if err := h.pemeriksaanService.SimpanPemeriksaan(r.Context(), kodeDokter, shared.StatusLanjut(statusLanjut), req); err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	response.Success(w, "Berhasil menyimpan data pemeriksaan", nil)
+}
+
+func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
+	idKunjungan := r.PathValue("id_kunjungan")
+	statusLanjut := r.PathValue("status_lanjut")
+	idPemeriksaanEnc := r.PathValue("id_pemeriksaan")
+
+	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		return
+	}
+
+	decryptedIdPem, err := crypto.Decrypt(idPemeriksaanEnc, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
+		return
+	}
+
+	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPem)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format ID pemeriksaan tidak valid"))
+		return
+	}
+
+	if idPemeriksaan.NoRawat != noRawat {
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak cocok dengan ID kunjungan"))
+		return
+	}
+
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	if err := h.pemeriksaanService.HapusPemeriksaan(r.Context(), kodeDokter, idPemeriksaan, shared.StatusLanjut(statusLanjut)); err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	response.Success(w, "Berhasil menghapus data pemeriksaan", nil)
+}
+
+
+

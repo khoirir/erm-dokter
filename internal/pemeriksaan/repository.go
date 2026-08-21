@@ -13,7 +13,8 @@ import (
 type Repository interface {
 	DaftarPemeriksaan(ctx context.Context, listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, int, error)
 	DetailPemeriksaan(ctx context.Context, idPemeriksaan IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
-	// UpdatePemeriksaan(ctx context.Context, noRawat string, pemeriksaan *Pemeriksaan) error
+	SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) error
+	HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error
 }
 
 type repository struct {
@@ -125,6 +126,22 @@ const selectPemeriksaanRanap = `
 	WHERE pr.no_rawat IN (%s)
 `
 
+const insertPemeriksaanRalan = `
+	INSERT INTO pemeriksaan_ralan (
+		no_rawat, tgl_perawatan, jam_rawat, suhu_tubuh, tensi, nadi, respirasi,
+		tinggi, berat, spo2, gcs, kesadaran, keluhan, pemeriksaan, alergi,
+		lingkar_perut, rtl, penilaian, instruksi, evaluasi, nip
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+const insertPemeriksaanRanap = `
+	INSERT INTO pemeriksaan_ranap (
+		no_rawat, tgl_perawatan, jam_rawat, suhu_tubuh, tensi, nadi, respirasi,
+		tinggi, berat, spo2, gcs, kesadaran, keluhan, pemeriksaan, alergi,
+		rtl, penilaian, instruksi, evaluasi, nip
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`
+
 func createInPlaceholders(count int) string {
 	if count <= 0 {
 		return "?"
@@ -221,11 +238,11 @@ func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, st
 
 	switch statusLanjut {
 	case shared.StatusLanjutRawatJalan:
-		query = selectPemeriksaanRalan + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
+		query = fmt.Sprintf(selectPemeriksaanRalan, "?") + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
 		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
 
 	case shared.StatusLanjutRawatInap:
-		query = selectPemeriksaanRanap + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
+		query = fmt.Sprintf(selectPemeriksaanRanap, "?") + " AND pr.tgl_perawatan = ? AND pr.jam_rawat = ? LIMIT 1"
 		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
 
 	default:
@@ -243,3 +260,66 @@ func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, st
 
 	return pemeriksaan, nil
 }
+
+func (r *repository) SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) error {
+	var query string
+	var args []any
+
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		query = insertPemeriksaanRalan
+		args = []any{
+			req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, req.SuhuTubuh, req.Tensi, req.Nadi, req.Respirasi,
+			req.TinggiBadan, req.BeratBadan, req.SpO2, req.Gcs, string(req.Kesadaran), req.Keluhan, req.Pemeriksaan, req.Alergi,
+			req.LingkarPerut, req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi, kodeDokter,
+		}
+	case shared.StatusLanjutRawatInap:
+		query = insertPemeriksaanRanap
+		args = []any{
+			req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, req.SuhuTubuh, req.Tensi, req.Nadi, req.Respirasi,
+			req.TinggiBadan, req.BeratBadan, req.SpO2, req.Gcs, string(req.Kesadaran), req.Keluhan, req.Pemeriksaan, req.Alergi,
+			req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi, kodeDokter,
+		}
+	default:
+		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+	}
+
+	_, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("gagal menyimpan data pemeriksaan: %w", err)
+	}
+
+	return nil
+}
+
+const deletePemeriksaanRalan = `
+	DELETE FROM pemeriksaan_ralan 
+	WHERE no_rawat = ? AND tgl_perawatan = ? AND jam_rawat = ?
+`
+
+const deletePemeriksaanRanap = `
+	DELETE FROM pemeriksaan_ranap 
+	WHERE no_rawat = ? AND tgl_perawatan = ? AND jam_rawat = ?
+`
+
+func (r *repository) HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error {
+	var query string
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		query = deletePemeriksaanRalan
+	case shared.StatusLanjutRawatInap:
+		query = deletePemeriksaanRanap
+	default:
+		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+	}
+
+	_, err := r.db.ExecContext(ctx, query, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
+	if err != nil {
+		return fmt.Errorf("gagal menghapus data pemeriksaan: %w", err)
+	}
+
+	return nil
+}
+
+
+

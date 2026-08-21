@@ -1,12 +1,13 @@
 package rawatjalan
 
 import (
-	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/response"
+	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
 
@@ -24,15 +25,27 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/rawat-jalan/referensi-filter", authMiddleware(timeoutMiddleware(h.GetReferensiFilter)))
-	mux.HandleFunc("POST /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
 }
 
 func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
-	var filter FilterAntreanDokter
-	if err := json.NewDecoder(r.Body).Decode(&filter); err != nil && err.Error() != "EOF" {
-		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
-		return
+	q := r.URL.Query()
+
+	halaman, _ := strconv.Atoi(q.Get("halaman"))
+	batas, _ := strconv.Atoi(q.Get("batas"))
+
+	filter := FilterAntreanDokter{
+		Tanggal:           q.Get("tanggal"),
+		KodePenjamin:      q.Get("kode_penjamin"),
+		StatusPemeriksaan: StatusPemeriksaan(q.Get("status_pemeriksaan")),
+		JenisAntrean:      JenisAntrean(q.Get("jenis_antrean")),
+		StatusLanjut:      shared.StatusLanjut(q.Get("status_lanjut")),
+		KataKunci:         q.Get("keyword"),
+		OrderBy:           q.Get("order_by"),
+		SortOrder:         q.Get("sort_order"),
+		Halaman:           halaman,
+		Batas:             batas,
 	}
 
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
@@ -64,13 +77,13 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	if idKunjungan == "" {
-		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak ditemukan", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak ditemukan"))
 		return
 	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "ID kunjungan tidak valid atau kadaluarsa", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
 		return
 	}
 
@@ -87,7 +100,7 @@ func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if kunjungan == nil {
-		response.Error(w, http.StatusNotFound, "Detail kunjungan pasien tidak ditemukan", nil)
+		apperror.HandleError(w, apperror.NewNotFoundError("Detail kunjungan pasien tidak ditemukan"))
 		return
 	}
 	kunjungan.Id = idKunjungan

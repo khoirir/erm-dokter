@@ -12,6 +12,8 @@ import (
 type Service interface {
 	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.MetaPaginasi, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
+	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
+	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
 	GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan
 }
 
@@ -95,3 +97,28 @@ func (s *service) GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJa
 		},
 	}
 }
+
+func (s *service) RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error) {
+	if noRM == "" {
+		return nil, apperror.NewBusinessError("nomor rekam medis tidak boleh kosong")
+	}
+	listKunjungan, err := s.repo.RiwayatKunjunganPasien(ctx, noRM)
+	if err != nil {
+		s.log.Error("Gagal query riwayat kunjungan pasien %s: %v", noRM, err)
+		return nil, err
+	}
+	return listKunjungan, nil
+}
+
+func (s *service) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
+	if noRawat == "" {
+		return "", "", false, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
+	}
+	tglReg, jamReg, exists, err := s.repo.GetWaktuRegistrasi(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal query waktu registrasi %s: %v", noRawat, err)
+		return "", "", false, err
+	}
+	return tglReg, jamReg, exists, nil
+}
+

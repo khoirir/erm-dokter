@@ -1,10 +1,10 @@
 @baseUrl = http://localhost:8082
 
-### 1. Healthcheck API (Publik - Tanpa Token)
+### 1. Healthcheck
 GET {{baseUrl}}/health
 Accept: application/json
 
-### 2. AUTH - Login Dokter (Otomatis Simpan Token)
+### 2. Auth - Login Dokter
 # @name login
 POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
@@ -14,91 +14,162 @@ Content-Type: application/json
   "password": "1"
 }
 
-### 3. RAWAT JALAN - Uji Coba Tanpa Token (Harus Respon 401 Unauthorized)
-POST {{baseUrl}}/api/v1/rawat-jalan/antrean
-Content-Type: application/json
+### 3. Rawat Jalan - Tanpa Token (401)
+GET {{baseUrl}}/api/v1/rawat-jalan/antrean?halaman=1&batas=10
+Accept: application/json
 
-{
-  "halaman": 1,
-  "batas": 10
-}
-
-### 4. RAWAT JALAN - Opsi Referensi Filter
+### 4. Rawat Jalan - Referensi Filter
 GET {{baseUrl}}/api/v1/rawat-jalan/referensi-filter
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-
-### 5. RAWAT JALAN - Daftar Antrean (Otomatis Ambil Token dari Hasil Login)
-POST {{baseUrl}}/api/v1/rawat-jalan/antrean
+### 5. Rawat Jalan - Daftar Antrean
+GET {{baseUrl}}/api/v1/rawat-jalan/antrean?tanggal=2026-04-22,2026-04-22&halaman=1&batas=20
 Authorization: Bearer {{login.response.body.data.token}}
-Content-Type: application/json
+Accept: application/json
 
-{
-  "tanggal": "2026-04-22,2026-04-22",
-  "halaman": 1,
-  "batas": 50
-}
-
-### 5.1 RAWAT JALAN - Uji Coba Multi-Error Validasi Filter (Harus Respon 400 dengan Map Error)
-POST {{baseUrl}}/api/v1/rawat-jalan/antrean
+### 6. Rawat Jalan - Validasi Filter (400)
+GET {{baseUrl}}/api/v1/rawat-jalan/antrean?tanggal=2026-04-22&order_by=salah_kolom&sort_order=SALAH_SORT&jenis_antrean=AntreanGhoib
 Authorization: Bearer {{login.response.body.data.token}}
-Content-Type: application/json
+Accept: application/json
 
-{
-  "tanggal": "2026-04-22",
-  "halaman": 1,
-  "batas": 50,
-  "order_by": "salah_kolom",
-  "sort_order": "SALAH_SORT",
-  "jenis_antrean": "AntreanGhoib"
-}
-
-### 6. RAWAT JALAN - Detail Kunjungan Pasien (Otomatis Ambil Token dari Hasil Login)
+### 7. Rawat Jalan - Detail Kunjungan
 GET {{baseUrl}}/api/v1/rawat-jalan/pUYIoZMNAKcIgdZUG9b5kyeu2Oq3Shnn11APEnbmtbmtcQYqZckh_vCReGa9
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 7. PENJAMIN - Daftar Penjamin
+### 8. Penjamin - Daftar Penjamin
 GET {{baseUrl}}/api/v1/penjamin
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 8. PEMERIKSAAN - Daftar Pemeriksaan Pasien (Semua / Default Ralan + Ranap)
-# Parameter `id` diisi oleh ID terenkripsi kunjungan pasien (no_rawat)
-POST {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua
+### 9. Pemeriksaan - Referensi Kesadaran
+GET {{baseUrl}}/api/v1/pemeriksaan/referensi-kesadaran
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 8.1 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Jalan / Ralan saja)
-POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+### 10. Pemeriksaan - Riwayat Kunjungan (Semua)
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?halaman=1&batas=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 8.2 PEMERIKSAAN - Daftar Pemeriksaan Pasien (Rawat Inap / Ranap saja)
-POST {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap
+### 11. Pemeriksaan - Riwayat Kunjungan (Ralan)
+GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?halaman=1&batas=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 8.3 PEMERIKSAAN - Daftar Riwayat Pemeriksaan Lintas Kunjungan Pasien by IdPasien (No Rekam Medis Enkripsi)
-POST {{baseUrl}}/api/v1/pemeriksaan/pasien/hpWPyOclOMey0g-5fuSE0kDzQqRkVi7ZohYpv-KsLqsia2Yl/Semua
+### 12. Pemeriksaan - Riwayat Kunjungan (Ranap)
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap?halaman=1&batas=20
 Authorization: Bearer {{login.response.body.data.token}}
-Content-Type: application/json
+Accept: application/json
 
-{
-    "tanggal": "2026-01-01, 2026-04-30",
-    "halaman": 1,
-    "batas": 20
-}
+### 13. Pemeriksaan - Riwayat Pasien (Semua Kunjungan)
+GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&halaman=1&batas=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
 
-# Parameter `id` diisi oleh ID terenkripsi item pemeriksaan (NoRawat~Tgl~Jam) yang didapat dari daftar pemeriksaan
+### 14. Pemeriksaan - Detail Pemeriksaan (Ralan)
 GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 9.1 PEMERIKSAAN - Detail 1 Item Pemeriksaan Pasien (Ranap)
+### 15. Pemeriksaan - Detail Pemeriksaan (Ranap)
 GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
+### 16. Pemeriksaan - Simpan Pemeriksaan (Ralan)
+POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
 
+{
+  "no_rawat": "2026/04/22/036934",
+  "tanggal_pemeriksaan": "2026-04-23",
+  "jam_pemeriksaan": "12:10:10",
+  "suhu_tubuh": "36.5",
+  "tensi": "120/80",
+  "nadi": "80",
+  "respirasi": "20",
+  "tinggi_badan": "170",
+  "berat_badan": "65",
+  "spo2": "98",
+  "gcs": "15",
+  "kesadaran": "Compos Mentis",
+  "keluhan": "Pasien mengeluh pusing dan demam sejak 2 hari",
+  "pemeriksaan": "Tekanan darah normal, faring tidak hiperemis",
+  "alergi": "Tidak ada alergi obat",
+  "lingkar_perut": "80",
+  "rencana_tindak_lanjut": "Istirahat cukup dan minum obat teratur",
+  "penilaian": "Cephalgia e.c Febris H-2",
+  "instruksi": "Minum air putih minimal 2 liter per hari",
+  "evaluasi": "Keadaan umum baik dan stabil"
+}
+
+### 17. Pemeriksaan - Simpan Pemeriksaan (Ranap)
+POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/04/22/036934",
+  "tanggal_pemeriksaan": "2026-04-23",
+  "jam_pemeriksaan": "14:05:00",
+  "suhu_tubuh": "37.0",
+  "tensi": "110/70",
+  "nadi": "78",
+  "respirasi": "18",
+  "tinggi_badan": "170",
+  "berat_badan": "65",
+  "spo2": "99",
+  "gcs": "15",
+  "kesadaran": "Compos Mentis",
+  "keluhan": "Keluhan berkurang setelah pemberian terapi infus",
+  "pemeriksaan": "Abdomen supel, bising usus normal",
+  "alergi": "Tidak ada",
+  "rencana_tindak_lanjut": "Observasi TTV per 4 jam",
+  "penilaian": "Perbaikan klinis",
+  "instruksi": "Lanjutkan terapi cairan RL 20 tpm",
+  "evaluasi": "Pasien tampak lebih segar"
+}
+
+### 18. Pemeriksaan - Simpan Validasi No Rawat (400)
+POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/01/01/999999",
+  "tanggal_pemeriksaan": "2026-04-23",
+  "jam_pemeriksaan": "12:10:10",
+  "kesadaran": "Compos Mentis",
+  "keluhan": "Uji coba no rawat salah",
+  "pemeriksaan": "Pemeriksaan",
+  "penilaian": "Penilaian",
+  "rencana_tindak_lanjut": "RTL",
+  "instruksi": "Instruksi",
+  "evaluasi": "Evaluasi"
+}
+
+### 19. Pemeriksaan - Simpan Validasi Waktu Sebelum Registrasi (400)
+POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/04/22/036934",
+  "tanggal_pemeriksaan": "2026-04-20",
+  "jam_pemeriksaan": "08:00:00",
+  "kesadaran": "Compos Mentis",
+  "keluhan": "Uji coba waktu sebelum registrasi",
+  "pemeriksaan": "Pemeriksaan",
+  "penilaian": "Penilaian",
+  "rencana_tindak_lanjut": "RTL",
+  "instruksi": "Instruksi",
+  "evaluasi": "Evaluasi"
+}
+
+### 20. Pemeriksaan - Hapus Pemeriksaan (Ralan)
+DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json

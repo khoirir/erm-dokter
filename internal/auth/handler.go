@@ -25,7 +25,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, loginRateLimit func(http.Ha
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Format request JSON tidak valid", nil)
+		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
 		return
 	}
 

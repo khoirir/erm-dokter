@@ -36,6 +36,10 @@ func (m *mockRepository) RiwayatKunjunganPasien(ctx context.Context, noRM string
 	return []rawatjalan.KunjunganRawatJalan{}, nil
 }
 
+func (m *mockRepository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
+	return "2020-01-01", "00:00:00", true, nil
+}
+
 func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
 	repo := &mockRepository{}
 	log := logger.New()
@@ -144,3 +148,26 @@ func TestDetailKunjungan_EmptyNoRawat(t *testing.T) {
 		t.Fatal("expected error for empty noRawat, got nil")
 	}
 }
+
+func TestRiwayatKunjunganPasien_EmptyNoRM(t *testing.T) {
+	repo := &mockRepository{}
+	log := logger.New()
+	uc := rawatjalan.NewService(repo, log)
+
+	_, err := uc.RiwayatKunjunganPasien(context.Background(), "")
+	if err == nil {
+		t.Fatal("expected error for empty noRM, got nil")
+	}
+}
+
+func TestGetWaktuRegistrasi_EmptyNoRawat(t *testing.T) {
+	repo := &mockRepository{}
+	log := logger.New()
+	uc := rawatjalan.NewService(repo, log)
+
+	_, _, _, err := uc.GetWaktuRegistrasi(context.Background(), "")
+	if err == nil {
+		t.Fatal("expected error for empty noRawat, got nil")
+	}
+}
+
