@@ -21,6 +21,7 @@ type Service interface {
 	DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
 	GetDaftarKesadaran(ctx context.Context) []OpsiReferensi
 	SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error)
+	UpdatePemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) (*Pemeriksaan, error)
 	HapusPemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error
 }
 
@@ -252,6 +253,110 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 	}
 
 	s.log.Info("Berhasil menyimpan pemeriksaan no_rawat %s (%s) oleh dokter %s", req.NoRawat, statusLanjut, kodeDokter)
+	return detail, nil
+}
+
+func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) (*Pemeriksaan, error) {
+	if statusLanjut != shared.StatusLanjutRawatJalan && statusLanjut != shared.StatusLanjutRawatInap {
+		return nil, apperror.NewBusinessError("status lanjut tidak valid (harus Ralan atau Ranap)")
+	}
+
+	if id.NoRawat == "" || id.TanggalPemeriksaan == "" || id.JamPemeriksaan == "" {
+		return nil, apperror.NewBusinessError("parameter ID pemeriksaan tidak lengkap")
+	}
+
+	if errs := req.Validate(); errs != nil {
+		s.log.Warn("Validasi update pemeriksaan gagal: %+v", errs)
+		return nil, errs
+	}
+
+	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
+	if err != nil {
+		s.log.Error("Gagal mengambil detail pemeriksaan untuk update %+v (%s): %v", id, statusLanjut, err)
+		return nil, err
+	}
+	if pemeriksaan == nil {
+		return nil, apperror.NewNotFoundError("Data pemeriksaan tidak ditemukan")
+	}
+
+	if pemeriksaan.KodeDokterPetugas != kodeDokter {
+		s.log.Warn("Percobaan mengubah pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: diinput oleh %s (%s)", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, pemeriksaan.KodeDokterPetugas, pemeriksaan.NamaDokterPetugas)
+		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
+	}
+
+	if err := shared.ValidasiBatasWaktuRekamMedis(pemeriksaan.TanggalPemeriksaan, pemeriksaan.JamPemeriksaan, s.maxEditJam, "diubah"); err != nil {
+		s.log.Warn("Percobaan mengubah pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: %v", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, err)
+		return nil, err
+	}
+
+	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, id.NoRawat)
+	if err != nil {
+		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", id.NoRawat, err)
+		return nil, err
+	}
+	if exists {
+		waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
+		if err == nil {
+			waktuPemeriksaan, err := shared.ParseWaktu(req.TanggalPemeriksaan, req.JamPemeriksaan)
+			if err == nil && waktuPemeriksaan.Before(waktuRegistrasi) {
+				errs := apperror.ValidationError{
+					"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", req.TanggalPemeriksaan, req.JamPemeriksaan, tglRegStr, jamRegStr),
+				}
+				s.log.Warn("Validasi waktu update pemeriksaan gagal untuk no_rawat %s: %+v", id.NoRawat, errs)
+				return nil, errs
+			}
+		}
+	}
+
+	if err := s.repo.UpdatePemeriksaan(ctx, id, statusLanjut, req); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if (errors.As(err, &mysqlErr) && mysqlErr.Number == 1062) || strings.Contains(err.Error(), "1062") || strings.Contains(err.Error(), "Duplicate entry") {
+			errMsg := fmt.Sprintf("Data pemeriksaan pada tanggal %s jam %s sudah pernah disimpan sebelumnya. Silakan sesuaikan jam pemeriksaan.", req.TanggalPemeriksaan, req.JamPemeriksaan)
+			s.log.Warn("Pembaruan pemeriksaan duplikat untuk no_rawat %s (%s %s): %s", id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, errMsg)
+			return nil, apperror.ValidationError{
+				"jam_pemeriksaan": errMsg,
+			}
+		}
+		s.log.Error("Gagal memperbarui pemeriksaan no_rawat %s (%s): %v", id.NoRawat, statusLanjut, err)
+		return nil, err
+	}
+
+	updatedId := IdPemeriksaan{
+		NoRawat:            id.NoRawat,
+		TanggalPemeriksaan: req.TanggalPemeriksaan,
+		JamPemeriksaan:     req.JamPemeriksaan,
+	}
+
+	detail, err := s.repo.DetailPemeriksaan(ctx, updatedId, statusLanjut)
+	if err != nil || detail == nil {
+		detail = &Pemeriksaan{
+			NoRawat:             id.NoRawat,
+			TanggalPemeriksaan:  req.TanggalPemeriksaan,
+			JamPemeriksaan:      req.JamPemeriksaan,
+			SuhuTubuh:           req.SuhuTubuh,
+			Tensi:               req.Tensi,
+			Nadi:                req.Nadi,
+			Respirasi:           req.Respirasi,
+			TinggiBadan:         req.TinggiBadan,
+			BeratBadan:          req.BeratBadan,
+			SpO2:                req.SpO2,
+			Gcs:                 req.Gcs,
+			Kesadaran:           req.Kesadaran,
+			Keluhan:             req.Keluhan,
+			Pemeriksaan:         req.Pemeriksaan,
+			Alergi:              req.Alergi,
+			LingkarPerut:        req.LingkarPerut,
+			RencanaTindakLanjut: req.RencanaTindakLanjut,
+			Penilaian:           req.Penilaian,
+			Instruksi:           req.Instruksi,
+			Evaluasi:            req.Evaluasi,
+			KodeDokterPetugas:   pemeriksaan.KodeDokterPetugas,
+			NamaDokterPetugas:   pemeriksaan.NamaDokterPetugas,
+			StatusLanjut:        statusLanjut,
+		}
+	}
+
+	s.log.Info("Berhasil memperbarui data pemeriksaan no_rawat %s (%s %s -> %s %s) oleh dokter %s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, req.TanggalPemeriksaan, req.JamPemeriksaan, kodeDokter)
 	return detail, nil
 }
 

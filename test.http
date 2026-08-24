@@ -85,7 +85,7 @@ Content-Type: application/json
 
 {
   "no_rawat": "2026/04/22/036934",
-  "tanggal_pemeriksaan": "2026-04-23",
+  "tanggal_pemeriksaan": "2026-08-23",
   "jam_pemeriksaan": "12:10:10",
   "suhu_tubuh": "36.5",
   "tensi": "120/80",
@@ -113,8 +113,8 @@ Content-Type: application/json
 
 {
   "no_rawat": "2026/04/22/036934",
-  "tanggal_pemeriksaan": "2026-08-21",
-  "jam_pemeriksaan": "14:50:00",
+  "tanggal_pemeriksaan": "2026-08-23",
+  "jam_pemeriksaan": "15:50:00",
   "suhu_tubuh": "37.0",
   "tensi": "110/70",
   "nadi": "79",
@@ -122,7 +122,7 @@ Content-Type: application/json
   "tinggi_badan": "170",
   "berat_badan": "65",
   "spo2": "99",
-  "gcs": "15",
+  "gcs": "456",
   "kesadaran": "Compos Mentis",
   "keluhan": "Keluhan berkurang setelah pemberian terapi infus",
   "pemeriksaan": "Abdomen supel, bising usus normal",
@@ -170,7 +170,7 @@ Content-Type: application/json
 }
 
 ### 20. Pemeriksaan - Hapus Pemeriksaan Ralan Hak Akses Ditolak
-DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -183,3 +183,43 @@ Accept: application/json
 DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/6yE88oLW3teaG8unUZZt3MKMsneON3fRnFtTgGqW5xxcuKLOjUs623xvtfKoL2ooIYnXN1fGu9FH-KWr9LTZ9zw
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
+
+### 23. Pemeriksaan - Update Pemeriksaan (Ranap) Sukses
+PUT {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "tanggal_pemeriksaan": "2026-08-23",
+  "jam_pemeriksaan": "12:10:10",
+  "suhu_tubuh": "36.8",
+  "tensi": "120/80",
+  "nadi": "80",
+  "respirasi": "20",
+  "tinggi_badan": "170",
+  "berat_badan": "65",
+  "spo2": "98",
+  "gcs": "456",
+  "kesadaran": "Compos Mentis",
+  "keluhan": "Keluhan pusing berkurang setelah istirahat",
+  "pemeriksaan": "Tekanan darah stabil, tidak ada ronki",
+  "alergi": "Tidak ada alergi obat",
+  "lingkar_perut": "80",
+  "rencana_tindak_lanjut": "Kontrol ulang jika gejala berulang",
+  "penilaian": "Cephalgia e.c Febris membaik",
+  "instruksi": "Minum obat teratur",
+  "evaluasi": "Keadaan umum baik"
+}
+
+### 24. Pemeriksaan - Update Pemeriksaan Validasi Error (400)
+PUT {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "suhu_tubuh": "999.0",
+  "tensi": "120/140",
+  "kesadaran": "KesadaranGhoib",
+  "keluhan": ""
+}
+

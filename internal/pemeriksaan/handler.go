@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 	mux.HandleFunc("GET /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByPasien)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.DetailPemeriksaan)))
 	mux.HandleFunc("POST /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPemeriksaan)))
+	mux.HandleFunc("PUT /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.UpdatePemeriksaan)))
 	mux.HandleFunc("DELETE /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.HapusPemeriksaan)))
 }
 
@@ -202,10 +203,10 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	response.Created(w, "Berhasil menyimpan data pemeriksaan", pemeriksaan)
 }
 
-func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
-	idPemeriksaanEnc := r.PathValue("id_pemeriksaan")
+	encryptedIdPemeriksaan := r.PathValue("id_pemeriksaan")
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -213,13 +214,69 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decryptedIdPem, err := crypto.Decrypt(idPemeriksaanEnc, h.encryptionKey)
+	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
 		return
 	}
 
-	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPem)
+	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPememeriksaan)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format ID pemeriksaan tidak valid"))
+		return
+	}
+
+	if idPemeriksaan.NoRawat != noRawat {
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak cocok dengan ID kunjungan"))
+		return
+	}
+
+	var req UpdatePemeriksaanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		return
+	}
+
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	pemeriksaan, err := h.pemeriksaanService.UpdatePemeriksaan(r.Context(), kodeDokter, idPemeriksaan, shared.StatusLanjut(statusLanjut), req)
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	if pemeriksaan != nil {
+		if encrypted, err := crypto.Encrypt(pemeriksaan.CompositeKey(), h.encryptionKey); err == nil {
+			pemeriksaan.Id = encrypted
+		}
+		pemeriksaan.IdKunjungan = idKunjungan
+	}
+
+	response.Success(w, "Berhasil memperbarui data pemeriksaan", pemeriksaan)
+}
+
+func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
+	idKunjungan := r.PathValue("id_kunjungan")
+	statusLanjut := r.PathValue("status_lanjut")
+	encryptedIdPemeriksaan := r.PathValue("id_pemeriksaan")
+
+	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		return
+	}
+
+	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
+		return
+	}
+
+	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPememeriksaan)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("Format ID pemeriksaan tidak valid"))
 		return

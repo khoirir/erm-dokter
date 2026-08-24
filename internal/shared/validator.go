@@ -36,8 +36,6 @@ func ValidasiRentangTanggal(tanggal string, errs apperror.ValidationError) {
 	}
 }
 
-// ParseWaktu menggabungkan tanggal (YYYY-MM-DD) dan jam (opsional, contoh: HH:mm:ss atau HH:mm).
-// Jika parameter jam kosong, default waktu akan diset ke 00:00:00.
 func ParseWaktu(tanggal, jam string) (time.Time, error) {
 	tanggal = strings.TrimSpace(tanggal)
 	jam = strings.TrimSpace(jam)
@@ -67,8 +65,6 @@ func ParseWaktu(tanggal, jam string) (time.Time, error) {
 	return time.Date(tgl.Year(), tgl.Month(), tgl.Day(), hour, min, sec, 0, time.Local), nil
 }
 
-// ValidasiBatasWaktuRekamMedis memeriksa apakah data rekam medis masih boleh diubah/dihapus berdasarkan batas waktu (dalam jam).
-// Mendukung data dengan tanggal+jam maupun data yang hanya memiliki tanggal saja (jam kosong).
 func ValidasiBatasWaktuRekamMedis(tanggal, jam string, maxJam int, aksi string) error {
 	if maxJam <= 0 {
 		return nil

@@ -115,8 +115,7 @@ func (f *FilterDaftarPemeriksaan) Validate() apperror.ValidationError {
 	return nil
 }
 
-type SimpanPemeriksaanRequest struct {
-	NoRawat             string    `json:"no_rawat"`
+type DataPemeriksaan struct {
 	TanggalPemeriksaan  string    `json:"tanggal_pemeriksaan"`
 	JamPemeriksaan      string    `json:"jam_pemeriksaan"`
 	SuhuTubuh           string    `json:"suhu_tubuh"`
@@ -138,54 +137,39 @@ type SimpanPemeriksaanRequest struct {
 	Evaluasi            string    `json:"evaluasi"`
 }
 
-func (r *SimpanPemeriksaanRequest) Sanitize() {
-	r.NoRawat = strings.TrimSpace(r.NoRawat)
-	r.TanggalPemeriksaan = strings.TrimSpace(r.TanggalPemeriksaan)
-	r.JamPemeriksaan = strings.TrimSpace(r.JamPemeriksaan)
-	r.SuhuTubuh = strings.ReplaceAll(strings.TrimSpace(r.SuhuTubuh), ",", ".")
-	r.Tensi = strings.ReplaceAll(strings.TrimSpace(r.Tensi), " ", "")
-	r.Nadi = strings.TrimSpace(r.Nadi)
-	r.Respirasi = strings.TrimSpace(r.Respirasi)
-	r.TinggiBadan = strings.ReplaceAll(strings.TrimSpace(r.TinggiBadan), ",", ".")
-	r.BeratBadan = strings.ReplaceAll(strings.TrimSpace(r.BeratBadan), ",", ".")
-	r.SpO2 = strings.TrimSpace(r.SpO2)
-	r.Gcs = strings.TrimSpace(r.Gcs)
-	r.Kesadaran = Kesadaran(strings.TrimSpace(string(r.Kesadaran)))
-	r.Keluhan = strings.TrimSpace(r.Keluhan)
-	r.Pemeriksaan = strings.TrimSpace(r.Pemeriksaan)
-	r.Alergi = strings.TrimSpace(r.Alergi)
-	r.LingkarPerut = strings.TrimSpace(r.LingkarPerut)
-	r.RencanaTindakLanjut = strings.TrimSpace(r.RencanaTindakLanjut)
-	r.Penilaian = strings.TrimSpace(r.Penilaian)
-	r.Instruksi = strings.TrimSpace(r.Instruksi)
-	r.Evaluasi = strings.TrimSpace(r.Evaluasi)
-
-	if r.TanggalPemeriksaan == "" {
-		r.TanggalPemeriksaan = time.Now().Format("2006-01-02")
-	}
-	if r.JamPemeriksaan == "" {
-		r.JamPemeriksaan = time.Now().Format("15:04:05")
-	}
+func (d *DataPemeriksaan) Sanitize() {
+	d.TanggalPemeriksaan = strings.TrimSpace(d.TanggalPemeriksaan)
+	d.JamPemeriksaan = strings.TrimSpace(d.JamPemeriksaan)
+	d.SuhuTubuh = strings.ReplaceAll(strings.TrimSpace(d.SuhuTubuh), ",", ".")
+	d.Tensi = strings.ReplaceAll(strings.TrimSpace(d.Tensi), " ", "")
+	d.Nadi = strings.TrimSpace(d.Nadi)
+	d.Respirasi = strings.TrimSpace(d.Respirasi)
+	d.TinggiBadan = strings.ReplaceAll(strings.TrimSpace(d.TinggiBadan), ",", ".")
+	d.BeratBadan = strings.ReplaceAll(strings.TrimSpace(d.BeratBadan), ",", ".")
+	d.SpO2 = strings.TrimSpace(d.SpO2)
+	d.Gcs = strings.TrimSpace(d.Gcs)
+	d.Kesadaran = Kesadaran(strings.TrimSpace(string(d.Kesadaran)))
+	d.Keluhan = strings.TrimSpace(d.Keluhan)
+	d.Pemeriksaan = strings.TrimSpace(d.Pemeriksaan)
+	d.Alergi = strings.TrimSpace(d.Alergi)
+	d.LingkarPerut = strings.TrimSpace(d.LingkarPerut)
+	d.RencanaTindakLanjut = strings.TrimSpace(d.RencanaTindakLanjut)
+	d.Penilaian = strings.TrimSpace(d.Penilaian)
+	d.Instruksi = strings.TrimSpace(d.Instruksi)
+	d.Evaluasi = strings.TrimSpace(d.Evaluasi)
 }
 
-func (r *SimpanPemeriksaanRequest) Validate() apperror.ValidationError {
-	r.Sanitize()
-	errs := make(apperror.ValidationError)
+func (d *DataPemeriksaan) Validate(errs apperror.ValidationError) {
+	d.Sanitize()
 
-	if r.NoRawat == "" {
-		errs["no_rawat"] = "Nomor rawat wajib diisi"
-	} else if len(r.NoRawat) > 17 {
-		errs["no_rawat"] = "Nomor rawat maksimal 17 karakter"
-	}
-
-	tgl, errTgl := time.Parse("2006-01-02", r.TanggalPemeriksaan)
+	tgl, errTgl := time.Parse("2006-01-02", d.TanggalPemeriksaan)
 	if errTgl != nil {
-		errs["tanggal_pemeriksaan"] = "Format tanggal pemeriksaan harus YYYY-MM-DD"
+		errs["tanggal_pemeriksaan"] = "Format tanggal pemeriksaan harus YYYY-MM-DD (2026-01-01)"
 	}
 
-	jam, errJam := time.Parse("15:04:05", r.JamPemeriksaan)
+	jam, errJam := time.Parse("15:04:05", d.JamPemeriksaan)
 	if errJam != nil {
-		errs["jam_pemeriksaan"] = "Format jam pemeriksaan harus HH:mm:ss (contoh: 12:10:00)"
+		errs["jam_pemeriksaan"] = "Format jam pemeriksaan harus HH:mm:ss (12:10:00)"
 	}
 
 	if errTgl == nil && errJam == nil {
@@ -199,92 +183,139 @@ func (r *SimpanPemeriksaanRequest) Validate() apperror.ValidationError {
 		}
 	}
 
-	if r.Kesadaran == "" {
+	if d.Kesadaran == "" {
 		errs["kesadaran"] = "Tingkat kesadaran wajib diisi"
-	} else if !r.Kesadaran.IsValid() {
+	} else if !d.Kesadaran.IsValid() {
 		errs["kesadaran"] = "Tingkat kesadaran tidak valid"
 	}
 
-	if r.Keluhan == "" {
-		errs["keluhan"] = "Keluhan wajib diisi"
-	} else if len(r.Keluhan) > 2000 {
-		errs["keluhan"] = "Keluhan maksimal 2000 karakter"
+	if d.Keluhan == "" {
+		errs["keluhan"] = "Keluhan wajib diisi (Subjective)"
+	} else if len(d.Keluhan) > 2000 {
+		errs["keluhan"] = "Keluhan maksimal 2000 karakter (Subjective)"
 	}
 
-	if r.Pemeriksaan == "" {
-		errs["pemeriksaan"] = "Pemeriksaan fisik/objektif wajib diisi"
-	} else if len(r.Pemeriksaan) > 2000 {
-		errs["pemeriksaan"] = "Pemeriksaan maksimal 2000 karakter"
+	if d.Pemeriksaan == "" {
+		errs["pemeriksaan"] = "Pemeriksaan wajib diisi (Objective)"
+	} else if len(d.Pemeriksaan) > 2000 {
+		errs["pemeriksaan"] = "Pemeriksaan maksimal 2000 karakter (Objective)"
 	}
 
-	if r.Penilaian == "" {
-		errs["penilaian"] = "Penilaian/Assessment wajib diisi"
-	} else if len(r.Penilaian) > 2000 {
-		errs["penilaian"] = "Penilaian maksimal 2000 karakter"
+	if d.Penilaian == "" {
+		errs["penilaian"] = "Penilaian wajib diisi (Assessment)"
+	} else if len(d.Penilaian) > 2000 {
+		errs["penilaian"] = "Penilaian maksimal 2000 karakter (Assessment)"
 	}
 
-	if r.RencanaTindakLanjut == "" {
-		errs["rencana_tindak_lanjut"] = "Rencana tindak lanjut wajib diisi"
-	} else if len(r.RencanaTindakLanjut) > 2000 {
-		errs["rencana_tindak_lanjut"] = "Rencana tindak lanjut maksimal 2000 karakter"
+	if d.RencanaTindakLanjut == "" {
+		errs["rencana_tindak_lanjut"] = "Rencana tindak lanjut wajib diisi (Plan)"
+	} else if len(d.RencanaTindakLanjut) > 2000 {
+		errs["rencana_tindak_lanjut"] = "Rencana tindak lanjut maksimal 2000 karakter (Plan)"
 	}
 
-	if r.Instruksi == "" {
-		errs["instruksi"] = "Instruksi medis wajib diisi"
-	} else if len(r.Instruksi) > 2000 {
-		errs["instruksi"] = "Instruksi maksimal 2000 karakter"
+	if d.Instruksi == "" {
+		errs["instruksi"] = "Instruksi medis wajib diisi (Instruction)"
+	} else if len(d.Instruksi) > 2000 {
+		errs["instruksi"] = "Instruksi maksimal 2000 karakter (Instruction)"
 	}
 
-	if r.Evaluasi == "" {
-		errs["evaluasi"] = "Evaluasi wajib diisi"
-	} else if len(r.Evaluasi) > 2000 {
-		errs["evaluasi"] = "Evaluasi maksimal 2000 karakter"
+	if d.Evaluasi == "" {
+		errs["evaluasi"] = "Evaluasi wajib diisi (Evaluation)"
+	} else if len(d.Evaluasi) > 2000 {
+		errs["evaluasi"] = "Evaluasi maksimal 2000 karakter (Evaluation)"
 	}
 
-	if r.SuhuTubuh != "" {
-		if msg := validateSuhuTubuh(r.SuhuTubuh); msg != "" {
+	if d.SuhuTubuh != "" {
+		if msg := validateSuhuTubuh(d.SuhuTubuh); msg != "" {
 			errs["suhu_tubuh"] = msg
 		}
 	}
-	if r.Tensi != "" {
-		if msg := validateTensi(r.Tensi); msg != "" {
+	if d.Tensi != "" {
+		if msg := validateTensi(d.Tensi); msg != "" {
 			errs["tensi"] = msg
 		}
 	}
-	if r.Nadi != "" {
-		if msg := validateNadi(r.Nadi); msg != "" {
+	if d.Nadi != "" {
+		if msg := validateNadi(d.Nadi); msg != "" {
 			errs["nadi"] = msg
 		}
 	}
-	if r.Respirasi != "" {
-		if msg := validateRespirasi(r.Respirasi); msg != "" {
+	if d.Respirasi != "" {
+		if msg := validateRespirasi(d.Respirasi); msg != "" {
 			errs["respirasi"] = msg
 		}
 	}
-	if r.TinggiBadan != "" {
-		if msg := validateTinggiBadan(r.TinggiBadan); msg != "" {
+	if d.TinggiBadan != "" {
+		if msg := validateTinggiBadan(d.TinggiBadan); msg != "" {
 			errs["tinggi_badan"] = msg
 		}
 	}
-	if r.BeratBadan != "" {
-		if msg := validateBeratBadan(r.BeratBadan); msg != "" {
+	if d.BeratBadan != "" {
+		if msg := validateBeratBadan(d.BeratBadan); msg != "" {
 			errs["berat_badan"] = msg
 		}
 	}
-	if r.SpO2 != "" {
-		if msg := validateSpO2(r.SpO2); msg != "" {
+	if d.SpO2 != "" {
+		if msg := validateSpO2(d.SpO2); msg != "" {
 			errs["spo2"] = msg
 		}
 	}
-	if len(r.Gcs) > 10 {
+	if len(d.Gcs) > 10 {
 		errs["gcs"] = "GCS maksimal 10 karakter"
 	}
-	if len(r.Alergi) > 50 {
+	if len(d.Alergi) > 50 {
 		errs["alergi"] = "Alergi maksimal 50 karakter"
 	}
-	if len(r.LingkarPerut) > 5 {
+	if len(d.LingkarPerut) > 5 {
 		errs["lingkar_perut"] = "Lingkar perut maksimal 5 karakter"
 	}
+}
+
+type SimpanPemeriksaanRequest struct {
+	NoRawat string `json:"no_rawat"`
+	DataPemeriksaan
+}
+
+func (r *SimpanPemeriksaanRequest) Sanitize() {
+	r.NoRawat = strings.TrimSpace(r.NoRawat)
+	if strings.TrimSpace(r.TanggalPemeriksaan) == "" {
+		r.TanggalPemeriksaan = time.Now().Format("2006-01-02")
+	}
+	if strings.TrimSpace(r.JamPemeriksaan) == "" {
+		r.JamPemeriksaan = time.Now().Format("15:04:05")
+	}
+	r.DataPemeriksaan.Sanitize()
+}
+
+func (r *SimpanPemeriksaanRequest) Validate() apperror.ValidationError {
+	r.Sanitize()
+	errs := make(apperror.ValidationError)
+
+	if r.NoRawat == "" {
+		errs["no_rawat"] = "Nomor rawat wajib diisi"
+	}
+
+	r.DataPemeriksaan.Validate(errs)
+
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
+}
+
+type UpdatePemeriksaanRequest struct {
+	DataPemeriksaan
+}
+
+func (r *UpdatePemeriksaanRequest) Sanitize() {
+	r.DataPemeriksaan.Sanitize()
+}
+
+func (r *UpdatePemeriksaanRequest) Validate() apperror.ValidationError {
+	r.Sanitize()
+	errs := make(apperror.ValidationError)
+
+	r.DataPemeriksaan.Validate(errs)
 
 	if len(errs) > 0 {
 		return errs
@@ -294,40 +325,40 @@ func (r *SimpanPemeriksaanRequest) Validate() apperror.ValidationError {
 
 func validateSuhuTubuh(suhuStr string) string {
 	if len(suhuStr) > 5 {
-		return "Suhu tubuh maksimal 5 karakter (contoh: 36.5)"
+		return "Suhu tubuh maksimal 5 karakter (36.5)"
 	}
 	suhu, err := strconv.ParseFloat(suhuStr, 64)
 	if err != nil {
-		return "Suhu tubuh harus berupa angka (contoh: 36.5)"
+		return "Suhu tubuh harus berupa angka (36.5)"
 	}
 	if suhu < 25.0 || suhu > 45.0 {
-		return "Suhu tubuh tidak wajar untuk manusia (rentang wajar: 25.0 - 45.0 °C)"
+		return "Suhu tubuh harus berada dalam rentang 25.0 - 45.0 °C"
 	}
 	return ""
 }
 
 func validateTensi(tensi string) string {
 	if len(tensi) > 8 {
-		return "Tensi maksimal 8 karakter (contoh: 120/80)"
+		return "Tensi maksimal 8 karakter (120/80)"
 	}
 
 	parts := strings.Split(tensi, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "Format tensi harus Sistolik/Diastolik (contoh: 120/80)"
+		return "Format tensi harus Sistolik/Diastolik (120/80)"
 	}
 
 	sistolik, errSis := strconv.Atoi(parts[0])
 	diastolik, errDia := strconv.Atoi(parts[1])
 	if errSis != nil || errDia != nil {
-		return "Nilai sistolik dan diastolik tensi harus berupa angka (contoh: 120/80)"
+		return "Nilai sistolik dan diastolik tensi harus berupa angka (120/80)"
 	}
 
 	if sistolik < 50 || sistolik > 300 || diastolik < 30 || diastolik > 200 {
-		return "Nilai tensi tidak wajar untuk manusia (sistolik: 50-300, diastolik: 30-200 mmHg)"
+		return "Tensi harus berada dalam rentang sistolik: 50-300 dan diastolik: 30-200 mmHg"
 	}
 
 	if sistolik <= diastolik {
-		return "Nilai sistolik harus lebih besar dari diastolik (contoh: 120/80)"
+		return "Nilai sistolik harus lebih besar dari diastolik (120/80)"
 	}
 
 	return ""
@@ -339,10 +370,10 @@ func validateNadi(nadiStr string) string {
 	}
 	nadi, err := strconv.Atoi(nadiStr)
 	if err != nil {
-		return "Nadi harus berupa angka bulat (contoh: 80)"
+		return "Nadi harus berupa angka bulat (80)"
 	}
 	if nadi < 20 || nadi > 300 {
-		return "Nilai nadi tidak wajar untuk manusia (rentang wajar: 20 - 300 x/menit)"
+		return "Nadi harus berada dalam rentang 20 - 300 x/menit"
 	}
 	return ""
 }
@@ -353,10 +384,10 @@ func validateRespirasi(respStr string) string {
 	}
 	resp, err := strconv.Atoi(respStr)
 	if err != nil {
-		return "Respirasi harus berupa angka bulat (contoh: 20)"
+		return "Respirasi harus berupa angka bulat (20)"
 	}
 	if resp < 5 || resp > 100 {
-		return "Nilai respirasi tidak wajar untuk manusia (rentang wajar: 5 - 100 x/menit)"
+		return "Respirasi harus berada dalam rentang 5 - 100 x/menit"
 	}
 	return ""
 }
@@ -367,10 +398,10 @@ func validateTinggiBadan(tbStr string) string {
 	}
 	tb, err := strconv.ParseFloat(tbStr, 64)
 	if err != nil {
-		return "Tinggi badan harus berupa angka (contoh: 170)"
+		return "Tinggi badan harus berupa angka (170)"
 	}
 	if tb < 20.0 || tb > 250.0 {
-		return "Tinggi badan tidak wajar untuk manusia (rentang wajar: 20 - 250 cm)"
+		return "Tinggi badan harus berada dalam rentang 20 - 250 cm"
 	}
 	return ""
 }
@@ -381,10 +412,10 @@ func validateBeratBadan(bbStr string) string {
 	}
 	bb, err := strconv.ParseFloat(bbStr, 64)
 	if err != nil {
-		return "Berat badan harus berupa angka (contoh: 65)"
+		return "Berat badan harus berupa angka (65)"
 	}
 	if bb < 0.5 || bb > 500.0 {
-		return "Berat badan tidak wajar untuk manusia (rentang wajar: 0.5 - 500 kg)"
+		return "Berat badan harus berada dalam rentang 0.5 - 500 kg"
 	}
 	return ""
 }
@@ -395,7 +426,7 @@ func validateSpO2(spo2Str string) string {
 	}
 	spo2, err := strconv.Atoi(spo2Str)
 	if err != nil {
-		return "SpO2 harus berupa angka bulat (contoh: 98)"
+		return "SpO2 harus berupa angka bulat (98)"
 	}
 	if spo2 < 0 || spo2 > 100 {
 		return "SpO2 harus berada dalam rentang 0 - 100%"

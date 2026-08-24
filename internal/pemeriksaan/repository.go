@@ -14,6 +14,7 @@ type Repository interface {
 	DaftarPemeriksaan(ctx context.Context, listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, int, error)
 	DetailPemeriksaan(ctx context.Context, idPemeriksaan IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
 	SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) error
+	UpdatePemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) error
 	HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error
 }
 
@@ -287,6 +288,63 @@ func (r *repository) SimpanPemeriksaan(ctx context.Context, kodeDokter string, s
 	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("gagal menyimpan data pemeriksaan: %w", err)
+	}
+
+	return nil
+}
+
+const updatePemeriksaanRalan = `
+	UPDATE pemeriksaan_ralan SET
+		tgl_perawatan = ?, jam_rawat = ?,
+		suhu_tubuh = ?, tensi = ?, nadi = ?, respirasi = ?,
+		tinggi = ?, berat = ?, spo2 = ?, gcs = ?, kesadaran = ?,
+		keluhan = ?, pemeriksaan = ?, alergi = ?, lingkar_perut = ?,
+		rtl = ?, penilaian = ?, instruksi = ?, evaluasi = ?
+	WHERE no_rawat = ? AND tgl_perawatan = ? AND jam_rawat = ?
+`
+
+const updatePemeriksaanRanap = `
+	UPDATE pemeriksaan_ranap SET
+		tgl_perawatan = ?, jam_rawat = ?,
+		suhu_tubuh = ?, tensi = ?, nadi = ?, respirasi = ?,
+		tinggi = ?, berat = ?, spo2 = ?, gcs = ?, kesadaran = ?,
+		keluhan = ?, pemeriksaan = ?, alergi = ?,
+		rtl = ?, penilaian = ?, instruksi = ?, evaluasi = ?
+	WHERE no_rawat = ? AND tgl_perawatan = ? AND jam_rawat = ?
+`
+
+func (r *repository) UpdatePemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) error {
+	var query string
+	var args []any
+
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		query = updatePemeriksaanRalan
+		args = []any{
+			req.TanggalPemeriksaan, req.JamPemeriksaan,
+			req.SuhuTubuh, req.Tensi, req.Nadi, req.Respirasi,
+			req.TinggiBadan, req.BeratBadan, req.SpO2, req.Gcs, string(req.Kesadaran),
+			req.Keluhan, req.Pemeriksaan, req.Alergi, req.LingkarPerut,
+			req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi,
+			id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan,
+		}
+	case shared.StatusLanjutRawatInap:
+		query = updatePemeriksaanRanap
+		args = []any{
+			req.TanggalPemeriksaan, req.JamPemeriksaan,
+			req.SuhuTubuh, req.Tensi, req.Nadi, req.Respirasi,
+			req.TinggiBadan, req.BeratBadan, req.SpO2, req.Gcs, string(req.Kesadaran),
+			req.Keluhan, req.Pemeriksaan, req.Alergi,
+			req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi,
+			id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan,
+		}
+	default:
+		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+	}
+
+	_, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("gagal memperbarui data pemeriksaan: %w", err)
 	}
 
 	return nil
