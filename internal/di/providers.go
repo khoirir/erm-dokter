@@ -14,6 +14,7 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 
 	return routes.NewRouteConfig(
 		provideHealth(),
+		provideDocs(),
 		provideAuth(db, cfg, log),
 		providePenjamin(db, log),
 		provideRawatJalan(db, cfg, log),

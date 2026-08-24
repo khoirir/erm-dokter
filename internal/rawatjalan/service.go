@@ -10,7 +10,7 @@ import (
 )
 
 type Service interface {
-	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.MetaPaginasi, error)
+	DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.PaginationMeta, error)
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
 	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
@@ -29,29 +29,29 @@ func NewService(repo Repository, log *logger.Logger) Service {
 	}
 }
 
-func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.MetaPaginasi, error) {
+func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.PaginationMeta, error) {
 	if errs := filter.Validate(); errs != nil {
 		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.MetaPaginasi{}, errs
+		return nil, shared.PaginationMeta{}, errs
 	}
 
 	if len(filter.KataKunci) > 0 && len(filter.KataKunci) < 3 {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("kata kunci pencarian minimal 3 karakter")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("kata kunci pencarian minimal 3 karakter")
 	}
 
 	daftarAntrean, totalData, err := s.repo.DaftarAntreanDokter(ctx, kodeDokter, filter)
 	if err != nil {
 		s.log.Error("Gagal query antrean dokter %s: %v", kodeDokter, err)
-		return nil, shared.MetaPaginasi{}, err
+		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Batas)))
+	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
 
-	meta := shared.MetaPaginasi{
-		TotalData:    totalData,
-		TotalHalaman: totalHalaman,
-		HalamanAktif: filter.Halaman,
-		BatasData:    filter.Batas,
+	meta := shared.PaginationMeta{
+		TotalRecords: totalData,
+		TotalPages:   totalHalaman,
+		CurrentPage:  filter.Page,
+		PerPage:      filter.Limit,
 	}
 
 	return daftarAntrean, meta, nil

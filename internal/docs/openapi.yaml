@@ -1,0 +1,980 @@
+openapi: 3.1.0
+info:
+    title: ERM Dokter API
+    version: 1.0.0
+    description: |
+        API Elektronik Rekam Medis (ERM) Dokter untuk Rumah Sakit & Klinik berbasis database Khanza.
+
+        ### Fitur Utama:
+        - **Authentication**: JWT Bearer Token dengan enkripsi password AES.
+        - **Rawat Jalan**: Antrean pasien dokter, pencarian & filter, detail kunjungan pasien.
+        - **Pemeriksaan Medis (SOAP & TTV)**: Riwayat pemeriksaan, pencatatan SOAP (Subjective, Objective, Assessment, Plan) baru, update pemeriksaan, dan penghapusan catatan dengan proteksi kepemilikan dokter & batas waktu edit rekam medis (48 jam).
+        - **Security & Privacy**: Enkripsi identifier URL (`id_kunjungan`, `id_pasien`, `id_pemeriksaan`) menggunakan AES-GCM URL-safe token untuk mencegah ID enumeration / scraping.
+    contact:
+        name: Tim Pengembang ERM Dokter
+servers:
+    - url: http://localhost:8082
+      description: Development Server Local
+
+security:
+    - BearerAuth: []
+
+tags:
+    - name: Health
+      description: Server Health Check
+    - name: Auth
+      description: Autentikasi Dokter & Manajemen Sesi
+    - name: Penjamin
+      description: Master Data Penjamin / Asuransi Pasien
+    - name: Rawat Jalan
+      description: Antrean Pasien & Detail Kunjungan Rawat Jalan
+    - name: Pemeriksaan
+      description: Rekam Medis Pasien (SOAP & Tanda-Tanda Vital)
+
+components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: Masukkan JWT Token yang didapatkan dari endpoint login (/api/v1/auth/login).
+
+    schemas:
+        BaseResponse:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    example: 200
+                status:
+                    type: string
+                    example: OK
+                message:
+                    type: string
+                    example: Berhasil memproses data
+
+        ErrorResponse:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    example: 400
+                status:
+                    type: string
+                    example: Bad Request
+                message:
+                    type: string
+                    example: Terjadi kesalahan validasi atau bisnis
+                errors:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    example:
+                        keluhan: "Keluhan wajib diisi (Subjective)"
+                        tensi: "Nilai sistolik harus lebih besar dari diastolik (120/80)"
+
+        PaginationMeta:
+            type: object
+            properties:
+                total_records:
+                    type: integer
+                    example: 45
+                total_pages:
+                    type: integer
+                    example: 3
+                current_page:
+                    type: integer
+                    example: 1
+                per_page:
+                    type: integer
+                    example: 20
+
+        LoginRequest:
+            type: object
+            required:
+                - username
+                - password
+            properties:
+                username:
+                    type: string
+                    description: Username / ID Dokter di Khanza
+                    example: DRHANDI
+                password:
+                    type: string
+                    description: Password akun dokter
+                    example: "1"
+
+        LoginData:
+            type: object
+            properties:
+                token:
+                    type: string
+                    description: JWT Access Token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                kode_dokter:
+                    type: string
+                    description: Kode Dokter di Khanza
+                    example: DR001
+                nama_dokter:
+                    type: string
+                    description: Nama Lengkap Dokter
+                    example: dr. Handi, Sp.PD
+
+        KunjunganRawatJalan:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted No Rawat (URL-Safe Token)
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                id_pasien:
+                    type: string
+                    description: Encrypted No Rekam Medis
+                    example: FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG
+                no_rawat:
+                    type: string
+                    example: 2026/04/22/036934
+                no_registrasi:
+                    type: string
+                    example: "001"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-04-22"
+                jam_registrasi:
+                    type: string
+                    example: "08:30:00"
+                no_rekam_medis:
+                    type: string
+                    example: "123456"
+                nama_pasien:
+                    type: string
+                    example: NY. SITI AMINAH
+                jenis_kelamin:
+                    type: string
+                    example: P
+                tanggal_lahir:
+                    type: string
+                    example: "1985-05-12"
+                alamat:
+                    type: string
+                    example: Jl. Mawar No. 12, Jakarta
+                kode_poli_asal:
+                    type: string
+                    example: U0001
+                nama_poli_asal:
+                    type: string
+                    example: Poli Penyakit Dalam
+                kode_dokter_asal:
+                    type: string
+                    example: DR001
+                nama_dokter_asal:
+                    type: string
+                    example: dr. Handi, Sp.PD
+                kode_penjamin:
+                    type: string
+                    example: BPJ
+                nama_penjamin:
+                    type: string
+                    example: BPJS Kesehatan
+                status_pemeriksaan:
+                    type: string
+                    example: Belum Periksa
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+                status_bayar:
+                    type: string
+                    example: Sudah Bayar
+                jenis_antrean:
+                    type: string
+                    example: Bukan Rujukan
+
+        Penjamin:
+            type: object
+            properties:
+                kode_penjamin:
+                    type: string
+                    example: BPJ
+                nama_penjamin:
+                    type: string
+                    example: BPJS Kesehatan
+                status_aktif:
+                    type: string
+                    example: "1"
+
+        OpsiReferensi:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: Compos Mentis
+                label:
+                    type: string
+                    example: Compos Mentis
+
+        ReferensiFilterRawatJalan:
+            type: object
+            properties:
+                status_pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                status_lanjut:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                status_bayar:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                jenis_antrean:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+
+        DataPemeriksaanPayload:
+            type: object
+            required:
+                - kesadaran
+                - keluhan
+                - pemeriksaan
+                - penilaian
+                - rencana_tindak_lanjut
+                - instruksi
+                - evaluasi
+            properties:
+                tanggal_pemeriksaan:
+                    type: string
+                    description: Format YYYY-MM-DD. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    description: Format HH:mm:ss. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    description: Rentang 25.0 - 45.0 °C
+                    example: "36.5"
+                tensi:
+                    type: string
+                    description: Format Sistolik/Diastolik (sistolik > diastolik, mmHg)
+                    example: "120/80"
+                nadi:
+                    type: string
+                    description: 20 - 300 x/menit
+                    example: "80"
+                respirasi:
+                    type: string
+                    description: 5 - 100 x/menit
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    description: 20 - 250 cm
+                    example: "170"
+                berat_badan:
+                    type: string
+                    description: 0.5 - 500 kg
+                    example: "65"
+                spo2:
+                    type: string
+                    description: 0 - 100 %
+                    example: "98"
+                gcs:
+                    type: string
+                    description: Glasgow Coma Scale (maks 10 karakter)
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum:
+                        [
+                            Compos Mentis,
+                            Somnolence,
+                            Sopor,
+                            Coma,
+                            Alert,
+                            Confusion,
+                            Voice,
+                            Pain,
+                            Unresponsive,
+                            Apatis,
+                            Delirium,
+                        ]
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    description: Anamnesis / Subjective (S)
+                    example: Pasien mengeluh demam sejak 3 hari yang lalu disertai pusing
+                pemeriksaan:
+                    type: string
+                    description: Pemeriksaan Fisik / Objective (O)
+                    example: Keadaan umum sedang, faring hiperemis, ronki -/-, wheezing -/-
+                alergi:
+                    type: string
+                    description: Riwayat Alergi Obat/Makanan
+                    example: Tidak ada riwayat alergi obat
+                lingkar_perut:
+                    type: string
+                    description: Khusus Rawat Jalan (cm)
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    description: Plan / Rencana Tindak Lanjut (P)
+                    example: Kontrol poli 3 hari kemudian jika demam belum turun
+                penilaian:
+                    type: string
+                    description: Diagnosis / Assessment (A)
+                    example: Febris H-3 e.c Susp. Viral Infection
+                instruksi:
+                    type: string
+                    description: Instruksi Medis
+                    example: Paracetamol 3x500mg prn demam, perbanyak minum air putih
+                evaluasi:
+                    type: string
+                    description: Evaluasi Perkembangan Pasien
+                    example: Keadaan umum stabil, tanda vital dalam batas normal
+
+        SimpanPemeriksaanRequest:
+            allOf:
+                - type: object
+                  required:
+                      - no_rawat
+                  properties:
+                      no_rawat:
+                          type: string
+                          description: Nomor Rawat Pasien
+                          example: 2026/04/22/036934
+                - $ref: "#/components/schemas/DataPemeriksaanPayload"
+
+        UpdatePemeriksaanRequest:
+            $ref: "#/components/schemas/DataPemeriksaanPayload"
+
+        Pemeriksaan:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted Composite Key ID Pemeriksaan
+                    example: 0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+                id_kunjungan:
+                    type: string
+                    description: Encrypted No Rawat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                no_rawat:
+                    type: string
+                    example: 2026/04/22/036934
+                tanggal_pemeriksaan:
+                    type: string
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    example: "36.5"
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "80"
+                respirasi:
+                    type: string
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    example: "170"
+                berat_badan:
+                    type: string
+                    example: "65"
+                spo2:
+                    type: string
+                    example: "98"
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    example: Pasien mengeluh demam
+                pemeriksaan:
+                    type: string
+                    example: Faring hiperemis
+                alergi:
+                    type: string
+                    example: Tidak ada
+                lingkar_perut:
+                    type: string
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    example: Kontrol 3 hari
+                penilaian:
+                    type: string
+                    example: Febris H-3
+                instruksi:
+                    type: string
+                    example: Paracetamol 3x500mg
+                evaluasi:
+                    type: string
+                    example: Stabil
+                kode_dokter_petugas:
+                    type: string
+                    example: DR001
+                nama_dokter_petugas:
+                    type: string
+                    example: dr. Handi, Sp.PD
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+
+paths:
+    /health:
+        get:
+            tags: [Health]
+            summary: Health Check Server
+            description: Endpoint untuk memverifikasi ketersediaan dan status server.
+            security: []
+            responses:
+                "200":
+                    description: Server berjalan normal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Server is healthy
+
+    /api/v1/auth/login:
+        post:
+            tags: [Auth]
+            summary: Login Dokter
+            description: Otentikasi menggunakan username dan password dokter Khanza. Mengembalikan token JWT yang berlaku 24 jam.
+            security: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LoginRequest"
+            responses:
+                "200":
+                    description: Login Berhasil
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/LoginData"
+                "400":
+                    description: Username/password salah atau validasi gagal
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "429":
+                    description: Terlalu banyak percobaan login (Rate limit 10 req/menit)
+
+    /api/v1/penjamin:
+        get:
+            tags: [Penjamin]
+            summary: Daftar Master Penjamin
+            description: Mengambil daftar penjamin / asuransi pasien yang terdaftar di sistem.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar penjamin
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Penjamin"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+
+    /api/v1/rawat-jalan/referensi-filter:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Opsi Filter Antrean
+            description: Mengambil daftar nilai opsi dropdown untuk filter antrean rawat jalan.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi filter
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/ReferensiFilterRawatJalan"
+
+    /api/v1/rawat-jalan/antrean:
+        get:
+            tags: [Rawat Jalan]
+            summary: Daftar Antrean Pasien Dokter
+            description: |
+                Mengambil daftar antrean kunjungan pasien yang ditangani oleh dokter yang sedang login.
+                - Parameter `tanggal` default-nya adalah hari ini jika dikosongkan.
+                - Kosongkan parameter filter (status, jenis antrean, dll) untuk menampilkan semua data.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: tanggal
+                  in: query
+                  description: Rentang tanggal registrasi (format YYYY-MM-DD,YYYY-MM-DD). Default hari ini.
+                  example: "2026-04-22,2026-04-22"
+                  schema:
+                      type: string
+                - name: order_by
+                  in: query
+                  description: Kolom pengurutan data
+                  example: waktu_registrasi
+                  schema:
+                      type: string
+                      enum: [waktu_registrasi, nama_pasien]
+                      default: waktu_registrasi
+                - name: sort_order
+                  in: query
+                  description: Urutan ascending atau descending
+                  example: ASC
+                  schema:
+                      type: string
+                      enum: [ASC, DESC]
+                      default: ASC
+                - name: jenis_antrean
+                  in: query
+                  description: Filter jenis antrean (kosongkan untuk semua)
+                  schema:
+                      type: string
+                      enum: [Rujukan, Bukan Rujukan]
+                - name: status_pemeriksaan
+                  in: query
+                  description: Filter status pemeriksaan pasien (kosongkan untuk semua)
+                  schema:
+                      type: string
+                      enum:
+                          [
+                              Belum,
+                              Sudah,
+                              Batal,
+                              Berkas Diterima,
+                              Dirujuk,
+                              Meninggal,
+                              Dirawat,
+                              Pulang Paksa,
+                          ]
+                - name: status_bayar
+                  in: query
+                  description: Filter status pembayaran (kosongkan untuk semua)
+                  schema:
+                      type: string
+                      enum: [Sudah Bayar, Belum Bayar]
+                - name: status_lanjut
+                  in: query
+                  description: Filter status lanjutan (kosongkan untuk semua)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                - name: kode_penjamin
+                  in: query
+                  description: Filter kode penjamin / asuransi (misal BPJ)
+                  schema:
+                      type: string
+                - name: keyword
+                  in: query
+                  description: Pencarian nama pasien, no rkm medis, atau no rawat (minimal 3 karakter)
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Nomor halaman (Page number)
+                  example: 1
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  description: Jumlah data per halaman (Items per page, maks 1000)
+                  example: 20
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar antrean
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/KunjunganRawatJalan"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Parameter filter tidak valid
+                "401":
+                    description: Tidak terautentikasi
+
+    /api/v1/rawat-jalan/{id_kunjungan}:
+        get:
+            tags: [Rawat Jalan]
+            summary: Detail Kunjungan Pasien
+            description: Mengambil data detail kunjungan rawat jalan berdasarkan token enkripsi `id_kunjungan`.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Detail kunjungan ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/KunjunganRawatJalan"
+                "404":
+                    description: Kunjungan tidak ditemukan
+
+    /api/v1/pemeriksaan/referensi-kesadaran:
+        get:
+            tags: [Pemeriksaan]
+            summary: Referensi Tingkat Kesadaran Pasien
+            description: Mengambil daftar tingkat kesadaran valid (GCS/AVPU) yang didukung oleh sistem.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Daftar tingkat kesadaran
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
+
+    /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan per Kunjungan
+            description: Mengambil riwayat catatan pemeriksaan SOAP & TTV pada 1 kunjungan pasien tertentu berdasarkan token terenkripsi `id_kunjungan` (no_rawat).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan (no_rawat)
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status perawatan
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan kunjungan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Pemeriksaan"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+        post:
+            tags: [Pemeriksaan]
+            summary: Simpan Catatan Pemeriksaan Baru
+            description: |
+                Menyimpan catatan pemeriksaan SOAP & TTV baru pada kunjungan pasien.
+                - `no_rawat` di body harus cocok dengan `id_kunjungan`.
+                - Waktu pemeriksaan tidak boleh mendahului waktu registrasi pasien dan tidak boleh melebihi waktu saat ini.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPemeriksaanRequest"
+            responses:
+                "201":
+                    description: Pemeriksaan berhasil disimpan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi klinis gagal atau duplikasi waktu pemeriksaan
+
+    /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan Pasien (Lintas Kunjungan)
+            description: Mengambil seluruh riwayat catatan pemeriksaan SOAP & TTV seorang pasien dari semua kunjungan berdasarkan token terenkripsi `id_pasien` (no_rkm_medis).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pasien (no_rkm_medis)
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status perawatan
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan pasien
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Pemeriksaan"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+
+    /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Detail Catatan Pemeriksaan
+            description: Mengambil detail satu catatan pemeriksaan SOAP & TTV berdasarkan ID Pemeriksaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Detail pemeriksaan ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Pemeriksaan"
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+
+        put:
+            tags: [Pemeriksaan]
+            summary: Update Catatan Pemeriksaan
+            description: |
+                Memperbarui catatan pemeriksaan SOAP & TTV.
+                - Hanya dokter pembuat (`nip`) yang berhak memperbarui.
+                - Batas waktu perubahan rekam medis maksimal 48 jam sejak pemeriksaan dibuat.
+                - Tanggal dan jam pemeriksaan juga dapat diperbarui selama valid dan tidak duplikat.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdatePemeriksaanRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi input gagal
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau telah melewati batas waktu 48 jam
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+
+        delete:
+            tags: [Pemeriksaan]
+            summary: Hapus Catatan Pemeriksaan
+            description: |
+                Menghapus catatan pemeriksaan dari database.
+                - Hanya dokter pembuat (`nip`) yang berhak menghapus.
+                - Batas waktu maksimal penghapusan 48 jam sejak pemeriksaan dibuat.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data pemeriksaan tidak ditemukan

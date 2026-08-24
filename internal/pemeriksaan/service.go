@@ -16,8 +16,8 @@ import (
 )
 
 type Service interface {
-	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.MetaPaginasi, error)
-	DaftarPemeriksaanByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.MetaPaginasi, error)
+	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error)
+	DaftarPemeriksaanByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error)
 	DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
 	GetDaftarKesadaran(ctx context.Context) []OpsiReferensi
 	SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error)
@@ -44,18 +44,18 @@ func NewService(repo Repository, rawatJalanService rawatjalan.Service, maxEditJa
 	}
 }
 
-func (s *service) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.MetaPaginasi, error) {
+func (s *service) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error) {
 	if noRawat == "" {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
 	}
 
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("status lanjut tidak valid")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("status lanjut tidak valid")
 	}
 
 	if errs := filter.Validate(); errs != nil {
 		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.MetaPaginasi{}, errs
+		return nil, shared.PaginationMeta{}, errs
 	}
 
 	rawParts := strings.Split(noRawat, ",")
@@ -66,49 +66,49 @@ func (s *service) DaftarPemeriksaan(ctx context.Context, noRawat string, statusL
 		}
 	}
 	if len(listNoRawat) == 0 {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
 	}
 
 	daftarPemeriksaan, totalData, err := s.repo.DaftarPemeriksaan(ctx, listNoRawat, statusLanjut, filter)
 	if err != nil {
 		s.log.Error("Gagal query daftar pemeriksaan %s: %v", noRawat, err)
-		return nil, shared.MetaPaginasi{}, err
+		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Batas)))
+	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
 
-	meta := shared.MetaPaginasi{
-		TotalData:    totalData,
-		TotalHalaman: totalHalaman,
-		HalamanAktif: filter.Halaman,
-		BatasData:    filter.Batas,
+	meta := shared.PaginationMeta{
+		TotalRecords: totalData,
+		TotalPages:   totalHalaman,
+		CurrentPage:  filter.Page,
+		PerPage:      filter.Limit,
 	}
 
 	return daftarPemeriksaan, meta, nil
 }
 
-func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.MetaPaginasi, error) {
+func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error) {
 	if strings.TrimSpace(noRekamMedis) == "" {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("nomor rekam medis tidak boleh kosong")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rekam medis tidak boleh kosong")
 	}
 
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		return nil, shared.MetaPaginasi{}, apperror.NewBusinessError("status lanjut tidak valid")
+		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("status lanjut tidak valid")
 	}
 
 	if errs := filter.Validate(); errs != nil {
 		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.MetaPaginasi{}, errs
+		return nil, shared.PaginationMeta{}, errs
 	}
 
 	riwayatKunjungan, err := s.rawatJalanService.RiwayatKunjunganPasien(ctx, noRekamMedis)
 	if err != nil {
 		s.log.Error("Gagal mengambil riwayat kunjungan untuk RM %s: %v", noRekamMedis, err)
-		return nil, shared.MetaPaginasi{}, err
+		return nil, shared.PaginationMeta{}, err
 	}
 
 	if len(riwayatKunjungan) == 0 {
-		return []Pemeriksaan{}, shared.MetaPaginasi{}, nil
+		return []Pemeriksaan{}, shared.PaginationMeta{}, nil
 	}
 
 	listNoRawat := make([]string, len(riwayatKunjungan))
@@ -119,16 +119,16 @@ func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string
 	daftarPemeriksaan, totalData, err := s.repo.DaftarPemeriksaan(ctx, listNoRawat, statusLanjut, filter)
 	if err != nil {
 		s.log.Error("Gagal query daftar pemeriksaan by RM %s: %v", noRekamMedis, err)
-		return nil, shared.MetaPaginasi{}, err
+		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Batas)))
+	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
 
-	meta := shared.MetaPaginasi{
-		TotalData:    totalData,
-		TotalHalaman: totalHalaman,
-		HalamanAktif: filter.Halaman,
-		BatasData:    filter.Batas,
+	meta := shared.PaginationMeta{
+		TotalRecords: totalData,
+		TotalPages:   totalHalaman,
+		CurrentPage:  filter.Page,
+		PerPage:      filter.Limit,
 	}
 
 	return daftarPemeriksaan, meta, nil

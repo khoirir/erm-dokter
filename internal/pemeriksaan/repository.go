@@ -209,7 +209,7 @@ func (r *repository) DaftarPemeriksaan(ctx context.Context, listNoRawat []string
 
 	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t ORDER BY t.tanggal_pemeriksaan DESC, t.jam_pemeriksaan DESC LIMIT ? OFFSET ?", baseQuery)
 
-	dataArgs := append(baseArgs, filter.Batas, filter.Offset())
+	dataArgs := append(baseArgs, filter.Limit, filter.Offset())
 
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {
@@ -378,6 +378,3 @@ func (r *repository) HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, sta
 
 	return nil
 }
-
-
-

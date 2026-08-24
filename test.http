@@ -4,6 +4,12 @@
 GET {{baseUrl}}/health
 Accept: application/json
 
+### 1a. API Documentation (Scalar UI)
+GET {{baseUrl}}/docs
+
+### 1b. OpenAPI Specification (YAML)
+GET {{baseUrl}}/docs/openapi.yaml
+
 ### 2. Auth - Login Dokter
 # @name login
 POST {{baseUrl}}/api/v1/auth/login
@@ -24,7 +30,12 @@ Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 5. Rawat Jalan - Daftar Antrean
-GET {{baseUrl}}/api/v1/rawat-jalan/antrean?tanggal=2026-04-22,2026-04-22&halaman=1&batas=20
+GET {{baseUrl}}/api/v1/rawat-jalan/antrean?tanggal=2026-04-22,2026-04-22&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 5a. Rawat Jalan - Daftar Antrean dengan Pencarian (Keyword)
+GET {{baseUrl}}/api/v1/rawat-jalan/antrean?tanggal=2026-04-22,2026-04-22&keyword=NY&page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -49,22 +60,22 @@ Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 10. Pemeriksaan - Riwayat Kunjungan (Semua)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?halaman=1&batas=20
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 11. Pemeriksaan - Riwayat Kunjungan (Ralan)
-GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?halaman=1&batas=20
+GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 12. Pemeriksaan - Riwayat Kunjungan (Ranap)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap?halaman=1&batas=20
+GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 13. Pemeriksaan - Riwayat Pasien (Semua Kunjungan)
-GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&halaman=1&batas=20
+GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 

@@ -80,27 +80,23 @@ type OpsiReferensi struct {
 
 type FilterDaftarPemeriksaan struct {
 	Tanggal string `json:"tanggal,omitempty"`
-	Halaman int    `json:"halaman,omitempty"`
-	Batas   int    `json:"batas,omitempty"`
+	Page    int    `json:"page,omitempty"`
+	Limit   int    `json:"limit,omitempty"`
 }
 
 func (f *FilterDaftarPemeriksaan) Sanitize() {
-	// if strings.TrimSpace(f.Tanggal) == "" {
-	// 	today := time.Now().Format("2006-01-02")
-	// 	f.Tanggal = today + "," + today
-	// }
-	if f.Halaman <= 0 {
-		f.Halaman = 1
+	if f.Page <= 0 {
+		f.Page = 1
 	}
-	if f.Batas <= 0 {
-		f.Batas = 20
-	} else if f.Batas > 100 {
-		f.Batas = 100
+	if f.Limit <= 0 {
+		f.Limit = 20
+	} else if f.Limit > 100 {
+		f.Limit = 100
 	}
 }
 
 func (f FilterDaftarPemeriksaan) Offset() int {
-	return (f.Halaman - 1) * f.Batas
+	return (f.Page - 1) * f.Limit
 }
 
 func (f *FilterDaftarPemeriksaan) Validate() apperror.ValidationError {

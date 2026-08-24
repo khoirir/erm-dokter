@@ -32,8 +32,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	halaman, _ := strconv.Atoi(q.Get("halaman"))
-	batas, _ := strconv.Atoi(q.Get("batas"))
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	filter := FilterAntreanDokter{
 		Tanggal:           q.Get("tanggal"),
@@ -44,8 +44,8 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 		KataKunci:         q.Get("keyword"),
 		OrderBy:           q.Get("order_by"),
 		SortOrder:         q.Get("sort_order"),
-		Halaman:           halaman,
-		Batas:             batas,
+		Page:              page,
+		Limit:             limit,
 	}
 
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())

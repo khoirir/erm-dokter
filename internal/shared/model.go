@@ -1,8 +1,8 @@
 package shared
 
-type MetaPaginasi struct {
-	TotalData    int `json:"total_data"`
-	TotalHalaman int `json:"total_halaman"`
-	HalamanAktif int `json:"halaman_aktif"`
-	BatasData    int `json:"batas_data"`
+type PaginationMeta struct {
+	TotalRecords int `json:"total_records"`
+	TotalPages   int `json:"total_pages"`
+	CurrentPage  int `json:"current_page"`
+	PerPage      int `json:"per_page"`
 }

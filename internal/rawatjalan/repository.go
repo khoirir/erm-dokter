@@ -222,7 +222,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 
 	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t %s LIMIT ? OFFSET ?", baseQuery, orderClause)
 
-	dataArgs := append(baseArgs, filter.Batas, filter.Offset())
+	dataArgs := append(baseArgs, filter.Limit, filter.Offset())
 
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {

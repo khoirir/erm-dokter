@@ -110,8 +110,8 @@ func TestDaftarAntreanDokter_Success(t *testing.T) {
 	if len(data) != 2 {
 		t.Errorf("expected 2 results, got %d", len(data))
 	}
-	if meta.TotalData != 2 {
-		t.Errorf("expected TotalData=2, got %d", meta.TotalData)
+	if meta.TotalRecords != 2 {
+		t.Errorf("expected TotalRecords=2, got %d", meta.TotalRecords)
 	}
 }
 
@@ -124,17 +124,17 @@ func TestDaftarAntreanDokter_Pagination(t *testing.T) {
 	log := logger.New()
 	uc := rawatjalan.NewService(repo, log)
 
-	filter := rawatjalan.FilterAntreanDokter{Halaman: 2, Batas: 5}
+	filter := rawatjalan.FilterAntreanDokter{Page: 2, Limit: 5}
 
 	_, meta, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if meta.TotalHalaman != 3 {
-		t.Errorf("expected TotalHalaman=3, got %d", meta.TotalHalaman)
+	if meta.TotalPages != 3 {
+		t.Errorf("expected TotalPages=3, got %d", meta.TotalPages)
 	}
-	if meta.HalamanAktif != 2 {
-		t.Errorf("expected HalamanAktif=2, got %d", meta.HalamanAktif)
+	if meta.CurrentPage != 2 {
+		t.Errorf("expected CurrentPage=2, got %d", meta.CurrentPage)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/auth"
+	"erm-dokter/internal/docs"
 	"erm-dokter/internal/health"
 	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pemeriksaan"
@@ -15,6 +16,7 @@ import (
 type RouteConfig struct {
 	Mux                *http.ServeMux
 	HealthHandler      *health.Handler
+	DocsHandler        *docs.Handler
 	AuthHandler        *auth.Handler
 	PenjaminHandler    *penjamin.Handler
 	RawatJalanHandler  *rawatjalan.Handler
@@ -25,6 +27,7 @@ type RouteConfig struct {
 
 func NewRouteConfig(
 	healthHandler *health.Handler,
+	docsHandler *docs.Handler,
 	authHandler *auth.Handler,
 	penjaminHandler *penjamin.Handler,
 	rawatJalanHandler *rawatjalan.Handler,
@@ -34,6 +37,7 @@ func NewRouteConfig(
 	return &RouteConfig{
 		Mux:                http.NewServeMux(),
 		HealthHandler:      healthHandler,
+		DocsHandler:        docsHandler,
 		AuthHandler:        authHandler,
 		PenjaminHandler:    penjaminHandler,
 		RawatJalanHandler:  rawatJalanHandler,
@@ -47,6 +51,7 @@ func (c *RouteConfig) Setup() {
 	loginRateLimit := middleware.RateLimitMiddleware(10, 1*time.Minute)
 
 	c.HealthHandler.RegisterRoutes(c.Mux)
+	c.DocsHandler.RegisterRoutes(c.Mux)
 	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit)
 	c.PenjaminHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)

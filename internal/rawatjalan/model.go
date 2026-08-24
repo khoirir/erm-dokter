@@ -71,18 +71,18 @@ type FilterAntreanDokter struct {
 	KataKunci         string              `json:"keyword,omitempty"`
 	OrderBy           string              `json:"order_by,omitempty"`
 	SortOrder         string              `json:"sort_order,omitempty"`
-	Halaman           int                 `json:"halaman,omitempty"`
-	Batas             int                 `json:"batas,omitempty"`
+	Page              int                 `json:"page,omitempty"`
+	Limit             int                 `json:"limit,omitempty"`
 }
 
 func (f *FilterAntreanDokter) Sanitize() {
-	if f.Halaman <= 0 {
-		f.Halaman = 1
+	if f.Page <= 0 {
+		f.Page = 1
 	}
-	if f.Batas <= 0 {
-		f.Batas = 20
-	} else if f.Batas > 1000 {
-		f.Batas = 1000
+	if f.Limit <= 0 {
+		f.Limit = 20
+	} else if f.Limit > 1000 {
+		f.Limit = 1000
 	}
 	if f.OrderBy == "" {
 		f.OrderBy = "waktu_registrasi"
@@ -99,7 +99,7 @@ func (f *FilterAntreanDokter) Sanitize() {
 }
 
 func (f FilterAntreanDokter) Offset() int {
-	return (f.Halaman - 1) * f.Batas
+	return (f.Page - 1) * f.Limit
 }
 
 func (f *FilterAntreanDokter) Validate() apperror.ValidationError {

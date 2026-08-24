@@ -45,13 +45,13 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	halaman, _ := strconv.Atoi(q.Get("halaman"))
-	batas, _ := strconv.Atoi(q.Get("batas"))
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	filter := FilterDaftarPemeriksaan{
 		Tanggal: q.Get("tanggal"),
-		Halaman: halaman,
-		Batas:   batas,
+		Page:    page,
+		Limit:   limit,
 	}
 
 	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaan(r.Context(), noRawat, shared.StatusLanjut(statusLanjut), filter)
@@ -82,13 +82,13 @@ func (h *Handler) DaftarPemeriksaanByPasien(w http.ResponseWriter, r *http.Reque
 	}
 
 	q := r.URL.Query()
-	halaman, _ := strconv.Atoi(q.Get("halaman"))
-	batas, _ := strconv.Atoi(q.Get("batas"))
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	filter := FilterDaftarPemeriksaan{
 		Tanggal: q.Get("tanggal"),
-		Halaman: halaman,
-		Batas:   batas,
+		Page:    page,
+		Limit:   limit,
 	}
 
 	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaanByRM(r.Context(), noRekamMedis, shared.StatusLanjut(statusLanjut), filter)
