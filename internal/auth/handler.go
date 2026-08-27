@@ -29,6 +29,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	resp, err := h.authService.Login(r.Context(), req)
 	if err != nil {
 		apperror.HandleError(w, err)

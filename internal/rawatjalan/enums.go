@@ -13,14 +13,27 @@ const (
 	StatusPulangPaksa    StatusPemeriksaan = "Pulang Paksa"
 )
 
+var ListStatusPemeriksaan = []struct {
+	Value StatusPemeriksaan
+	Label string
+}{
+	{Value: StatusBelum, Label: "Belum Periksa"},
+	{Value: StatusSudah, Label: "Sudah Periksa"},
+	{Value: StatusBatal, Label: "Batal Periksa"},
+	{Value: StatusBerkasDiterima, Label: "Berkas Diterima"},
+	{Value: StatusDirujuk, Label: "Dirujuk"},
+	{Value: StatusMeninggal, Label: "Meninggal"},
+	{Value: StatusDirawat, Label: "Dirawat"},
+	{Value: StatusPulangPaksa, Label: "Pulang Paksa"},
+}
+
 func (s StatusPemeriksaan) IsValid() bool {
-	switch s {
-	case StatusBelum, StatusSudah, StatusBatal, StatusBerkasDiterima,
-		StatusDirujuk, StatusMeninggal, StatusDirawat, StatusPulangPaksa:
-		return true
-	default:
-		return false
+	for _, item := range ListStatusPemeriksaan {
+		if s == item.Value {
+			return true
+		}
 	}
+	return false
 }
 
 type StatusBayar string
@@ -30,13 +43,21 @@ const (
 	StatusBayarBelum StatusBayar = "Belum Bayar"
 )
 
+var ListStatusBayar = []struct {
+	Value StatusBayar
+	Label string
+}{
+	{Value: StatusBayarSudah, Label: "Sudah Bayar"},
+	{Value: StatusBayarBelum, Label: "Belum Bayar"},
+}
+
 func (s StatusBayar) IsValid() bool {
-	switch s {
-	case StatusBayarSudah, StatusBayarBelum:
-		return true
-	default:
-		return false
+	for _, item := range ListStatusBayar {
+		if s == item.Value {
+			return true
+		}
 	}
+	return false
 }
 
 type JenisAntrean string
@@ -46,13 +67,21 @@ const (
 	JenisAntreanTidakRujukan JenisAntrean = "Bukan Rujukan"
 )
 
+var ListJenisAntrean = []struct {
+	Value JenisAntrean
+	Label string
+}{
+	{Value: JenisAntreanRujukan, Label: "Rujukan"},
+	{Value: JenisAntreanTidakRujukan, Label: "Bukan Rujukan"},
+}
+
 func (j JenisAntrean) IsValid() bool {
-	switch j {
-	case JenisAntreanRujukan, JenisAntreanTidakRujukan:
-		return true
-	default:
-		return false
+	for _, item := range ListJenisAntrean {
+		if j == item.Value {
+			return true
+		}
 	}
+	return false
 }
 
 type OrderBy string
@@ -70,4 +99,3 @@ func (o OrderBy) IsValid() bool {
 		return false
 	}
 }
-

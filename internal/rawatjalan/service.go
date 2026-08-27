@@ -2,7 +2,6 @@ package rawatjalan
 
 import (
 	"context"
-	"math"
 
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/shared"
@@ -14,7 +13,11 @@ type Service interface {
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
 	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
-	GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan
+
+	DaftarStatusPemeriksaan(ctx context.Context) []OpsiReferensi
+	DaftarStatusLanjut(ctx context.Context) []OpsiReferensi
+	DaftarStatusBayar(ctx context.Context) []OpsiReferensi
+	DaftarJenisAntrean(ctx context.Context) []OpsiReferensi
 }
 
 type service struct {
@@ -30,31 +33,13 @@ func NewService(repo Repository, log *logger.Logger) Service {
 }
 
 func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, shared.PaginationMeta, error) {
-	if errs := filter.Validate(); errs != nil {
-		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.PaginationMeta{}, errs
-	}
-
-	if len(filter.KataKunci) > 0 && len(filter.KataKunci) < 3 {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("kata kunci pencarian minimal 3 karakter")
-	}
-
 	daftarAntrean, totalData, err := s.repo.DaftarAntreanDokter(ctx, kodeDokter, filter)
 	if err != nil {
 		s.log.Error("Gagal query antrean dokter %s: %v", kodeDokter, err)
 		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
-
-	meta := shared.PaginationMeta{
-		TotalRecords: totalData,
-		TotalPages:   totalHalaman,
-		CurrentPage:  filter.Page,
-		PerPage:      filter.Limit,
-	}
-
-	return daftarAntrean, meta, nil
+	return daftarAntrean, shared.NewPaginationMeta(totalData, filter.Page, filter.Limit), nil
 }
 
 func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error) {
@@ -69,33 +54,6 @@ func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokte
 	}
 
 	return kunjungan, nil
-}
-
-func (s *service) GetReferensiFilter(ctx context.Context) ReferensiFilterRawatJalan {
-	return ReferensiFilterRawatJalan{
-		StatusPemeriksaan: []OpsiReferensi{
-			{Value: string(StatusBelum), Label: "Belum Periksa"},
-			{Value: string(StatusSudah), Label: "Sudah Periksa"},
-			{Value: string(StatusBatal), Label: "Batal Periksa"},
-			{Value: string(StatusBerkasDiterima), Label: "Berkas Diterima"},
-			{Value: string(StatusDirujuk), Label: "Dirujuk"},
-			{Value: string(StatusMeninggal), Label: "Meninggal"},
-			{Value: string(StatusDirawat), Label: "Dirawat"},
-			{Value: string(StatusPulangPaksa), Label: "Pulang Paksa"},
-		},
-		StatusLanjut: []OpsiReferensi{
-			{Value: string(shared.StatusLanjutRawatJalan), Label: "Rawat Jalan"},
-			{Value: string(shared.StatusLanjutRawatInap), Label: "Rawat Inap"},
-		},
-		StatusBayar: []OpsiReferensi{
-			{Value: string(StatusBayarSudah), Label: "Sudah Bayar"},
-			{Value: string(StatusBayarBelum), Label: "Belum Bayar"},
-		},
-		JenisAntrean: []OpsiReferensi{
-			{Value: string(JenisAntreanRujukan), Label: "Rujukan"},
-			{Value: string(JenisAntreanTidakRujukan), Label: "Bukan Rujukan"},
-		},
-	}
 }
 
 func (s *service) RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error) {
@@ -120,5 +78,45 @@ func (s *service) GetWaktuRegistrasi(ctx context.Context, noRawat string) (strin
 		return "", "", false, err
 	}
 	return tglReg, jamReg, exists, nil
+}
+
+func (s *service) DaftarStatusPemeriksaan(ctx context.Context) []OpsiReferensi {
+	opsi := make([]OpsiReferensi, len(ListStatusPemeriksaan))
+	for i, item := range ListStatusPemeriksaan {
+		opsi[i] = OpsiReferensi{
+			Value: string(item.Value),
+			Label: item.Label,
+		}
+	}
+	return opsi
+}
+
+func (s *service) DaftarStatusLanjut(ctx context.Context) []OpsiReferensi {
+	return []OpsiReferensi{
+		{Value: string(shared.StatusLanjutRawatJalan), Label: "Rawat Jalan"},
+		{Value: string(shared.StatusLanjutRawatInap), Label: "Rawat Inap"},
+	}
+}
+
+func (s *service) DaftarStatusBayar(ctx context.Context) []OpsiReferensi {
+	opsi := make([]OpsiReferensi, len(ListStatusBayar))
+	for i, item := range ListStatusBayar {
+		opsi[i] = OpsiReferensi{
+			Value: string(item.Value),
+			Label: item.Label,
+		}
+	}
+	return opsi
+}
+
+func (s *service) DaftarJenisAntrean(ctx context.Context) []OpsiReferensi {
+	opsi := make([]OpsiReferensi, len(ListJenisAntrean))
+	for i, item := range ListJenisAntrean {
+		opsi[i] = OpsiReferensi{
+			Value: string(item.Value),
+			Label: item.Label,
+		}
+	}
+	return opsi
 }
 

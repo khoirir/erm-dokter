@@ -25,7 +25,7 @@ func JWTMiddleware(jwtSecret string) func(http.HandlerFunc) http.HandlerFunc {
 
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				response.Error(w, http.StatusUnauthorized, "Format kredensial login tidak valid", nil)
+				response.Error(w, http.StatusUnauthorized, "Kredensial login tidak valid", nil)
 				return
 			}
 
@@ -44,13 +44,12 @@ func JWTMiddleware(jwtSecret string) func(http.HandlerFunc) http.HandlerFunc {
 func GetKodeDokter(ctx context.Context) (string, error) {
 	claims, ok := ctx.Value(UserClaimKey).(*token.Claims)
 	if !ok || claims == nil {
-		return "", apperror.NewUnauthorizedError("kredensial login tidak ditemukan")
+		return "", apperror.NewUnauthorizedError("Kredensial login tidak ditemukan")
 	}
 
 	if strings.TrimSpace(claims.KodeDokter) == "" {
-		return "", apperror.NewUnauthorizedError("identitas dokter pada akun ini tidak valid")
+		return "", apperror.NewUnauthorizedError("Identitas dokter pada akun ini tidak valid")
 	}
 
 	return claims.KodeDokter, nil
 }
-

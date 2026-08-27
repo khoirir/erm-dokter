@@ -16,9 +16,11 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		provideHealth(),
 		provideDocs(),
 		provideAuth(db, cfg, log),
-		providePenjamin(db, log),
+		provideMaster(db, log),
+		provideObat(db, cfg, log),
 		provideRawatJalan(db, cfg, log),
 		providePemeriksaan(db, cfg, log),
+		provideResep(db, cfg, log),
 		cfg.JWTSecret,
 	)
 }

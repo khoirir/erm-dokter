@@ -1,0 +1,371 @@
+package resep
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"strings"
+
+	"erm-dokter/internal/shared"
+)
+
+type Repository interface {
+	DaftarResep(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error)
+	DaftarResepByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error)
+	DaftarAturanPakai(ctx context.Context, keyword string) ([]AturanPakai, error)
+	DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error)
+}
+
+type repository struct {
+	db *sql.DB
+}
+
+func NewRepository(db *sql.DB) Repository {
+	return &repository{
+		db: db,
+	}
+}
+
+func (r *repository) DaftarResep(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error) {
+	return r.queryResep(ctx, "ro.no_rawat = ?", noRawat, statusLanjut, filter)
+}
+
+func (r *repository) DaftarResepByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error) {
+	return r.queryResep(ctx, "rp.no_rkm_medis = ?", noRM, statusLanjut, filter)
+}
+
+func (r *repository) queryResep(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error) {
+	var tglAwal, tglAkhir string
+	useTglFilter := false
+
+	tglParts := strings.Split(filter.Tanggal, ",")
+	if len(tglParts) == 2 {
+		tglAwal = strings.TrimSpace(tglParts[0])
+		tglAkhir = strings.TrimSpace(tglParts[1])
+		useTglFilter = true
+	}
+
+	statusCondition := ""
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		statusCondition = " AND ro.status = 'ralan'"
+	case shared.StatusLanjutRawatInap:
+		statusCondition = " AND ro.status = 'ranap'"
+	}
+
+	tanggalCondition := ""
+	if useTglFilter {
+		tanggalCondition = " AND ro.tgl_peresepan BETWEEN ? AND ?"
+	}
+
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM resep_obat ro
+		INNER JOIN reg_periksa rp ON rp.no_rawat = ro.no_rawat
+		INNER JOIN dokter d ON d.kd_dokter = ro.kd_dokter
+		WHERE %s AND ro.tgl_peresepan != '0000-00-00'%s%s`, whereClause, statusCondition, tanggalCondition)
+
+	countArgs := []any{paramValue}
+	if useTglFilter {
+		countArgs = append(countArgs, tglAwal, tglAkhir)
+	}
+
+	var totalData int
+	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&totalData); err != nil {
+		return nil, 0, err
+	}
+
+	if totalData == 0 {
+		return []Resep{}, 0, nil
+	}
+
+	selectQuery := fmt.Sprintf(`
+		SELECT 
+			ro.no_resep,
+			ro.no_rawat,
+			DATE_FORMAT(ro.tgl_peresepan, '%%Y-%%m-%%d') AS tanggal_peresepan,
+			ro.jam_peresepan,
+			ro.status,
+			ro.kd_dokter,
+			COALESCE(d.nm_dokter, '') AS nama_dokter
+		FROM resep_obat ro
+		INNER JOIN reg_periksa rp ON rp.no_rawat = ro.no_rawat
+		INNER JOIN dokter d ON d.kd_dokter = ro.kd_dokter
+		WHERE %s AND ro.tgl_peresepan != '0000-00-00'%s%s
+		ORDER BY ro.tgl_peresepan DESC, ro.jam_peresepan DESC
+		LIMIT ? OFFSET ?`, whereClause, statusCondition, tanggalCondition)
+
+	selectArgs := []any{paramValue}
+	if useTglFilter {
+		selectArgs = append(selectArgs, tglAwal, tglAkhir)
+	}
+	selectArgs = append(selectArgs, filter.Limit, filter.Offset())
+
+	rows, err := r.db.QueryContext(ctx, selectQuery, selectArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var listResep []Resep
+	var listNoResep []string
+	resepIndexMap := make(map[string]int)
+
+	for rows.Next() {
+		var res Resep
+		if err := rows.Scan(
+			&res.NoResep,
+			&res.NoRawat,
+			&res.TanggalPeresepan,
+			&res.JamPeresepan,
+			&res.Status,
+			&res.KodeDokter,
+			&res.NamaDokter,
+		); err != nil {
+			return nil, 0, err
+		}
+
+		res.ResepDokter = make([]ResepDokter, 0)
+		res.ResepDokterRacikan = make([]ResepDokterRacikan, 0)
+
+		resepIndexMap[res.NoResep] = len(listResep)
+		listResep = append(listResep, res)
+		listNoResep = append(listNoResep, res.NoResep)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	if len(listNoResep) == 0 {
+		return listResep, totalData, nil
+	}
+
+	if err := r.loadResepDokter(ctx, listNoResep, listResep, resepIndexMap); err != nil {
+		return nil, 0, err
+	}
+
+	if err := r.loadResepRacikan(ctx, listNoResep, listResep, resepIndexMap); err != nil {
+		return nil, 0, err
+	}
+
+	return listResep, totalData, nil
+}
+
+func (r *repository) loadResepDokter(ctx context.Context, listNoResep []string, listResep []Resep, resepIndexMap map[string]int) error {
+	inPlaceholders := shared.CreateInPlaceholders(len(listNoResep))
+	args := make([]any, len(listNoResep))
+	for i, nr := range listNoResep {
+		args[i] = nr
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 
+			rd.no_resep,
+			rd.kode_brng AS kode_obat,
+			COALESCE(dtb.nama_brng, '') AS nama_obat,
+			rd.jml,
+			COALESCE(dtb.kode_sat, '') AS satuan,
+			rd.aturan_pakai
+		FROM resep_dokter rd
+		LEFT JOIN databarang dtb ON rd.kode_brng = dtb.kode_brng
+		WHERE rd.no_resep IN (%s)`, inPlaceholders)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var rd ResepDokter
+		if err := rows.Scan(
+			&rd.NoResep,
+			&rd.KodeObat,
+			&rd.NamaObat,
+			&rd.Jumlah,
+			&rd.Satuan,
+			&rd.AturanPakai,
+		); err != nil {
+			return err
+		}
+
+		if idx, exists := resepIndexMap[rd.NoResep]; exists {
+			listResep[idx].ResepDokter = append(listResep[idx].ResepDokter, rd)
+		}
+	}
+
+	return rows.Err()
+}
+
+func (r *repository) loadResepRacikan(ctx context.Context, listNoResep []string, listResep []Resep, resepIndexMap map[string]int) error {
+	inPlaceholders := shared.CreateInPlaceholders(len(listNoResep))
+	args := make([]any, len(listNoResep))
+	for i, nr := range listNoResep {
+		args[i] = nr
+	}
+
+	queryRacik := fmt.Sprintf(`
+		SELECT 
+			rdr.no_resep,
+			rdr.no_racik,
+			rdr.nama_racik,
+			rdr.kd_racik,
+			COALESCE(mr.nm_racik, '') AS metode_racik,
+			rdr.jml_dr,
+			rdr.aturan_pakai,
+			rdr.keterangan
+		FROM resep_dokter_racikan rdr
+		LEFT JOIN metode_racik mr ON rdr.kd_racik = mr.kd_racik
+		WHERE rdr.no_resep IN (%s)
+		ORDER BY rdr.no_racik ASC`, inPlaceholders)
+
+	rows, err := r.db.QueryContext(ctx, queryRacik, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	racikanMap := make(map[string]*ResepDokterRacikan)
+
+	for rows.Next() {
+		var rdr ResepDokterRacikan
+		if err := rows.Scan(
+			&rdr.NoResep,
+			&rdr.NoRacik,
+			&rdr.NamaRacik,
+			&rdr.KodeMetodeRacik,
+			&rdr.NamaMetodeRacik,
+			&rdr.JumlahRacikan,
+			&rdr.AturanPakai,
+			&rdr.Keterangan,
+		); err != nil {
+			return err
+		}
+		rdr.DetailRacikan = make([]ResepDokterRacikanDetail, 0)
+
+		if idx, exists := resepIndexMap[rdr.NoResep]; exists {
+			listResep[idx].ResepDokterRacikan = append(listResep[idx].ResepDokterRacikan, rdr)
+			lastIdx := len(listResep[idx].ResepDokterRacikan) - 1
+			key := fmt.Sprintf("%s_%s", rdr.NoResep, rdr.NoRacik)
+			racikanMap[key] = &listResep[idx].ResepDokterRacikan[lastIdx]
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	if len(racikanMap) == 0 {
+		return nil
+	}
+
+	queryDetail := fmt.Sprintf(`
+		SELECT 
+			rdrd.no_resep,
+			rdrd.no_racik,
+			rdrd.kode_brng,
+			COALESCE(dtb.nama_brng, '') AS nama_obat,
+			rdrd.kandungan,
+			rdrd.jml,
+			COALESCE(dtb.kode_sat, '') AS satuan
+		FROM resep_dokter_racikan_detail rdrd
+		LEFT JOIN databarang dtb ON rdrd.kode_brng = dtb.kode_brng
+		WHERE rdrd.no_resep IN (%s)
+		ORDER BY rdrd.no_racik ASC`, inPlaceholders)
+
+	detailRows, err := r.db.QueryContext(ctx, queryDetail, args...)
+	if err != nil {
+		return err
+	}
+	defer detailRows.Close()
+
+	for detailRows.Next() {
+		var d ResepDokterRacikanDetail
+		if err := detailRows.Scan(
+			&d.NoResep,
+			&d.NoRacik,
+			&d.KodeObat,
+			&d.NamaObat,
+			&d.Kandungan,
+			&d.Jumlah,
+			&d.Satuan,
+		); err != nil {
+			return err
+		}
+
+		key := fmt.Sprintf("%s_%s", d.NoResep, d.NoRacik)
+		if racikPtr, exists := racikanMap[key]; exists {
+			racikPtr.DetailRacikan = append(racikPtr.DetailRacikan, d)
+		}
+	}
+
+	return detailRows.Err()
+}
+
+func (r *repository) DaftarAturanPakai(ctx context.Context, keyword string) ([]AturanPakai, error) {
+	cleanKeyword := strings.ReplaceAll(strings.TrimSpace(keyword), " ", "")
+	query := "SELECT aturan FROM master_aturan_pakai"
+	var args []any
+
+	if cleanKeyword != "" {
+		query += " WHERE REPLACE(aturan, ' ', '') LIKE ?"
+		args = append(args, "%"+cleanKeyword+"%")
+	}
+
+	query += " ORDER BY aturan ASC"
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []AturanPakai
+	for rows.Next() {
+		var ap AturanPakai
+		if err := rows.Scan(&ap.AturanPakai); err != nil {
+			return nil, err
+		}
+		list = append(list, ap)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if list == nil {
+		list = []AturanPakai{}
+	}
+
+	return list, nil
+}
+
+func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error) {
+	query := "SELECT kd_racik AS kode, nm_racik AS nama FROM metode_racik ORDER BY nm_racik ASC"
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []MetodeRacik
+	for rows.Next() {
+		var mr MetodeRacik
+		if err := rows.Scan(&mr.Kode, &mr.Nama); err != nil {
+			return nil, err
+		}
+		list = append(list, mr)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if list == nil {
+		list = []MetodeRacik{}
+	}
+
+	return list, nil
+}

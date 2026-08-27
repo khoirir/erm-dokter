@@ -6,7 +6,6 @@ import (
 
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/rawatjalan"
-	"erm-dokter/internal/shared/apperror"
 )
 
 type mockRepository struct {
@@ -41,23 +40,15 @@ func (m *mockRepository) GetWaktuRegistrasi(ctx context.Context, noRawat string)
 }
 
 func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
-	repo := &mockRepository{}
-	log := logger.New()
-	uc := rawatjalan.NewService(repo, log)
 
 	filter := rawatjalan.FilterAntreanDokter{
-		OrderBy:   "kolom_salah",
+		OrderBy:   "kolom_tidak_ada",
 		SortOrder: "SALAH",
 	}
 
-	_, _, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
-	if err == nil {
+	validationErr := filter.Validate()
+	if validationErr == nil {
 		t.Fatal("expected validation error, got nil")
-	}
-
-	validationErr, ok := err.(apperror.ValidationError)
-	if !ok {
-		t.Fatalf("expected apperror.ValidationError, got %T", err)
 	}
 
 	if _, exists := validationErr["order_by"]; !exists {
@@ -69,23 +60,15 @@ func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
 }
 
 func TestDaftarAntreanDokter_MinKeywordLength(t *testing.T) {
-	repo := &mockRepository{}
-	log := logger.New()
-	uc := rawatjalan.NewService(repo, log)
+	filter := rawatjalan.FilterAntreanDokter{Keyword: "ab"}
 
-	filter := rawatjalan.FilterAntreanDokter{KataKunci: "ab"}
-
-	_, _, err := uc.DaftarAntreanDokter(context.Background(), "DK001", filter)
-	if err == nil {
-		t.Fatal("expected business error for short keyword, got nil")
+	validationErr := filter.Validate()
+	if validationErr == nil {
+		t.Fatal("expected validation error for short keyword, got nil")
 	}
 
-	businessErr, ok := err.(*apperror.BusinessError)
-	if !ok {
-		t.Fatalf("expected *apperror.BusinessError, got %T", err)
-	}
-	if businessErr.Message != "kata kunci pencarian minimal 3 karakter" {
-		t.Errorf("unexpected error message: %s", businessErr.Message)
+	if _, exists := validationErr["keyword"]; !exists {
+		t.Error("expected validation error for 'keyword'")
 	}
 }
 
@@ -170,4 +153,32 @@ func TestGetWaktuRegistrasi_EmptyNoRawat(t *testing.T) {
 		t.Fatal("expected error for empty noRawat, got nil")
 	}
 }
+
+func TestRawatJalan_StaticReferences(t *testing.T) {
+	repo := &mockRepository{}
+	log := logger.New()
+	uc := rawatjalan.NewService(repo, log)
+	ctx := context.Background()
+
+	statusPeriksa := uc.DaftarStatusPemeriksaan(ctx)
+	if len(statusPeriksa) != 8 {
+		t.Errorf("expected 8 status periksa items, got %d", len(statusPeriksa))
+	}
+
+	statusLanjut := uc.DaftarStatusLanjut(ctx)
+	if len(statusLanjut) != 2 {
+		t.Errorf("expected 2 status lanjut items, got %d", len(statusLanjut))
+	}
+
+	statusBayar := uc.DaftarStatusBayar(ctx)
+	if len(statusBayar) != 2 {
+		t.Errorf("expected 2 status bayar items, got %d", len(statusBayar))
+	}
+
+	jenisAntrean := uc.DaftarJenisAntrean(ctx)
+	if len(jenisAntrean) != 2 {
+		t.Errorf("expected 2 jenis antrean items, got %d", len(jenisAntrean))
+	}
+}
+
 

@@ -7,10 +7,12 @@ import (
 	"erm-dokter/internal/auth"
 	"erm-dokter/internal/docs"
 	"erm-dokter/internal/health"
+	"erm-dokter/internal/master"
 	"erm-dokter/internal/middleware"
+	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pemeriksaan"
-	"erm-dokter/internal/penjamin"
 	"erm-dokter/internal/rawatjalan"
+	"erm-dokter/internal/resep"
 )
 
 type RouteConfig struct {
@@ -18,9 +20,11 @@ type RouteConfig struct {
 	HealthHandler      *health.Handler
 	DocsHandler        *docs.Handler
 	AuthHandler        *auth.Handler
-	PenjaminHandler    *penjamin.Handler
+	MasterHandler      *master.Handler
+	ObatHandler        *obat.Handler
 	RawatJalanHandler  *rawatjalan.Handler
 	PemeriksaanHandler *pemeriksaan.Handler
+	ResepHandler       *resep.Handler
 	AuthMiddleware     func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware  func(http.HandlerFunc) http.HandlerFunc
 }
@@ -29,9 +33,11 @@ func NewRouteConfig(
 	healthHandler *health.Handler,
 	docsHandler *docs.Handler,
 	authHandler *auth.Handler,
-	penjaminHandler *penjamin.Handler,
+	masterHandler *master.Handler,
+	obatHandler *obat.Handler,
 	rawatJalanHandler *rawatjalan.Handler,
 	pemeriksaanHandler *pemeriksaan.Handler,
+	resepHandler *resep.Handler,
 	jwtSecret string,
 ) *RouteConfig {
 	return &RouteConfig{
@@ -39,9 +45,11 @@ func NewRouteConfig(
 		HealthHandler:      healthHandler,
 		DocsHandler:        docsHandler,
 		AuthHandler:        authHandler,
-		PenjaminHandler:    penjaminHandler,
+		MasterHandler:      masterHandler,
+		ObatHandler:        obatHandler,
 		RawatJalanHandler:  rawatJalanHandler,
 		PemeriksaanHandler: pemeriksaanHandler,
+		ResepHandler:       resepHandler,
 		AuthMiddleware:     middleware.JWTMiddleware(jwtSecret),
 		TimeoutMiddleware:  middleware.TimeoutMiddleware(30 * time.Second),
 	}
@@ -53,9 +61,11 @@ func (c *RouteConfig) Setup() {
 	c.HealthHandler.RegisterRoutes(c.Mux)
 	c.DocsHandler.RegisterRoutes(c.Mux)
 	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit)
-	c.PenjaminHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.MasterHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.ObatHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.PemeriksaanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.ResepHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {

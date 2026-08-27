@@ -9,7 +9,8 @@ info:
         - **Authentication**: JWT Bearer Token dengan enkripsi password AES.
         - **Rawat Jalan**: Antrean pasien dokter, pencarian & filter, detail kunjungan pasien.
         - **Pemeriksaan Medis (SOAP & TTV)**: Riwayat pemeriksaan, pencatatan SOAP (Subjective, Objective, Assessment, Plan) baru, update pemeriksaan, dan penghapusan catatan dengan proteksi kepemilikan dokter & batas waktu edit rekam medis (48 jam).
-        - **Security & Privacy**: Enkripsi identifier URL (`id_kunjungan`, `id_pasien`, `id_pemeriksaan`) menggunakan AES-GCM URL-safe token untuk mencegah ID enumeration / scraping.
+        - **Resep Obat**: Riwayat peresepan obat pasien per kunjungan dan riwayat peresepan seluruh kunjungan berdasarkan No. RM (mendukung filter Ralan, Ranap, Semua, dan rentang tanggal).
+        - **Security & Privacy**: Enkripsi identifier URL (`id_kunjungan`, `id_pasien`, `id_pemeriksaan`, `id_obat`) menggunakan AES-GCM URL-safe token untuk mencegah ID enumeration / scraping.
     contact:
         name: Tim Pengembang ERM Dokter
 servers:
@@ -24,12 +25,16 @@ tags:
       description: Server Health Check
     - name: Auth
       description: Autentikasi Dokter & Manajemen Sesi
-    - name: Penjamin
-      description: Master Data Penjamin / Asuransi Pasien
+    - name: Master
+      description: Master Data Database (Penjamin, Depo Farmasi)
+    - name: Obat
+      description: Katalog Obat, Ketersediaan Stok per Depo & Master Klasifikasi Obat
     - name: Rawat Jalan
       description: Antrean Pasien & Detail Kunjungan Rawat Jalan
     - name: Pemeriksaan
       description: Rekam Medis Pasien (SOAP & Tanda-Tanda Vital)
+    - name: Resep
+      description: Riwayat Peresepan Obat Pasien (Non-Racikan & Racikan)
 
 components:
     securitySchemes:
@@ -196,12 +201,257 @@ components:
                 kode_penjamin:
                     type: string
                     example: BPJ
-                nama_penjamin:
+                nama:
                     type: string
-                    example: BPJS Kesehatan
-                status_aktif:
+                    example: BPJS KESEHATAN
+
+        Depo:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: DPRJ
+                nama:
+                    type: string
+                    example: Depo Rawat Jalan
+
+        JenisObat:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: J01
+                nama:
+                    type: string
+                    example: Tablet
+
+        GolonganObat:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: G01
+                nama:
+                    type: string
+                    example: Obat Bebas
+
+        KategoriObat:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: K01
+                nama:
+                    type: string
+                    example: Antibiotik
+
+        Obat:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                kode_obat:
+                    type: string
+                    example: "B00001"
+                nama_obat:
+                    type: string
+                    example: "PARACETAMOL 500MG TABLET"
+                komposisi:
+                    type: string
+                    example: "Paracetamol 500 mg"
+                harga:
+                    type: string
+                    example: "Rp 1.500"
+                satuan:
+                    type: string
+                    example: "TAB"
+                stok:
+                    type: number
+                    format: double
+                    example: 250.00
+                kapasitas:
+                    type: number
+                    format: double
+                    example: 1.00
+                kode_depo:
+                    type: string
+                    example: "DPRJ"
+                nama_depo:
+                    type: string
+                    example: "Depo Rawat Jalan"
+                kode_jenis:
+                    type: string
+                    example: "J01"
+                nama_jenis:
+                    type: string
+                    example: "Tablet"
+                kode_golongan:
+                    type: string
+                    example: "G01"
+                nama_golongan:
+                    type: string
+                    example: "Obat Bebas"
+                kode_kategori:
+                    type: string
+                    example: "K01"
+                nama_kategori:
+                    type: string
+                    example: "Analgetik Antipiretik"
+                stok_depo:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/StokDepo"
+
+        StokDepo:
+            type: object
+            properties:
+                kode_depo:
+                    type: string
+                    example: DPRJ
+                nama_depo:
+                    type: string
+                    example: Depo Rawat Jalan
+                stok:
+                    type: number
+                    format: double
+                    example: 120.00
+
+        Resep:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted ID Nomor Resep
+                    example: 2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: eN781vJ9A8Z
+                no_resep:
+                    type: string
+                    example: "202604230001"
+                no_rawat:
+                    type: string
+                    example: "2026/04/23/000001"
+                tanggal_peresepan:
+                    type: string
+                    example: "2026-04-23"
+                jam_peresepan:
+                    type: string
+                    example: "10:15:00"
+                status:
+                    type: string
+                    example: "ralan"
+                kode_dokter:
+                    type: string
+                    example: "DK001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Hendra Pratama, Sp.A"
+                resep_dokter:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokter"
+                resep_dokter_racikan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokterRacikan"
+
+        ResepDokter:
+            type: object
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                kode_obat:
+                    type: string
+                    example: "B00001"
+                nama_obat:
+                    type: string
+                    example: "PARACETAMOL 500MG TABLET"
+                jumlah:
+                    type: number
+                    format: double
+                    example: 10.00
+                satuan:
+                    type: string
+                    example: "TAB"
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 tablet sesudah makan"
+
+        ResepDokterRacikan:
+            type: object
+            properties:
+                no_racik:
                     type: string
                     example: "1"
+                nama_racik:
+                    type: string
+                    example: "Puyer Batuk Pilek"
+                kode_racik:
+                    type: string
+                    example: "PULV"
+                metode_racik:
+                    type: string
+                    example: "Puyer / Serbuk"
+                jumlah_racikan:
+                    type: integer
+                    example: 10
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 bungkus"
+                keterangan:
+                    type: string
+                    example: "Sesudah makan"
+                detail_racikan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokterRacikanDetail"
+
+        ResepDokterRacikanDetail:
+            type: object
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                kode_obat:
+                    type: string
+                    example: "B00002"
+                nama_obat:
+                    type: string
+                    example: "CTM 4MG TABLET"
+                kandungan:
+                    type: string
+                    example: "2 mg"
+                jumlah:
+                    type: number
+                    format: double
+                    example: 5.00
+                satuan:
+                    type: string
+                    example: "TAB"
+
+        AturanPakai:
+            type: object
+            properties:
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 tablet sesudah makan"
+
+        MetodeRacik:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: "PULV"
+                nama:
+                    type: string
+                    example: "Puyer / Serbuk"
 
         OpsiReferensi:
             type: object
@@ -489,11 +739,11 @@ paths:
                 "429":
                     description: Terlalu banyak percobaan login (Rate limit 10 req/menit)
 
-    /api/v1/penjamin:
+    /api/v1/master/penjamin:
         get:
-            tags: [Penjamin]
+            tags: [Master]
             summary: Daftar Master Penjamin
-            description: Mengambil daftar penjamin / asuransi pasien yang terdaftar di sistem.
+            description: Mengambil daftar penjamin / asuransi pasien yang aktif di sistem.
             security:
                 - BearerAuth: []
             responses:
@@ -513,16 +763,16 @@ paths:
                 "401":
                     description: Token tidak ada atau kadaluarsa
 
-    /api/v1/rawat-jalan/referensi-filter:
+    /api/v1/master/depo:
         get:
-            tags: [Rawat Jalan]
-            summary: Referensi Opsi Filter Antrean
-            description: Mengambil daftar nilai opsi dropdown untuk filter antrean rawat jalan.
+            tags: [Master]
+            summary: Daftar Master Depo Farmasi
+            description: Mengambil daftar bangsal / depo farmasi yang aktif.
             security:
                 - BearerAuth: []
             responses:
                 "200":
-                    description: Berhasil mengambil referensi filter
+                    description: Berhasil mengambil daftar depo
                     content:
                         application/json:
                             schema:
@@ -531,7 +781,274 @@ paths:
                                     - type: object
                                       properties:
                                           data:
-                                              $ref: "#/components/schemas/ReferensiFilterRawatJalan"
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Depo"
+
+    /api/v1/obat:
+        get:
+            tags: [Obat]
+            summary: Daftar Katalog Obat & Stok Farmasi
+            description: |
+                Mengambil daftar katalog obat dan ketersediaan stok di depo farmasi.
+                - Mendukung pencarian teks (`keyword` pada nama obat, kode obat, atau komposisi).
+                - Mendukung filter berdasarkan `kode_depo` / `depo`, `kode_jenis` / `jenis`, `kode_golongan` / `golongan`, `kode_kategori` / `kategori`.
+                - Mendukung pengurutan (`order_by`: `nama_obat`, `kode_obat`, `harga`, `stok`, `nama_depo`, `nama_jenis`, `nama_golongan`, `nama_kategori`) dan `sort_order` (`ASC`, `DESC`).
+                - Mendukung pagination (`page`, `limit`).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: depo
+                  in: query
+                  description: Filter kode depo farmasi (contoh DPRJ, DPHD, DPIGD, GDF)
+                  schema:
+                      type: string
+                - name: jenis
+                  in: query
+                  description: Filter kode jenis obat
+                  schema:
+                      type: string
+                - name: golongan
+                  in: query
+                  description: Filter kode golongan obat
+                  schema:
+                      type: string
+                - name: kategori
+                  in: query
+                  description: Filter kode kategori obat
+                  schema:
+                      type: string
+                - name: keyword
+                  in: query
+                  description: Pencarian nama obat atau komposisi (minimal 3 karakter)
+                  schema:
+                      type: string
+                      minLength: 3
+                - name: order_by
+                  in: query
+                  description: Kolom pengurutan data
+                  schema:
+                      type: string
+                      default: "nama_obat"
+                - name: sort_order
+                  in: query
+                  description: Arah pengurutan data
+                  schema:
+                      type: string
+                      enum: [ASC, DESC]
+                      default: "ASC"
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Obat"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+
+    /api/v1/obat/jenis:
+        get:
+            tags: [Obat]
+            summary: Daftar Jenis Obat
+            description: Mengambil daftar jenis obat.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar jenis obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/JenisObat"
+
+    /api/v1/obat/golongan:
+        get:
+            tags: [Obat]
+            summary: Daftar Golongan Obat
+            description: Mengambil daftar golongan obat.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar golongan obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/GolonganObat"
+
+    /api/v1/obat/kategori:
+        get:
+            tags: [Obat]
+            summary: Daftar Kategori Obat
+            description: Mengambil daftar kategori obat.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar kategori obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/KategoriObat"
+
+    /api/v1/obat/{id_obat}:
+        get:
+            tags: [Obat]
+            summary: Detail Obat & Rincian Stok per Depo
+            description: Mengambil informasi detail satu obat beserta breakdown ketersediaan stok di seluruh depo farmasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_obat
+                  in: path
+                  required: true
+                  description: Encrypted ID kode obat
+                  schema:
+                      type: string
+                  example: "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Obat"
+                "400":
+                    description: ID obat tidak valid
+                "404":
+                    description: Data obat tidak ditemukan
+
+    /api/v1/rawat-jalan/status-pemeriksaan:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Pemeriksaan Antrean
+            description: Mengambil daftar opsi status pemeriksaan untuk filter antrean pasien.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
+
+    /api/v1/rawat-jalan/status-lanjut:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Lanjut
+            description: Mengambil opsi status perawatan (Rawat Jalan / Rawat Inap).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status lanjut
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
+
+    /api/v1/rawat-jalan/status-bayar:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Pembayaran
+            description: Mengambil opsi status pembayaran (Sudah Bayar / Belum Bayar).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status bayar
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
+
+    /api/v1/rawat-jalan/jenis-antrean:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Jenis Antrean
+            description: Mengambil opsi jenis antrean (Rujukan / Bukan Rujukan).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi jenis antrean
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
 
     /api/v1/rawat-jalan/antrean:
         get:
@@ -600,7 +1117,7 @@ paths:
                   schema:
                       type: string
                       enum: [Ralan, Ranap]
-                - name: kode_penjamin
+                - name: penjamin
                   in: query
                   description: Filter kode penjamin / asuransi (misal BPJ)
                   schema:
@@ -671,19 +1188,16 @@ paths:
                                       properties:
                                           data:
                                               $ref: "#/components/schemas/KunjunganRawatJalan"
-                "404":
-                    description: Kunjungan tidak ditemukan
-
-    /api/v1/pemeriksaan/referensi-kesadaran:
+    /api/v1/pemeriksaan/kesadaran:
         get:
             tags: [Pemeriksaan]
             summary: Referensi Tingkat Kesadaran Pasien
-            description: Mengambil daftar tingkat kesadaran valid (GCS/AVPU) yang didukung oleh sistem.
+            description: Mengambil daftar tingkat kesadaran valid (GCS/AVPU) yang didukung sistem.
             security:
                 - BearerAuth: []
             responses:
                 "200":
-                    description: Daftar tingkat kesadaran
+                    description: Berhasil mengambil referensi tingkat kesadaran
                     content:
                         application/json:
                             schema:
@@ -978,3 +1492,175 @@ paths:
                     description: Ditolak karena bukan dokter pembuat atau melebihi batas waktu 48 jam
                 "404":
                     description: Data pemeriksaan tidak ditemukan
+
+    /api/v1/resep/aturan-pakai:
+        get:
+            tags: [Resep]
+            summary: Daftar Master Aturan Pakai
+            description: Mengambil daftar master aturan pakai obat untuk kebutuhan autocomplete / dropdown dengan fitur pencarian keyword (opsional).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian aturan pakai (contoh "3 x 1" atau "tablet")
+                  schema:
+                      type: string
+                      example: "3 x 1"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar aturan pakai
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/AturanPakai"
+
+    /api/v1/resep/metode-racik:
+        get:
+            tags: [Resep]
+            summary: Daftar Master Metode Racik
+            description: Mengambil daftar referensi metode racikan obat (misalnya Puyer/PULV, Kapsul/CAPS, Salep, Sirup, dll).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar metode racik
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/MetodeRacik"
+
+    /api/v1/resep/{id_kunjungan}/{status_lanjut}:
+        get:
+            tags: [Resep]
+            summary: Daftar Resep per Kunjungan
+            description: Mengambil riwayat peresepan obat pasien untuk satu kunjungan tertentu (Ralan, Ranap, atau Semua).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                      example: Ralan
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                      example: "2026-08-01,2026-08-27"
+                - name: page
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar resep
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Resep"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+
+    /api/v1/resep/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Resep]
+            summary: Riwayat Resep Seluruh Kunjungan Pasien
+            description: Mengambil seluruh riwayat peresepan obat pasien berdasarkan Nomor Rekam Medis (Ralan, Ranap, atau Semua).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                      example: Semua
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                      example: "2026-08-01,2026-08-27"
+                - name: page
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat resep pasien
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Resep"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid

@@ -22,30 +22,30 @@ func (m *mockAuthRepository) VerifikasiLogin(ctx context.Context, username, pass
 }
 
 func TestLogin_EmptyUsername(t *testing.T) {
-	repo := &mockAuthRepository{}
-	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", log)
-
-	_, err := uc.Login(context.Background(), auth.LoginRequest{
+	req := auth.LoginRequest{
 		Username: "",
 		Password: "pass123",
-	})
-	if err == nil {
-		t.Fatal("expected validation error, got nil")
+	}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation error for empty username, got nil")
+	}
+	if _, exists := errs["username"]; !exists {
+		t.Error("expected validation error for 'username'")
 	}
 }
 
 func TestLogin_EmptyPassword(t *testing.T) {
-	repo := &mockAuthRepository{}
-	log := logger.New()
-	uc := auth.NewService(repo, "test-secret", log)
-
-	_, err := uc.Login(context.Background(), auth.LoginRequest{
+	req := auth.LoginRequest{
 		Username: "dokter1",
 		Password: "",
-	})
-	if err == nil {
-		t.Fatal("expected validation error, got nil")
+	}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation error for empty password, got nil")
+	}
+	if _, exists := errs["password"]; !exists {
+		t.Error("expected validation error for 'password'")
 	}
 }
 

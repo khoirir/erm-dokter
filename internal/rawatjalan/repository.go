@@ -153,9 +153,9 @@ func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAnt
 		args = append(args, tglAwal, tglAkhir)
 	}
 
-	if filter.KodePenjamin != "" {
+	if filter.Penjamin != "" {
 		conditions = append(conditions, "r.kd_pj = ?")
-		args = append(args, filter.KodePenjamin)
+		args = append(args, filter.Penjamin)
 	}
 
 	if filter.StatusPemeriksaan != "" {
@@ -168,9 +168,9 @@ func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAnt
 		args = append(args, filter.StatusLanjut)
 	}
 
-	if filter.KataKunci != "" {
+	if filter.Keyword != "" {
 		conditions = append(conditions, "(p.nm_pasien LIKE ? OR r.no_rkm_medis LIKE ? OR r.no_rawat LIKE ?)")
-		keywordPattern := "%" + filter.KataKunci + "%"
+		keywordPattern := "%" + filter.Keyword + "%"
 		args = append(args, keywordPattern, keywordPattern, keywordPattern)
 	}
 
@@ -320,4 +320,3 @@ func (r *repository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (st
 	}
 	return tglReg, jamReg, true, nil
 }
-

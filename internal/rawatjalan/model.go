@@ -55,20 +55,13 @@ type OpsiReferensi struct {
 	Label string `json:"label"`
 }
 
-type ReferensiFilterRawatJalan struct {
-	StatusPemeriksaan []OpsiReferensi `json:"status_pemeriksaan"`
-	StatusLanjut      []OpsiReferensi `json:"status_lanjut"`
-	StatusBayar       []OpsiReferensi `json:"status_bayar"`
-	JenisAntrean      []OpsiReferensi `json:"jenis_antrean"`
-}
-
 type FilterAntreanDokter struct {
 	Tanggal           string              `json:"tanggal,omitempty"`
-	KodePenjamin      string              `json:"kode_penjamin,omitempty"`
+	Penjamin          string              `json:"penjamin,omitempty"`
 	StatusPemeriksaan StatusPemeriksaan   `json:"status_pemeriksaan,omitempty"`
 	JenisAntrean      JenisAntrean        `json:"jenis_antrean,omitempty"`
 	StatusLanjut      shared.StatusLanjut `json:"status_lanjut,omitempty"`
-	KataKunci         string              `json:"keyword,omitempty"`
+	Keyword           string              `json:"keyword,omitempty"`
 	OrderBy           string              `json:"order_by,omitempty"`
 	SortOrder         string              `json:"sort_order,omitempty"`
 	Page              int                 `json:"page,omitempty"`
@@ -81,8 +74,8 @@ func (f *FilterAntreanDokter) Sanitize() {
 	}
 	if f.Limit <= 0 {
 		f.Limit = 20
-	} else if f.Limit > 1000 {
-		f.Limit = 1000
+	} else if f.Limit > 100 {
+		f.Limit = 100
 	}
 	if f.OrderBy == "" {
 		f.OrderBy = "waktu_registrasi"
@@ -122,6 +115,10 @@ func (f *FilterAntreanDokter) Validate() apperror.ValidationError {
 	}
 	if f.Tanggal != "" {
 		shared.ValidasiRentangTanggal(f.Tanggal, errs)
+	}
+	keyword := strings.TrimSpace(f.Keyword)
+	if len(keyword) > 0 && len(keyword) < 3 {
+		errs["keyword"] = "Kata kunci pencarian minimal 3 karakter"
 	}
 	if len(errs) > 0 {
 		return errs
