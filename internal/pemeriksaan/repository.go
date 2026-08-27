@@ -143,17 +143,6 @@ const insertPemeriksaanRanap = `
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-func createInPlaceholders(count int) string {
-	if count <= 0 {
-		return "?"
-	}
-	placeholders := make([]string, count)
-	for i := range count {
-		placeholders[i] = "?"
-	}
-	return strings.Join(placeholders, ",")
-}
-
 func buildBaseQuery(listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) (string, []any) {
 	var tglAwal, tglAkhir string
 	useTglFilter := false
@@ -165,7 +154,7 @@ func buildBaseQuery(listNoRawat []string, statusLanjut shared.StatusLanjut, filt
 		useTglFilter = true
 	}
 
-	inClause := createInPlaceholders(len(listNoRawat))
+	inClause := shared.CreateInPlaceholders(len(listNoRawat))
 	sqlRalan := fmt.Sprintf(selectPemeriksaanRalan, inClause)
 	sqlRanap := fmt.Sprintf(selectPemeriksaanRanap, inClause)
 

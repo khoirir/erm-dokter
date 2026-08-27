@@ -1,14 +1,14 @@
-package penjamin
+package master
 
 import (
 	"context"
-	"fmt"
 
 	"erm-dokter/internal/pkg/logger"
 )
 
 type Service interface {
 	DaftarPenjamin(ctx context.Context) ([]Penjamin, error)
+	DaftarDepo(ctx context.Context) ([]Depo, error)
 }
 
 type service struct {
@@ -24,11 +24,19 @@ func NewService(repo Repository, log *logger.Logger) Service {
 }
 
 func (s *service) DaftarPenjamin(ctx context.Context) ([]Penjamin, error) {
-	penjamin, err := s.repo.DaftarPenjamin(ctx)
+	data, err := s.repo.DaftarPenjamin(ctx)
 	if err != nil {
 		s.log.Error("Gagal mengambil daftar penjamin: %v", err)
-		return nil, fmt.Errorf("gagal mengambil daftar penjamin: %w", err)
+		return nil, err
 	}
+	return data, nil
+}
 
-	return penjamin, nil
+func (s *service) DaftarDepo(ctx context.Context) ([]Depo, error) {
+	data, err := s.repo.DaftarDepo(ctx)
+	if err != nil {
+		s.log.Error("Gagal mengambil daftar depo: %v", err)
+		return nil, err
+	}
+	return data, nil
 }

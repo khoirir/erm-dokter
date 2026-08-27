@@ -45,10 +45,10 @@ erm-dokter/
 │   ├── di/                       # Dependency Injection provider container
 │   ├── docs/                     # Handler Scalar UI & OpenAPI 3.1 YAML spec
 │   ├── health/                   # Health check endpoint
+│   ├── master/                   # Master data (penjamin, depo, obat) & opsi referensi
 │   ├── middleware/               # Auth JWT, CORS, Rate Limiter, Timeout
 │   ├── pasien/                   # Domain & model data pasien
 │   ├── pemeriksaan/              # Domain Rekam Medis Klinis (SOAP & TTV)
-│   ├── penjamin/                 # Master data penjamin / asuransi
 │   ├── pkg/                      # Shared utility packages:
 │   │   ├── crypto/               # AES-GCM encryption/decryption helper
 │   │   ├── database/             # Database connection & pooling
@@ -56,6 +56,7 @@ erm-dokter/
 │   │   ├── response/             # Standardized JSON response helper
 │   │   └── token/                # JWT claim generator & validator
 │   ├── rawatjalan/               # Domain antrean & kunjungan rawat jalan
+│   ├── resep/                    # Domain resep obat dokter (e-resep)
 │   ├── routes/                   # HTTP Route Registry (Go 1.22+ ServeMux)
 │   └── shared/                   # Shared types, PaginationMeta, AppError
 ├── test.http                     # File pengujian REST Client (VS Code)

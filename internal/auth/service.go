@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"erm-dokter/internal/pkg/logger"
@@ -29,14 +28,10 @@ func NewService(repo Repository, jwtSecret string, log *logger.Logger) Service {
 }
 
 func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
-	if errs := req.Validate(); errs != nil {
-		return nil, errs
-	}
-
 	user, err := s.repo.VerifikasiLogin(ctx, req.Username, req.Password)
 	if err != nil {
 		s.log.Error("Gagal memverifikasi login: %v", err)
-		return nil, fmt.Errorf("gagal memverifikasi login: %w", err)
+		return nil, err
 	}
 
 	if user == nil {
@@ -47,7 +42,7 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 	tkn, err := token.GenerateToken(user.IDUser, user.NamaUser, s.jwtSecret, 24*time.Hour)
 	if err != nil {
 		s.log.Error("Gagal membuat token: %v", err)
-		return nil, fmt.Errorf("gagal membuat token: %w", err)
+		return nil, err
 	}
 
 	s.log.Info("Login berhasil untuk dokter: %s", user.IDUser)

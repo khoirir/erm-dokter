@@ -24,7 +24,11 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("GET /api/v1/rawat-jalan/referensi-filter", authMiddleware(timeoutMiddleware(h.GetReferensiFilter)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/status-pemeriksaan", authMiddleware(timeoutMiddleware(h.DaftarStatusPemeriksaan)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/status-lanjut", authMiddleware(timeoutMiddleware(h.DaftarStatusLanjut)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/status-bayar", authMiddleware(timeoutMiddleware(h.DaftarStatusBayar)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/jenis-antrean", authMiddleware(timeoutMiddleware(h.DaftarJenisAntrean)))
+
 	mux.HandleFunc("GET /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
 }
@@ -37,15 +41,20 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 
 	filter := FilterAntreanDokter{
 		Tanggal:           q.Get("tanggal"),
-		KodePenjamin:      q.Get("kode_penjamin"),
+		Penjamin:          q.Get("penjamin"),
 		StatusPemeriksaan: StatusPemeriksaan(q.Get("status_pemeriksaan")),
 		JenisAntrean:      JenisAntrean(q.Get("jenis_antrean")),
 		StatusLanjut:      shared.StatusLanjut(q.Get("status_lanjut")),
-		KataKunci:         q.Get("keyword"),
+		Keyword:           q.Get("keyword"),
 		OrderBy:           q.Get("order_by"),
 		SortOrder:         q.Get("sort_order"),
 		Page:              page,
 		Limit:             limit,
+	}
+
+	if errs := filter.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
 	}
 
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
@@ -112,7 +121,24 @@ func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, "Berhasil mengambil detail kunjungan pasien", kunjungan)
 }
 
-func (h *Handler) GetReferensiFilter(w http.ResponseWriter, r *http.Request) {
-	referensi := h.rawatJalanService.GetReferensiFilter(r.Context())
-	response.Success(w, "Berhasil mengambil referensi filter", referensi)
+func (h *Handler) DaftarStatusPemeriksaan(w http.ResponseWriter, r *http.Request) {
+	data := h.rawatJalanService.DaftarStatusPemeriksaan(r.Context())
+	response.Success(w, "Berhasil mengambil referensi status pemeriksaan", data)
 }
+
+func (h *Handler) DaftarStatusLanjut(w http.ResponseWriter, r *http.Request) {
+	data := h.rawatJalanService.DaftarStatusLanjut(r.Context())
+	response.Success(w, "Berhasil mengambil referensi status lanjut", data)
+}
+
+func (h *Handler) DaftarStatusBayar(w http.ResponseWriter, r *http.Request) {
+	data := h.rawatJalanService.DaftarStatusBayar(r.Context())
+	response.Success(w, "Berhasil mengambil referensi status bayar", data)
+}
+
+func (h *Handler) DaftarJenisAntrean(w http.ResponseWriter, r *http.Request) {
+	data := h.rawatJalanService.DaftarJenisAntrean(r.Context())
+	response.Success(w, "Berhasil mengambil referensi jenis antrean", data)
+}
+
+

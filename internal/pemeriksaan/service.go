@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -19,7 +18,7 @@ type Service interface {
 	DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error)
 	DaftarPemeriksaanByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error)
 	DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error)
-	GetDaftarKesadaran(ctx context.Context) []OpsiReferensi
+	DaftarKesadaran(ctx context.Context) []OpsiReferensi
 	SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error)
 	UpdatePemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) (*Pemeriksaan, error)
 	HapusPemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error
@@ -45,28 +44,12 @@ func NewService(repo Repository, rawatJalanService rawatjalan.Service, maxEditJa
 }
 
 func (s *service) DaftarPemeriksaan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error) {
-	if noRawat == "" {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
-	}
-
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("status lanjut tidak valid")
-	}
-
-	if errs := filter.Validate(); errs != nil {
-		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.PaginationMeta{}, errs
-	}
-
 	rawParts := strings.Split(noRawat, ",")
 	var listNoRawat []string
 	for _, p := range rawParts {
 		if trimmed := strings.TrimSpace(p); trimmed != "" {
 			listNoRawat = append(listNoRawat, trimmed)
 		}
-	}
-	if len(listNoRawat) == 0 {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
 	}
 
 	daftarPemeriksaan, totalData, err := s.repo.DaftarPemeriksaan(ctx, listNoRawat, statusLanjut, filter)
@@ -75,32 +58,10 @@ func (s *service) DaftarPemeriksaan(ctx context.Context, noRawat string, statusL
 		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
-
-	meta := shared.PaginationMeta{
-		TotalRecords: totalData,
-		TotalPages:   totalHalaman,
-		CurrentPage:  filter.Page,
-		PerPage:      filter.Limit,
-	}
-
-	return daftarPemeriksaan, meta, nil
+	return daftarPemeriksaan, shared.NewPaginationMeta(totalData, filter.Page, filter.Limit), nil
 }
 
 func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) ([]Pemeriksaan, shared.PaginationMeta, error) {
-	if strings.TrimSpace(noRekamMedis) == "" {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("nomor rekam medis tidak boleh kosong")
-	}
-
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("status lanjut tidak valid")
-	}
-
-	if errs := filter.Validate(); errs != nil {
-		s.log.Warn("Filter validasi gagal: %+v", errs)
-		return nil, shared.PaginationMeta{}, errs
-	}
-
 	riwayatKunjungan, err := s.rawatJalanService.RiwayatKunjunganPasien(ctx, noRekamMedis)
 	if err != nil {
 		s.log.Error("Gagal mengambil riwayat kunjungan untuk RM %s: %v", noRekamMedis, err)
@@ -108,7 +69,7 @@ func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string
 	}
 
 	if len(riwayatKunjungan) == 0 {
-		return []Pemeriksaan{}, shared.PaginationMeta{}, nil
+		return []Pemeriksaan{}, shared.NewPaginationMeta(0, filter.Page, filter.Limit), nil
 	}
 
 	listNoRawat := make([]string, len(riwayatKunjungan))
@@ -122,27 +83,10 @@ func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string
 		return nil, shared.PaginationMeta{}, err
 	}
 
-	totalHalaman := int(math.Ceil(float64(totalData) / float64(filter.Limit)))
-
-	meta := shared.PaginationMeta{
-		TotalRecords: totalData,
-		TotalPages:   totalHalaman,
-		CurrentPage:  filter.Page,
-		PerPage:      filter.Limit,
-	}
-
-	return daftarPemeriksaan, meta, nil
+	return daftarPemeriksaan, shared.NewPaginationMeta(totalData, filter.Page, filter.Limit), nil
 }
 
 func (s *service) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error) {
-	if statusLanjut != shared.StatusLanjutRawatJalan && statusLanjut != shared.StatusLanjutRawatInap {
-		return nil, apperror.NewBusinessError("status lanjut tidak valid (harus Ralan atau Ranap)")
-	}
-
-	if id.NoRawat == "" || id.TanggalPemeriksaan == "" || id.JamPemeriksaan == "" {
-		return nil, apperror.NewBusinessError("parameter ID pemeriksaan tidak lengkap")
-	}
-
 	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
 	if err != nil {
 		s.log.Error("Gagal query detail pemeriksaan %+v (%s): %v", id, statusLanjut, err)
@@ -152,58 +96,20 @@ func (s *service) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statu
 	return pemeriksaan, nil
 }
 
-func (s *service) GetDaftarKesadaran(ctx context.Context) []OpsiReferensi {
-	return []OpsiReferensi{
-		{Value: string(KesadaranComposMentis), Label: "Compos Mentis"},
-		{Value: string(KesadaranSomnolen), Label: "Somnolen"},
-		{Value: string(KesadaranSopor), Label: "Sopor"},
-		{Value: string(KesadaranKoma), Label: "Koma"},
-		{Value: string(KesadaranAlert), Label: "Alert"},
-		{Value: string(KesadaranConfusion), Label: "Confusion"},
-		{Value: string(KesadaranVoice), Label: "Voice"},
-		{Value: string(KesadaranPain), Label: "Pain"},
-		{Value: string(KesadaranUnresponsive), Label: "Unresponsive"},
-		{Value: string(KesadaranApatis), Label: "Apatis"},
-		{Value: string(KesadaranDelirium), Label: "Delirium"},
+func (s *service) DaftarKesadaran(ctx context.Context) []OpsiReferensi {
+	opsi := make([]OpsiReferensi, len(ListKesadaran))
+	for i, k := range ListKesadaran {
+		opsi[i] = OpsiReferensi{
+			Value: string(k),
+			Label: string(k),
+		}
 	}
+	return opsi
 }
 
 func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error) {
-	if statusLanjut != shared.StatusLanjutRawatJalan && statusLanjut != shared.StatusLanjutRawatInap {
-		return nil, apperror.NewBusinessError("status lanjut tidak valid (harus Ralan atau Ranap)")
-	}
-
-	if errs := req.Validate(); errs != nil {
-		s.log.Warn("Validasi simpan pemeriksaan gagal: %+v", errs)
-		return nil, errs
-	}
-
-	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, req.NoRawat)
-	if err != nil {
-		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", req.NoRawat, err)
+	if err := s.validasiWaktuRegistrasi(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan); err != nil {
 		return nil, err
-	}
-	if !exists {
-		return nil, apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
-	}
-
-	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
-	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", req.NoRawat, tglRegStr, jamRegStr, err)
-		return nil, err
-	}
-
-	waktuPemeriksaan, err := shared.ParseWaktu(req.TanggalPemeriksaan, req.JamPemeriksaan)
-	if err != nil {
-		return nil, apperror.NewBusinessError(err.Error())
-	}
-
-	if waktuPemeriksaan.Before(waktuRegistrasi) {
-		errs := apperror.ValidationError{
-			"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", req.TanggalPemeriksaan, req.JamPemeriksaan, tglRegStr, jamRegStr),
-		}
-		s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", req.NoRawat, errs)
-		return nil, errs
 	}
 
 	if err := s.repo.SimpanPemeriksaan(ctx, kodeDokter, statusLanjut, req); err != nil {
@@ -257,19 +163,6 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 }
 
 func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) (*Pemeriksaan, error) {
-	if statusLanjut != shared.StatusLanjutRawatJalan && statusLanjut != shared.StatusLanjutRawatInap {
-		return nil, apperror.NewBusinessError("status lanjut tidak valid (harus Ralan atau Ranap)")
-	}
-
-	if id.NoRawat == "" || id.TanggalPemeriksaan == "" || id.JamPemeriksaan == "" {
-		return nil, apperror.NewBusinessError("parameter ID pemeriksaan tidak lengkap")
-	}
-
-	if errs := req.Validate(); errs != nil {
-		s.log.Warn("Validasi update pemeriksaan gagal: %+v", errs)
-		return nil, errs
-	}
-
 	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
 	if err != nil {
 		s.log.Error("Gagal mengambil detail pemeriksaan untuk update %+v (%s): %v", id, statusLanjut, err)
@@ -289,23 +182,8 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 		return nil, err
 	}
 
-	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, id.NoRawat)
-	if err != nil {
-		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", id.NoRawat, err)
+	if err := s.validasiWaktuRegistrasi(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan); err != nil {
 		return nil, err
-	}
-	if exists {
-		waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
-		if err == nil {
-			waktuPemeriksaan, err := shared.ParseWaktu(req.TanggalPemeriksaan, req.JamPemeriksaan)
-			if err == nil && waktuPemeriksaan.Before(waktuRegistrasi) {
-				errs := apperror.ValidationError{
-					"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", req.TanggalPemeriksaan, req.JamPemeriksaan, tglRegStr, jamRegStr),
-				}
-				s.log.Warn("Validasi waktu update pemeriksaan gagal untuk no_rawat %s: %+v", id.NoRawat, errs)
-				return nil, errs
-			}
-		}
 	}
 
 	if err := s.repo.UpdatePemeriksaan(ctx, id, statusLanjut, req); err != nil {
@@ -361,14 +239,6 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 }
 
 func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error {
-	if statusLanjut != shared.StatusLanjutRawatJalan && statusLanjut != shared.StatusLanjutRawatInap {
-		return apperror.NewBusinessError("status lanjut tidak valid (harus Ralan atau Ranap)")
-	}
-
-	if id.NoRawat == "" || id.TanggalPemeriksaan == "" || id.JamPemeriksaan == "" {
-		return apperror.NewBusinessError("parameter ID pemeriksaan tidak lengkap")
-	}
-
 	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
 	if err != nil {
 		s.log.Error("Gagal mengambil detail pemeriksaan untuk hapus %+v (%s): %v", id, statusLanjut, err)
@@ -394,6 +264,38 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	}
 
 	s.log.Info("Berhasil menghapus data pemeriksaan no_rawat %s (%s %s) oleh dokter %s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter)
+	return nil
+}
+
+func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPeriksa, jamPeriksa string) error {
+	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
+		return err
+	}
+	if !exists {
+		return apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
+	}
+
+	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
+	if err != nil {
+		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
+		return err
+	}
+
+	waktuPemeriksaan, err := shared.ParseWaktu(tglPeriksa, jamPeriksa)
+	if err != nil {
+		return apperror.NewBusinessError(err.Error())
+	}
+
+	if waktuPemeriksaan.Before(waktuRegistrasi) {
+		errs := apperror.ValidationError{
+			"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeriksa, jamPeriksa, tglRegStr, jamRegStr),
+		}
+		s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", noRawat, errs)
+		return errs
+	}
+
 	return nil
 }
 

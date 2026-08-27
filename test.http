@@ -24,8 +24,23 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/rawat-jalan/antrean?halaman=1&batas=10
 Accept: application/json
 
-### 4. Rawat Jalan - Referensi Filter
-GET {{baseUrl}}/api/v1/rawat-jalan/referensi-filter
+### 4a. Rawat Jalan - Referensi Status Pemeriksaan
+GET {{baseUrl}}/api/v1/rawat-jalan/status-pemeriksaan
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 4b. Rawat Jalan - Referensi Status Lanjut
+GET {{baseUrl}}/api/v1/rawat-jalan/status-lanjut
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 4c. Rawat Jalan - Referensi Status Bayar
+GET {{baseUrl}}/api/v1/rawat-jalan/status-bayar
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 4d. Rawat Jalan - Referensi Jenis Antrean
+GET {{baseUrl}}/api/v1/rawat-jalan/jenis-antrean
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -49,17 +64,52 @@ GET {{baseUrl}}/api/v1/rawat-jalan/pUYIoZMNAKcIgdZUG9b5kyeu2Oq3Shnn11APEnbmtbmtc
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 8. Penjamin - Daftar Penjamin
-GET {{baseUrl}}/api/v1/penjamin
+### 8. Master - Daftar Penjamin
+GET {{baseUrl}}/api/v1/master/penjamin
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 9. Pemeriksaan - Referensi Kesadaran
-GET {{baseUrl}}/api/v1/pemeriksaan/referensi-kesadaran
+### 8a. Master - Daftar Depo Farmasi
+GET {{baseUrl}}/api/v1/master/depo
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 10. Pemeriksaan - Riwayat Kunjungan (Semua)
+### 9. Obat - Daftar Katalog & Stok Obat
+GET {{baseUrl}}/api/v1/obat?depo=DPRJ&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9a. Obat - Pencarian Obat (Keyword)
+GET {{baseUrl}}/api/v1/obat?keyword=PARA&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9b. Obat - Daftar Jenis Obat
+GET {{baseUrl}}/api/v1/obat/jenis
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9c. Obat - Daftar Golongan Obat
+GET {{baseUrl}}/api/v1/obat/golongan
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9d. Obat - Daftar Kategori Obat
+GET {{baseUrl}}/api/v1/obat/kategori
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9e. Obat - Detail Obat & Stok per Depo
+GET {{baseUrl}}/api/v1/obat/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 10. Pemeriksaan - Referensi Tingkat Kesadaran
+GET {{baseUrl}}/api/v1/pemeriksaan/kesadaran
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 11. Pemeriksaan - Riwayat Kunjungan (Semua)
 GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json

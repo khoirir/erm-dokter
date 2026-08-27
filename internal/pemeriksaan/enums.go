@@ -16,13 +16,25 @@ const (
 	KesadaranDelirium     Kesadaran = "Delirium"
 )
 
+var ListKesadaran = []Kesadaran{
+	KesadaranComposMentis,
+	KesadaranSomnolen,
+	KesadaranSopor,
+	KesadaranKoma,
+	KesadaranAlert,
+	KesadaranConfusion,
+	KesadaranVoice,
+	KesadaranPain,
+	KesadaranUnresponsive,
+	KesadaranApatis,
+	KesadaranDelirium,
+}
+
 func (k Kesadaran) IsValid() bool {
-	switch k {
-	case KesadaranComposMentis, KesadaranSomnolen, KesadaranSopor, KesadaranKoma,
-		KesadaranAlert, KesadaranConfusion, KesadaranVoice, KesadaranPain,
-		KesadaranUnresponsive, KesadaranApatis, KesadaranDelirium:
-		return true
-	default:
-		return false
+	for _, item := range ListKesadaran {
+		if k == item {
+			return true
+		}
 	}
+	return false
 }

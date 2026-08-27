@@ -25,9 +25,9 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("GET /api/v1/pemeriksaan/referensi-kesadaran", authMiddleware(timeoutMiddleware(h.GetDaftarKesadaran)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/kesadaran", authMiddleware(timeoutMiddleware(h.DaftarKesadaran)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaan)))
-	mux.HandleFunc("GET /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByPasien)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByRM)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.DetailPemeriksaan)))
 	mux.HandleFunc("POST /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPemeriksaan)))
 	mux.HandleFunc("PUT /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.UpdatePemeriksaan)))
@@ -37,6 +37,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if status != "Semua" && !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -54,7 +60,12 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
-	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaan(r.Context(), noRawat, shared.StatusLanjut(statusLanjut), filter)
+	if errs := filter.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaan(r.Context(), noRawat, status, filter)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -71,9 +82,15 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	response.SuccessWithMeta(w, "Berhasil mengambil daftar pemeriksaan", daftarPemeriksaan, meta)
 }
 
-func (h *Handler) DaftarPemeriksaanByPasien(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DaftarPemeriksaanByRM(w http.ResponseWriter, r *http.Request) {
 	idPasien := r.PathValue("id_pasien")
 	statusLanjut := r.PathValue("status_lanjut")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if status != "Semua" && !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRekamMedis, err := crypto.Decrypt(idPasien, h.encryptionKey)
 	if err != nil {
@@ -91,7 +108,12 @@ func (h *Handler) DaftarPemeriksaanByPasien(w http.ResponseWriter, r *http.Reque
 		Limit:   limit,
 	}
 
-	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaanByRM(r.Context(), noRekamMedis, shared.StatusLanjut(statusLanjut), filter)
+	if errs := filter.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	daftarPemeriksaan, meta, err := h.pemeriksaanService.DaftarPemeriksaanByRM(r.Context(), noRekamMedis, status, filter)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -114,6 +136,12 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
 	encryptedID := r.PathValue("id_pemeriksaan")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -138,7 +166,7 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pemeriksaan, err := h.pemeriksaanService.DetailPemeriksaan(r.Context(), idPemeriksaan, shared.StatusLanjut(statusLanjut))
+	pemeriksaan, err := h.pemeriksaanService.DetailPemeriksaan(r.Context(), idPemeriksaan, status)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -155,14 +183,20 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, "Berhasil mengambil detail pemeriksaan", pemeriksaan)
 }
 
-func (h *Handler) GetDaftarKesadaran(w http.ResponseWriter, r *http.Request) {
-	daftarKesadaran := h.pemeriksaanService.GetDaftarKesadaran(r.Context())
-	response.Success(w, "Berhasil mengambil daftar kesadaran", daftarKesadaran)
+func (h *Handler) DaftarKesadaran(w http.ResponseWriter, r *http.Request) {
+	daftarKesadaran := h.pemeriksaanService.DaftarKesadaran(r.Context())
+	response.Success(w, "Berhasil mengambil referensi tingkat kesadaran", daftarKesadaran)
 }
 
 func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRawatURL, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -181,13 +215,18 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	pemeriksaan, err := h.pemeriksaanService.SimpanPemeriksaan(r.Context(), kodeDokter, shared.StatusLanjut(statusLanjut), req)
+	pemeriksaan, err := h.pemeriksaanService.SimpanPemeriksaan(r.Context(), kodeDokter, status, req)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -207,6 +246,12 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
 	encryptedIdPemeriksaan := r.PathValue("id_pemeriksaan")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -237,13 +282,18 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	pemeriksaan, err := h.pemeriksaanService.UpdatePemeriksaan(r.Context(), kodeDokter, idPemeriksaan, shared.StatusLanjut(statusLanjut), req)
+	pemeriksaan, err := h.pemeriksaanService.UpdatePemeriksaan(r.Context(), kodeDokter, idPemeriksaan, status, req)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
@@ -263,6 +313,12 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
 	encryptedIdPemeriksaan := r.PathValue("id_pemeriksaan")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		return
+	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
@@ -293,13 +349,10 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pemeriksaanService.HapusPemeriksaan(r.Context(), kodeDokter, idPemeriksaan, shared.StatusLanjut(statusLanjut)); err != nil {
+	if err := h.pemeriksaanService.HapusPemeriksaan(r.Context(), kodeDokter, idPemeriksaan, status); err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
 	response.Success(w, "Berhasil menghapus data pemeriksaan", nil)
 }
-
-
-
