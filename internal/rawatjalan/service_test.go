@@ -40,7 +40,6 @@ func (m *mockRepository) GetWaktuRegistrasi(ctx context.Context, noRawat string)
 }
 
 func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
-
 	filter := rawatjalan.FilterAntreanDokter{
 		OrderBy:   "kolom_tidak_ada",
 		SortOrder: "SALAH",
@@ -58,6 +57,31 @@ func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
 		t.Error("expected validation error for 'sort_order'")
 	}
 }
+
+func TestDaftarAntreanDokter_ValidOrderByOptions(t *testing.T) {
+	validOrderBys := []string{
+		"waktu_registrasi",
+		"nama_pasien",
+		"penjamin",
+		"status_pemeriksaan",
+		"status_lanjut",
+		"status_bayar",
+		"jenis_antrean",
+	}
+
+	for _, ob := range validOrderBys {
+		t.Run(ob, func(t *testing.T) {
+			filter := rawatjalan.FilterAntreanDokter{
+				OrderBy:   ob,
+				SortOrder: "ASC",
+			}
+			if errs := filter.Validate(); errs != nil {
+				t.Fatalf("expected valid filter for order_by=%s, got %v", ob, errs)
+			}
+		})
+	}
+}
+
 
 func TestDaftarAntreanDokter_MinKeywordLength(t *testing.T) {
 	filter := rawatjalan.FilterAntreanDokter{Keyword: "ab"}

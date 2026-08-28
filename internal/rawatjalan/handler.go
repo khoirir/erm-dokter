@@ -92,7 +92,7 @@ func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 

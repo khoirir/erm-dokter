@@ -4,12 +4,19 @@ import (
 	"database/sql"
 
 	"erm-dokter/internal/config"
+	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
 )
 
 func provideResep(db *sql.DB, cfg *config.Config, log *logger.Logger) *resep.Handler {
 	repo := resep.NewRepository(db)
-	svc := resep.NewService(repo, log)
+	rawatJalanRepo := rawatjalan.NewRepository(db)
+	rawatJalanSvc := rawatjalan.NewService(rawatJalanRepo, log)
+	obatRepo := obat.NewRepository(db)
+	obatSvc := obat.NewService(obatRepo, log)
+	svc := resep.NewService(repo, rawatJalanSvc, obatSvc, cfg.MaxEditRekamMedisJam, log)
 	return resep.NewHandler(svc, cfg.EncryptionKey)
 }
+

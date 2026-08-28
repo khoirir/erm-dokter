@@ -284,3 +284,87 @@ Content-Type: application/json
   "keluhan": ""
 }
 
+### 25. Resep - Daftar Aturan Pakai
+GET {{baseUrl}}/api/v1/resep/aturan-pakai?keyword=3%20x%201
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 26. Resep - Daftar Metode Racik
+GET {{baseUrl}}/api/v1/resep/metode-racik
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 27. Resep - Daftar Resep per Kunjungan (Ralan)
+GET {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=5
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 28. Resep - Riwayat Resep Pasien by RM
+GET {{baseUrl}}/api/v1/resep/pasien/2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI/Semua?page=1&limit=5
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 29. Resep - Simpan Resep Non-Racikan (Ralan)
+POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/04/22/036934",
+  "resep_dokter": [
+    {
+      "id_obat": "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI",
+      "jumlah": 10,
+      "aturan_pakai": "3 x 1 tablet sesudah makan"
+    }
+  ]
+}
+
+### 30. Resep - Simpan Resep Racikan & Non-Racikan (Kombinasi)
+POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/04/22/036934",
+  "resep_dokter": [
+    {
+      "id_obat": "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI",
+      "jumlah": 5,
+      "aturan_pakai": "1 x 1 tablet malam hari"
+    }
+  ],
+  "resep_racikan": [
+    {
+      "nama_racik": "Puyer Batuk Pilek",
+      "kode_racik": "PULV",
+      "jumlah_racikan": 10,
+      "aturan_pakai": "3 x 1 bungkus",
+      "keterangan": "Sebelum tidur",
+      "detail": [
+        {
+          "id_obat": "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI",
+          "kandungan": "500 mg",
+          "jumlah": 5
+        }
+      ]
+    }
+  ]
+}
+
+### 31. Resep - Simpan Validasi Error No Rawat Beda (400)
+POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "no_rawat": "2026/01/01/999999",
+  "resep_dokter": [
+    {
+      "id_obat": "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI",
+      "jumlah": 10,
+      "aturan_pakai": "3 x 1"
+    }
+  ]
+}
+

@@ -87,15 +87,27 @@ func (j JenisAntrean) IsValid() bool {
 type OrderBy string
 
 const (
-	OrderByWaktuRegistrasi OrderBy = "waktu_registrasi"
-	OrderByNamaPasien     OrderBy = "nama_pasien"
+	OrderByWaktuRegistrasi   OrderBy = "waktu_registrasi"
+	OrderByNamaPasien        OrderBy = "nama_pasien"
+	OrderByPenjamin          OrderBy = "penjamin"
+	OrderByStatusPemeriksaan OrderBy = "status_pemeriksaan"
+	OrderByStatusLanjut      OrderBy = "status_lanjut"
+	OrderByStatusBayar       OrderBy = "status_bayar"
+	OrderByJenisAntrean      OrderBy = "jenis_antrean"
 )
 
 func (o OrderBy) IsValid() bool {
 	switch o {
-	case OrderByWaktuRegistrasi, OrderByNamaPasien:
+	case OrderByWaktuRegistrasi,
+		OrderByNamaPasien,
+		OrderByPenjamin,
+		OrderByStatusPemeriksaan,
+		OrderByStatusLanjut,
+		OrderByStatusBayar,
+		OrderByJenisAntrean:
 		return true
 	default:
 		return false
 	}
 }
+

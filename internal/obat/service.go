@@ -13,6 +13,7 @@ type Service interface {
 	DaftarJenis(ctx context.Context) ([]JenisObat, error)
 	DaftarGolongan(ctx context.Context) ([]GolonganObat, error)
 	DaftarKategori(ctx context.Context) ([]KategoriObat, error)
+	CekKeberadaanObat(ctx context.Context, listKodeObat []string) (map[string]bool, error)
 }
 
 type service struct {
@@ -72,4 +73,13 @@ func (s *service) DaftarKategori(ctx context.Context) ([]KategoriObat, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func (s *service) CekKeberadaanObat(ctx context.Context, listKodeObat []string) (map[string]bool, error) {
+	res, err := s.repo.CekKeberadaanObat(ctx, listKodeObat)
+	if err != nil {
+		s.log.Error("Gagal memeriksa keberadaan obat di repository: %v", err)
+		return nil, err
+	}
+	return res, nil
 }

@@ -93,9 +93,15 @@ const selectKunjunganRujukan = `
 `
 
 var orderByMapping = map[string]func(string) string{
-	"nama_pasien":      func(dir string) string { return fmt.Sprintf("t.nama_pasien %s", dir) },
-	"waktu_registrasi": func(dir string) string { return fmt.Sprintf("t.tanggal_registrasi %s, t.jam_registrasi %s", dir, dir) },
+	"waktu_registrasi":   func(dir string) string { return fmt.Sprintf("t.tanggal_registrasi %s, t.jam_registrasi %s", dir, dir) },
+	"nama_pasien":        func(dir string) string { return fmt.Sprintf("t.nama_pasien %s", dir) },
+	"penjamin":           func(dir string) string { return fmt.Sprintf("t.nama_penjamin %s", dir) },
+	"status_pemeriksaan": func(dir string) string { return fmt.Sprintf("t.status_pemeriksaan %s", dir) },
+	"status_lanjut":      func(dir string) string { return fmt.Sprintf("t.status_lanjut %s", dir) },
+	"status_bayar":       func(dir string) string { return fmt.Sprintf("t.status_bayar %s", dir) },
+	"jenis_antrean":      func(dir string) string { return fmt.Sprintf("t.jenis_antrean %s", dir) },
 }
+
 
 type scanner interface {
 	Scan(dest ...any) error
