@@ -39,6 +39,11 @@ func (m *mockConcurrentRepo) HapusResep(ctx context.Context, noResep string) err
 	return nil
 }
 
+func (m *mockConcurrentRepo) UpdateResep(ctx context.Context, noResep string, req SimpanResepRequest) (*Resep, error) {
+	return nil, nil
+}
+
+
 
 type mockConcurrentRJ struct {
 	rawatjalan.Service

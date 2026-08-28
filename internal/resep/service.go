@@ -18,7 +18,9 @@ type Service interface {
 	DetailResep(ctx context.Context, noResep string) (*Resep, error)
 	SimpanResep(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
 	HapusResep(ctx context.Context, kodeDokter, noRawat, noResep string, statusLanjut shared.StatusLanjut) error
+	UpdateResep(ctx context.Context, kodeDokter, noRawat, noResep string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
 	DaftarAturanPakai(ctx context.Context, keyword string) ([]AturanPakai, error)
+
 	DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error)
 }
 
@@ -114,44 +116,16 @@ func (s *service) HapusResep(ctx context.Context, kodeDokter, noRawat, noResep s
 		return apperror.NewNotFoundError("Data resep obat tidak ditemukan pada kunjungan ini")
 	}
 
-	if resep.KodeDokter != kodeDokter {
-		s.log.Warn("Percobaan menghapus resep no_resep %s oleh dokter %s ditolak: diresepkan oleh %s (%s)", noResep, kodeDokter, resep.KodeDokter, resep.NamaDokter)
-		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus resep ini karena diresepkan oleh dokter lain (%s)", resep.NamaDokter))
-	}
-
-	if resep.TanggalPerawatan != "" && resep.TanggalPerawatan != "0000-00-00" && resep.JamPerawatan != "" && resep.JamPerawatan != "00:00:00" {
-		s.log.Warn("Percobaan menghapus resep no_resep %s ditolak: telah divalidasi farmasi pada %s %s", noResep, resep.TanggalPerawatan, resep.JamPerawatan)
-		return apperror.NewForbiddenError("Resep obat telah divalidasi oleh pihak farmasi dan tidak dapat dihapus")
-	}
-
-	if resep.TanggalPenyerahan != "" && resep.TanggalPenyerahan != "0000-00-00" && resep.JamPenyerahan != "" && resep.JamPenyerahan != "00:00:00" {
-		s.log.Warn("Percobaan menghapus resep no_resep %s ditolak: telah diserahkan ke pasien pada %s %s", noResep, resep.TanggalPenyerahan, resep.JamPenyerahan)
-		return apperror.NewForbiddenError("Resep obat telah diserahkan ke pasien dan tidak dapat dihapus")
+	if err := s.validasiAksesDanStatusResep(resep, kodeDokter, "menghapus"); err != nil {
+		return err
 	}
 
 	if statusLanjut == shared.StatusLanjutRawatJalan {
-		tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
-		if err != nil {
-			s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
+		if err := s.validasiWaktuRegistrasi(ctx, noRawat, "", "", statusLanjut); err != nil {
 			return err
-		}
-		if !exists {
-			return apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
-		}
-
-		waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
-		if err != nil {
-			s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
-			return err
-		}
-
-		batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
-		if time.Now().After(batasWaktu) {
-			errMsg := fmt.Sprintf("Batas waktu penghapusan resep obat untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
-			s.log.Warn("Batas waktu hapus resep kadaluarsa untuk no_rawat %s: %s", noRawat, errMsg)
-			return apperror.NewForbiddenError(errMsg)
 		}
 	}
+
 
 	if err := s.repo.HapusResep(ctx, noResep); err != nil {
 		s.log.Error("Gagal menghapus resep obat no_resep %s untuk no_rawat %s: %v", noResep, noRawat, err)
@@ -161,6 +135,71 @@ func (s *service) HapusResep(ctx context.Context, kodeDokter, noRawat, noResep s
 	s.log.Info("Berhasil menghapus resep obat no_resep %s untuk no_rawat %s oleh dokter %s", noResep, noRawat, kodeDokter)
 	return nil
 }
+
+func (s *service) UpdateResep(ctx context.Context, kodeDokter, noRawat, noResep string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error) {
+	resep, err := s.repo.DetailResep(ctx, noResep)
+	if err != nil {
+		s.log.Error("Gagal mengambil detail resep %s untuk edit: %v", noResep, err)
+		return nil, err
+	}
+	if resep == nil || resep.NoRawat != noRawat {
+		return nil, apperror.NewNotFoundError("Data resep obat tidak ditemukan pada kunjungan ini")
+	}
+
+	if err := s.validasiAksesDanStatusResep(resep, kodeDokter, "mengubah"); err != nil {
+		return nil, err
+	}
+
+	if err := s.validasiWaktuRegistrasi(ctx, req.NoRawat, req.TanggalPeresepan, req.JamPeresepan, statusLanjut); err != nil {
+		return nil, err
+	}
+
+	if err := s.validasiStatusKamarInap(ctx, req.NoRawat, statusLanjut); err != nil {
+		return nil, err
+	}
+
+	if err := s.validasiKeberadaanObat(ctx, req); err != nil {
+		return nil, err
+	}
+
+	if err := s.validasiMetodeRacik(ctx, req); err != nil {
+		return nil, err
+	}
+
+	updatedResep, err := s.repo.UpdateResep(ctx, noResep, req)
+	if err != nil {
+		s.log.Error("Gagal memperbarui resep obat no_resep %s (%s): %v", noResep, statusLanjut, err)
+		return nil, err
+	}
+
+	s.log.Info("Berhasil memperbarui resep obat no_resep %s untuk no_rawat %s oleh dokter %s", noResep, req.NoRawat, kodeDokter)
+	return updatedResep, nil
+}
+
+func (s *service) validasiAksesDanStatusResep(resep *Resep, kodeDokter, action string) error {
+	passive := "diubah"
+	if action == "menghapus" {
+		passive = "dihapus"
+	}
+
+	if resep.KodeDokter != kodeDokter {
+		s.log.Warn("Percobaan %s resep no_resep %s oleh dokter %s ditolak: diresepkan oleh %s (%s)", action, resep.NoResep, kodeDokter, resep.KodeDokter, resep.NamaDokter)
+		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk %s resep ini karena diresepkan oleh dokter lain (%s)", action, resep.NamaDokter))
+	}
+
+	if resep.TanggalPerawatan != "" && resep.TanggalPerawatan != "0000-00-00" && resep.JamPerawatan != "" && resep.JamPerawatan != "00:00:00" {
+		s.log.Warn("Percobaan %s resep no_resep %s ditolak: telah divalidasi farmasi pada %s %s", action, resep.NoResep, resep.TanggalPerawatan, resep.JamPerawatan)
+		return apperror.NewForbiddenError(fmt.Sprintf("Resep obat telah divalidasi oleh pihak farmasi dan tidak dapat %s", passive))
+	}
+
+	if resep.TanggalPenyerahan != "" && resep.TanggalPenyerahan != "0000-00-00" && resep.JamPenyerahan != "" && resep.JamPenyerahan != "00:00:00" {
+		s.log.Warn("Percobaan %s resep no_resep %s ditolak: telah diserahkan ke pasien pada %s %s", action, resep.NoResep, resep.TanggalPenyerahan, resep.JamPenyerahan)
+		return apperror.NewForbiddenError(fmt.Sprintf("Resep obat telah diserahkan ke pasien dan tidak dapat %s", passive))
+	}
+
+	return nil
+}
+
 
 func (s *service) validasiKeberadaanObat(ctx context.Context, req SimpanResepRequest) error {
 
@@ -262,17 +301,19 @@ func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPeres
 		return err
 	}
 
-	waktuPeresepan, err := shared.ParseWaktu(tglPeresepan, jamPeresepan)
-	if err != nil {
-		return apperror.NewBusinessError(err.Error())
-	}
-
-	if waktuPeresepan.Before(waktuRegistrasi) {
-		errs := apperror.ValidationError{
-			"tanggal_peresepan": fmt.Sprintf("Waktu peresepan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeresepan, jamPeresepan, tglRegStr, jamRegStr),
+	if tglPeresepan != "" && jamPeresepan != "" {
+		waktuPeresepan, err := shared.ParseWaktu(tglPeresepan, jamPeresepan)
+		if err != nil {
+			return apperror.NewBusinessError(err.Error())
 		}
-		s.log.Warn("Validasi waktu peresepan gagal untuk no_rawat %s: %+v", noRawat, errs)
-		return errs
+
+		if waktuPeresepan.Before(waktuRegistrasi) {
+			errs := apperror.ValidationError{
+				"tanggal_peresepan": fmt.Sprintf("Waktu peresepan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeresepan, jamPeresepan, tglRegStr, jamRegStr),
+			}
+			s.log.Warn("Validasi waktu peresepan gagal untuk no_rawat %s: %+v", noRawat, errs)
+			return errs
+		}
 	}
 
 	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
@@ -281,6 +322,7 @@ func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPeres
 		s.log.Warn("Peresepan ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
 		return apperror.NewForbiddenError(errMsg)
 	}
+
 
 	return nil
 }

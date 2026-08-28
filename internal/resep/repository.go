@@ -22,7 +22,9 @@ type Repository interface {
 	DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error)
 	CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error)
 	HapusResep(ctx context.Context, noResep string) error
+	UpdateResep(ctx context.Context, noResep string, req SimpanResepRequest) (*Resep, error)
 }
+
 
 type repository struct {
 	db *sql.DB
@@ -502,7 +504,44 @@ func (r *repository) HapusResep(ctx context.Context, noResep string) error {
 	return tx.Commit()
 }
 
+func (r *repository) UpdateResep(ctx context.Context, noResep string, req SimpanResepRequest) (*Resep, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	updateQuery := `UPDATE resep_obat SET tgl_peresepan = ?, jam_peresepan = ? WHERE no_resep = ?`
+	if _, err := tx.ExecContext(ctx, updateQuery, req.TanggalPeresepan, req.JamPeresepan, noResep); err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter_racikan_detail WHERE no_resep = ?", noResep); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter_racikan WHERE no_resep = ?", noResep); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter WHERE no_resep = ?", noResep); err != nil {
+		return nil, err
+	}
+
+	if err := r.insertResepDokter(ctx, tx, noResep, req.ResepDokter); err != nil {
+		return nil, err
+	}
+	if err := r.insertResepRacikan(ctx, tx, noResep, req.ResepRacikan); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return r.DetailResep(ctx, noResep)
+}
+
 func (r *repository) generateNoResep(ctx context.Context, tx *sql.Tx, tglPeresepan string) (string, error) {
+
 	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(tglPeresepan))
 	prefix := time.Now().Format("20060102")
 	if err == nil {
