@@ -3,8 +3,11 @@ package resep
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"erm-dokter/internal/shared"
 )
@@ -12,8 +15,13 @@ import (
 type Repository interface {
 	DaftarResep(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error)
 	DaftarResepByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error)
+	DetailResep(ctx context.Context, noResep string) (*Resep, error)
+	SimpanResep(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
+	CekStatusKamarInap(ctx context.Context, noRawat string) (isAktif bool, isPernahRanap bool, err error)
 	DaftarAturanPakai(ctx context.Context, keyword string) ([]AturanPakai, error)
 	DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error)
+	CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error)
+	HapusResep(ctx context.Context, noResep string) error
 }
 
 type repository struct {
@@ -368,4 +376,307 @@ func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, erro
 	}
 
 	return list, nil
+}
+
+func (r *repository) CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error) {
+	uniqueCodes := make([]string, 0, len(listKodeRacik))
+	seen := make(map[string]bool)
+	for _, code := range listKodeRacik {
+		trimmed := strings.TrimSpace(code)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			uniqueCodes = append(uniqueCodes, trimmed)
+		}
+	}
+
+	if len(uniqueCodes) == 0 {
+		return map[string]bool{}, nil
+	}
+
+	inPlaceholders := shared.CreateInPlaceholders(len(uniqueCodes))
+	args := make([]any, len(uniqueCodes))
+	for i, c := range uniqueCodes {
+		args[i] = c
+	}
+
+	query := fmt.Sprintf("SELECT kd_racik FROM metode_racik WHERE kd_racik IN (%s)", inPlaceholders)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	foundMap := make(map[string]bool)
+	for rows.Next() {
+		var kode string
+		if err := rows.Scan(&kode); err != nil {
+			return nil, err
+		}
+		foundMap[kode] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return foundMap, nil
+}
+
+func (r *repository) DetailResep(ctx context.Context, noResep string) (*Resep, error) {
+	query := `
+		SELECT 
+			ro.no_resep,
+			ro.no_rawat,
+			DATE_FORMAT(ro.tgl_peresepan, '%Y-%m-%d') AS tanggal_peresepan,
+			ro.jam_peresepan,
+			DATE_FORMAT(ro.tgl_perawatan, '%Y-%m-%d') AS tanggal_perawatan,
+			ro.jam AS jam_perawatan,
+			DATE_FORMAT(ro.tgl_penyerahan, '%Y-%m-%d') AS tanggal_penyerahan,
+			ro.jam_penyerahan,
+			ro.status,
+			ro.kd_dokter,
+			COALESCE(d.nm_dokter, '') AS nama_dokter
+		FROM resep_obat ro
+		INNER JOIN dokter d ON d.kd_dokter = ro.kd_dokter
+		WHERE ro.no_resep = ?`
+
+	var res Resep
+	err := r.db.QueryRowContext(ctx, query, noResep).Scan(
+		&res.NoResep,
+		&res.NoRawat,
+		&res.TanggalPeresepan,
+		&res.JamPeresepan,
+		&res.TanggalPerawatan,
+		&res.JamPerawatan,
+		&res.TanggalPenyerahan,
+		&res.JamPenyerahan,
+		&res.Status,
+		&res.KodeDokter,
+		&res.NamaDokter,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	res.ResepDokter = make([]ResepDokter, 0)
+	res.ResepDokterRacikan = make([]ResepDokterRacikan, 0)
+
+	listResep := []Resep{res}
+	resepIndexMap := map[string]int{res.NoResep: 0}
+
+	if err := r.loadResepDokter(ctx, []string{res.NoResep}, listResep, resepIndexMap); err != nil {
+		return nil, err
+	}
+	if err := r.loadResepRacikan(ctx, []string{res.NoResep}, listResep, resepIndexMap); err != nil {
+		return nil, err
+	}
+
+	return &listResep[0], nil
+}
+
+func (r *repository) HapusResep(ctx context.Context, noResep string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter_racikan_detail WHERE no_resep = ?", noResep); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter_racikan WHERE no_resep = ?", noResep); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_dokter WHERE no_resep = ?", noResep); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM resep_obat WHERE no_resep = ?", noResep); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *repository) generateNoResep(ctx context.Context, tx *sql.Tx, tglPeresepan string) (string, error) {
+	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(tglPeresepan))
+	prefix := time.Now().Format("20060102")
+	if err == nil {
+		prefix = parsedDate.Format("20060102")
+	}
+
+	query := `SELECT no_resep FROM resep_obat WHERE no_resep LIKE ? ORDER BY no_resep DESC LIMIT 1 FOR UPDATE`
+	var lastToday string
+	err = tx.QueryRowContext(ctx, query, prefix+"%").Scan(&lastToday)
+	if errors.Is(err, sql.ErrNoRows) {
+		return prefix + "0001", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	if len(lastToday) != 12 || !strings.HasPrefix(lastToday, prefix) {
+		return time.Now().Format("20060102150405"), nil
+	}
+
+	tail := lastToday[len(lastToday)-4:]
+	next, err := strconv.Atoi(tail)
+	if err != nil || next >= 9999 {
+		return time.Now().Format("20060102150405"), nil
+	}
+
+	return fmt.Sprintf("%s%04d", prefix, next+1), nil
+}
+
+func (r *repository) SimpanResep(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error) {
+	var lastErr error
+	dbStatus := strings.ToLower(string(statusLanjut))
+
+	for attempt := 1; attempt <= 3; attempt++ {
+		tx, err := r.db.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		noResep, err := r.generateNoResep(ctx, tx, req.TanggalPeresepan)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		if err := r.insertHeader(ctx, tx, noResep, req, kodeDokter, dbStatus); err != nil {
+			_ = tx.Rollback()
+			if isDuplicateKey(err) {
+				lastErr = err
+				continue
+			}
+			return nil, err
+		}
+
+		if err := r.insertResepDokter(ctx, tx, noResep, req.ResepDokter); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		if err := r.insertResepRacikan(ctx, tx, noResep, req.ResepRacikan); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		if err := tx.Commit(); err != nil {
+			if isDuplicateKey(err) {
+				lastErr = err
+				continue
+			}
+			return nil, err
+		}
+
+		return r.DetailResep(ctx, noResep)
+	}
+
+	return nil, fmt.Errorf("gagal mendapatkan nomor resep unik setelah 3 kali percobaan: %w", lastErr)
+}
+
+func (r *repository) insertHeader(ctx context.Context, tx *sql.Tx, noResep string, req SimpanResepRequest, kodeDokter string, dbStatus string) error {
+	query := `
+		INSERT INTO resep_obat (
+			no_resep, tgl_perawatan, jam, no_rawat, kd_dokter,
+			tgl_peresepan, jam_peresepan, status, tgl_penyerahan, jam_penyerahan
+		) VALUES (?, '0000-00-00', '00:00:00', ?, ?, ?, ?, ?, '0000-00-00', '00:00:00')`
+
+	_, err := tx.ExecContext(ctx, query, noResep, req.NoRawat, kodeDokter, req.TanggalPeresepan, req.JamPeresepan, dbStatus)
+	return err
+}
+
+func (r *repository) insertResepDokter(ctx context.Context, tx *sql.Tx, noResep string, items []ResepDokterInput) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	query := `INSERT INTO resep_dokter (no_resep, kode_brng, jml, aturan_pakai) VALUES (?, ?, ?, ?)`
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, rd := range items {
+		if _, err := stmt.ExecContext(ctx, noResep, rd.KodeObat, rd.Jumlah, rd.AturanPakai); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *repository) insertResepRacikan(ctx context.Context, tx *sql.Tx, noResep string, items []ResepRacikanInput) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	queryRacik := `INSERT INTO resep_dokter_racikan (no_resep, no_racik, nama_racik, kd_racik, jml_dr, aturan_pakai, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	stmtRacik, err := tx.PrepareContext(ctx, queryRacik)
+	if err != nil {
+		return err
+	}
+	defer stmtRacik.Close()
+
+	queryDetail := `INSERT INTO resep_dokter_racikan_detail (no_resep, no_racik, kode_brng, p1, p2, kandungan, jml) VALUES (?, ?, ?, 1, 1, ?, ?)`
+	stmtDetail, err := tx.PrepareContext(ctx, queryDetail)
+	if err != nil {
+		return err
+	}
+	defer stmtDetail.Close()
+
+	for i, rr := range items {
+		noRacik := i + 1
+		if _, err := stmtRacik.ExecContext(ctx, noResep, noRacik, rr.NamaRacik, rr.KodeRacik, rr.JumlahRacikan, rr.AturanPakai, rr.Keterangan); err != nil {
+			return err
+		}
+
+		for _, d := range rr.Detail {
+			if _, err := stmtDetail.ExecContext(ctx, noResep, noRacik, d.KodeObat, d.Kandungan, d.Jumlah); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func isDuplicateKey(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	return strings.Contains(errStr, "1062") || strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "primary")
+}
+
+func (r *repository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
+	query := `SELECT stts_pulang, tgl_keluar, jam_keluar 
+		FROM kamar_inap 
+		WHERE no_rawat = ? 
+		ORDER BY tgl_masuk DESC, jam_masuk DESC 
+		LIMIT 1`
+
+	var sttsPulang, tglKeluar, jamKeluar string
+	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&sttsPulang, &tglKeluar, &jamKeluar)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, false, nil
+		}
+		return false, false, err
+	}
+
+	isBelumPulangStts := sttsPulang == "-" || strings.TrimSpace(sttsPulang) == ""
+	isBelumKeluarTgl := tglKeluar == "0000-00-00" || strings.TrimSpace(tglKeluar) == ""
+	isBelumKeluarJam := jamKeluar == "00:00:00" || strings.TrimSpace(jamKeluar) == ""
+
+	if isBelumPulangStts && isBelumKeluarTgl && isBelumKeluarJam {
+		return true, true, nil
+	}
+
+	return false, true, nil
 }

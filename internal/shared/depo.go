@@ -2,7 +2,6 @@ package shared
 
 import "strings"
 
-// KodeDepoFarmasi adalah daftar kode bangsal resmi yang bertindak sebagai depo farmasi di Khanza
 var KodeDepoFarmasi = []string{
 	"DPHD",
 	"DPIGD",
@@ -12,7 +11,6 @@ var KodeDepoFarmasi = []string{
 	"GDF",
 }
 
-// InClauseDepoFarmasi menghasilkan klausa SQL "column IN ('...')" berdasarkan daftar KodeDepoFarmasi
 func InClauseDepoFarmasi(colName string) string {
 	quoted := make([]string, len(KodeDepoFarmasi))
 	for i, k := range KodeDepoFarmasi {

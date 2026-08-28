@@ -1,6 +1,10 @@
 package resep
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
@@ -12,12 +16,17 @@ type Resep struct {
 	NoRawat            string               `json:"no_rawat"`
 	TanggalPeresepan   string               `json:"tanggal_peresepan"`
 	JamPeresepan       string               `json:"jam_peresepan"`
+	TanggalPerawatan   string               `json:"tanggal_perawatan,omitempty"`
+	JamPerawatan       string               `json:"jam_perawatan,omitempty"`
+	TanggalPenyerahan  string               `json:"tanggal_penyerahan,omitempty"`
+	JamPenyerahan      string               `json:"jam_penyerahan,omitempty"`
 	Status             string               `json:"status"`
 	KodeDokter         string               `json:"kode_dokter"`
 	NamaDokter         string               `json:"nama_dokter"`
 	ResepDokter        []ResepDokter        `json:"resep_dokter"`
 	ResepDokterRacikan []ResepDokterRacikan `json:"resep_dokter_racikan"`
 }
+
 
 type ResepDokter struct {
 	NoResep     string  `json:"-"`
@@ -92,4 +101,147 @@ type AturanPakai struct {
 type MetodeRacik struct {
 	Kode string `json:"kode"`
 	Nama string `json:"nama"`
+}
+
+type SimpanResepRequest struct {
+	NoRawat          string              `json:"no_rawat"`
+	TanggalPeresepan string              `json:"tanggal_peresepan"`
+	JamPeresepan     string              `json:"jam_peresepan"`
+	ResepDokter      []ResepDokterInput  `json:"resep_dokter"`
+	ResepRacikan     []ResepRacikanInput `json:"resep_racikan"`
+}
+
+type ResepDokterInput struct {
+	IdObat      string  `json:"id_obat"`
+	KodeObat    string  `json:"-"`
+	Jumlah      float64 `json:"jumlah"`
+	AturanPakai string  `json:"aturan_pakai"`
+}
+
+type ResepRacikanInput struct {
+	NamaRacik     string                    `json:"nama_racik"`
+	KodeRacik     string                    `json:"kode_racik"`
+	JumlahRacikan int                       `json:"jumlah_racikan"`
+	AturanPakai   string                    `json:"aturan_pakai"`
+	Keterangan    string                    `json:"keterangan"`
+	Detail        []ResepRacikanDetailInput `json:"detail"`
+}
+
+type ResepRacikanDetailInput struct {
+	IdObat    string  `json:"id_obat"`
+	KodeObat  string  `json:"-"`
+	Kandungan string  `json:"kandungan"`
+	Jumlah    float64 `json:"jumlah"`
+}
+
+func (r *SimpanResepRequest) Sanitize() {
+	r.NoRawat = strings.TrimSpace(r.NoRawat)
+	r.TanggalPeresepan = strings.TrimSpace(r.TanggalPeresepan)
+	r.JamPeresepan = strings.TrimSpace(r.JamPeresepan)
+	if r.TanggalPeresepan == "" {
+		r.TanggalPeresepan = time.Now().Format("2006-01-02")
+	}
+	if r.JamPeresepan == "" {
+		r.JamPeresepan = time.Now().Format("15:04:05")
+	}
+
+	for i := range r.ResepDokter {
+		r.ResepDokter[i].IdObat = strings.TrimSpace(r.ResepDokter[i].IdObat)
+		r.ResepDokter[i].AturanPakai = strings.TrimSpace(r.ResepDokter[i].AturanPakai)
+	}
+
+	for i := range r.ResepRacikan {
+		r.ResepRacikan[i].NamaRacik = strings.TrimSpace(r.ResepRacikan[i].NamaRacik)
+		r.ResepRacikan[i].KodeRacik = strings.TrimSpace(r.ResepRacikan[i].KodeRacik)
+		r.ResepRacikan[i].AturanPakai = strings.TrimSpace(r.ResepRacikan[i].AturanPakai)
+		r.ResepRacikan[i].Keterangan = strings.TrimSpace(r.ResepRacikan[i].Keterangan)
+
+		for j := range r.ResepRacikan[i].Detail {
+			r.ResepRacikan[i].Detail[j].IdObat = strings.TrimSpace(r.ResepRacikan[i].Detail[j].IdObat)
+			r.ResepRacikan[i].Detail[j].Kandungan = strings.TrimSpace(r.ResepRacikan[i].Detail[j].Kandungan)
+		}
+	}
+}
+
+func (r *SimpanResepRequest) Validate() apperror.ValidationError {
+	r.Sanitize()
+	errs := make(apperror.ValidationError)
+
+	if r.NoRawat == "" {
+		errs["no_rawat"] = "Nomor rawat wajib diisi"
+	}
+
+	tgl, errTgl := time.Parse("2006-01-02", r.TanggalPeresepan)
+	if errTgl != nil {
+		errs["tanggal_peresepan"] = "Format tanggal peresepan harus YYYY-MM-DD"
+	}
+
+	jam, errJam := time.Parse("15:04:05", r.JamPeresepan)
+	if errJam != nil {
+		errs["jam_peresepan"] = "Format jam peresepan harus HH:mm:ss"
+	}
+
+	if errTgl == nil && errJam == nil {
+		waktuPeresepan := time.Date(
+			tgl.Year(), tgl.Month(), tgl.Day(),
+			jam.Hour(), jam.Minute(), jam.Second(), 0,
+			time.Local,
+		)
+		if waktuPeresepan.After(time.Now()) {
+			errs["tanggal_peresepan"] = "Waktu peresepan tidak boleh melebihi waktu saat ini"
+		}
+	}
+
+	if len(r.ResepDokter) == 0 && len(r.ResepRacikan) == 0 {
+		errs["resep"] = "Resep obat harus memiliki minimal 1 obat non-racikan atau obat racikan"
+	}
+
+	for i, rd := range r.ResepDokter {
+		prefix := fmt.Sprintf("resep_dokter[%d]", i)
+		if rd.IdObat == "" {
+			errs[prefix+".id_obat"] = fmt.Sprintf("Obat ke-%d: ID obat wajib diisi", i+1)
+		}
+		if rd.Jumlah <= 0 {
+			errs[prefix+".jumlah"] = fmt.Sprintf("Obat ke-%d: Jumlah obat harus lebih dari 0", i+1)
+		}
+		if rd.AturanPakai == "" {
+			errs[prefix+".aturan_pakai"] = fmt.Sprintf("Obat ke-%d: Aturan pakai wajib diisi", i+1)
+		}
+	}
+
+	for i, rr := range r.ResepRacikan {
+		prefix := fmt.Sprintf("resep_racikan[%d]", i)
+		if rr.NamaRacik == "" {
+			errs[prefix+".nama_racik"] = fmt.Sprintf("Racikan ke-%d: Nama racikan wajib diisi", i+1)
+		}
+		if rr.KodeRacik == "" {
+			errs[prefix+".kode_racik"] = fmt.Sprintf("Racikan ke-%d: Metode/kode racik wajib diisi", i+1)
+		}
+		if rr.JumlahRacikan <= 0 {
+			errs[prefix+".jumlah_racikan"] = fmt.Sprintf("Racikan ke-%d: Jumlah racikan harus lebih dari 0", i+1)
+		}
+		if rr.AturanPakai == "" {
+			errs[prefix+".aturan_pakai"] = fmt.Sprintf("Racikan ke-%d: Aturan pakai wajib diisi", i+1)
+		}
+		if len(rr.Detail) == 0 {
+			errs[prefix+".detail"] = fmt.Sprintf("Racikan ke-%d: Komposisi obat racikan minimal harus memiliki 1 bahan", i+1)
+			continue
+		}
+
+		for j, d := range rr.Detail {
+			detailPrefix := fmt.Sprintf("%s.detail[%d]", prefix, j)
+			if d.IdObat == "" {
+				errs[detailPrefix+".id_obat"] = fmt.Sprintf("Racikan ke-%d bahan ke-%d: ID obat wajib diisi", i+1, j+1)
+			}
+			if d.Jumlah <= 0 {
+				errs[detailPrefix+".jumlah"] = fmt.Sprintf("Racikan ke-%d bahan ke-%d: Jumlah obat harus lebih dari 0", i+1, j+1)
+			}
+		}
+
+	}
+
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
 }

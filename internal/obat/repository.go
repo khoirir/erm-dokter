@@ -17,6 +17,7 @@ type Repository interface {
 	DaftarJenis(ctx context.Context) ([]JenisObat, error)
 	DaftarGolongan(ctx context.Context) ([]GolonganObat, error)
 	DaftarKategori(ctx context.Context) ([]KategoriObat, error)
+	CekKeberadaanObat(ctx context.Context, listKodeObat []string) (map[string]bool, error)
 }
 
 type repository struct {
@@ -29,7 +30,17 @@ func NewRepository(db *sql.DB) Repository {
 	}
 }
 
+var orderByMapping = map[string]func(string) string{
+	"nama_obat":     func(dir string) string { return fmt.Sprintf("dtb.nama_brng %s", dir) },
+	"stok":          func(dir string) string { return fmt.Sprintf("stok %s", dir) },
+	"nama_depo":     func(dir string) string { return fmt.Sprintf("bg.nm_bangsal %s", dir) },
+	"nama_jenis":    func(dir string) string { return fmt.Sprintf("jn.nama %s", dir) },
+	"nama_golongan": func(dir string) string { return fmt.Sprintf("gb.nama %s", dir) },
+	"nama_kategori": func(dir string) string { return fmt.Sprintf("kb.nama %s", dir) },
+}
+
 func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([]Obat, int64, error) {
+
 	var baseFrom string
 	var selectCols string
 	var conditions []string
@@ -124,8 +135,14 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 		return []Obat{}, 0, nil
 	}
 
-	selectQuery := selectCols + baseFrom + whereClause +
-		fmt.Sprintf(" ORDER BY %s %s LIMIT ? OFFSET ?", filter.OrderBy, filter.SortOrder)
+	builder, exists := orderByMapping[filter.OrderBy]
+	if !exists {
+		builder = orderByMapping["nama_obat"]
+	}
+	orderClause := " ORDER BY " + builder(filter.SortOrder)
+
+	selectQuery := selectCols + baseFrom + whereClause + orderClause + " LIMIT ? OFFSET ?"
+
 
 	dataArgs := append(args, filter.Limit, filter.Offset())
 	rows, err := r.db.QueryContext(ctx, selectQuery, dataArgs...)
@@ -312,3 +329,52 @@ func (r *repository) DaftarKategori(ctx context.Context) ([]KategoriObat, error)
 
 	return list, nil
 }
+
+func (r *repository) CekKeberadaanObat(ctx context.Context, listKodeObat []string) (map[string]bool, error) {
+	if len(listKodeObat) == 0 {
+		return map[string]bool{}, nil
+	}
+
+	uniqueCodes := make([]string, 0, len(listKodeObat))
+	seen := make(map[string]bool)
+	for _, code := range listKodeObat {
+		trimmed := strings.TrimSpace(code)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			uniqueCodes = append(uniqueCodes, trimmed)
+		}
+	}
+
+	if len(uniqueCodes) == 0 {
+		return map[string]bool{}, nil
+	}
+
+	inPlaceholders := shared.CreateInPlaceholders(len(uniqueCodes))
+	args := make([]any, len(uniqueCodes))
+	for i, c := range uniqueCodes {
+		args[i] = c
+	}
+
+	query := fmt.Sprintf("SELECT kode_brng FROM databarang WHERE kode_brng IN (%s)", inPlaceholders)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	foundMap := make(map[string]bool)
+	for rows.Next() {
+		var kode string
+		if err := rows.Scan(&kode); err != nil {
+			return nil, err
+		}
+		foundMap[kode] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return foundMap, nil
+}
+

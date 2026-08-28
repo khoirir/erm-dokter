@@ -3,6 +3,7 @@ package obat
 import (
 	"strings"
 
+	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
 
@@ -69,25 +70,16 @@ func (f *FilterDaftarObat) Sanitize() {
 		f.Limit = 100
 	}
 
-	validSortColumns := map[string]string{
-		"nama_obat":     "dtb.nama_brng",
-		"stok":          "stok",
-		"nama_depo":     "bg.nm_bangsal",
-		"nama_jenis":    "jn.nama",
-		"nama_golongan": "gb.nama",
-		"nama_kategori": "kb.nama",
+	if f.OrderBy == "" {
+		f.OrderBy = "nama_obat"
+	} else {
+		f.OrderBy = strings.ToLower(strings.TrimSpace(f.OrderBy))
 	}
 
-	if col, ok := validSortColumns[strings.ToLower(f.OrderBy)]; ok {
-		f.OrderBy = col
-	} else {
-		f.OrderBy = "dtb.nama_brng"
-	}
-
-	if strings.ToUpper(f.SortOrder) == "DESC" {
-		f.SortOrder = "DESC"
-	} else {
+	if f.SortOrder == "" {
 		f.SortOrder = "ASC"
+	} else {
+		f.SortOrder = strings.ToUpper(strings.TrimSpace(f.SortOrder))
 	}
 }
 
@@ -99,29 +91,17 @@ func (f *FilterDaftarObat) Validate() apperror.ValidationError {
 	f.Sanitize()
 	errs := make(apperror.ValidationError)
 
-	keyword := strings.TrimSpace(f.Keyword)
-	if len(keyword) > 0 && len(keyword) < 3 {
-		errs["keyword"] = "Kata kunci pencarian minimal 3 karakter"
-	}
-
-	validSortOrders := map[string]bool{
-		"ASC":  true,
-		"DESC": true,
-	}
-	if f.SortOrder != "" && !validSortOrders[strings.ToUpper(strings.TrimSpace(f.SortOrder))] {
+	if !shared.SortOrder(f.SortOrder).IsValid() {
 		errs["sort_order"] = "Jenis pengurutan tidak valid"
 	}
 
-	validSortColumns := map[string]bool{
-		"nama_obat":     true,
-		"stok":          true,
-		"nama_depo":     true,
-		"nama_jenis":    true,
-		"nama_golongan": true,
-		"nama_kategori": true,
-	}
-	if f.OrderBy != "" && !validSortColumns[strings.ToLower(strings.TrimSpace(f.OrderBy))] {
+	if !OrderBy(f.OrderBy).IsValid() {
 		errs["order_by"] = "Jenis pengurutan tidak valid"
+	}
+
+	keyword := strings.TrimSpace(f.Keyword)
+	if len(keyword) > 0 && len(keyword) < 3 {
+		errs["keyword"] = "Kata kunci pencarian minimal 3 karakter"
 	}
 
 	if len(errs) > 0 {
@@ -129,3 +109,5 @@ func (f *FilterDaftarObat) Validate() apperror.ValidationError {
 	}
 	return nil
 }
+
+

@@ -1,62 +1,72 @@
-package obat_test
+package obat
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pkg/logger"
 )
 
 type mockRepository struct {
-	obatData     []obat.Obat
+	obatData     []Obat
 	obatTotal    int64
-	detailData   *obat.Obat
-	jenisData    []obat.JenisObat
-	golonganData []obat.GolonganObat
-	kategoriData []obat.KategoriObat
+	detailData   *Obat
+	jenisData    []JenisObat
+	golonganData []GolonganObat
+	kategoriData []KategoriObat
 	err          error
 }
 
-func (m *mockRepository) DaftarObat(ctx context.Context, filter obat.FilterDaftarObat) ([]obat.Obat, int64, error) {
+func (m *mockRepository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([]Obat, int64, error) {
 	if m.err != nil {
 		return nil, 0, m.err
 	}
 	return m.obatData, m.obatTotal, nil
 }
 
-func (m *mockRepository) DetailObat(ctx context.Context, kodeObat string) (*obat.Obat, error) {
+func (m *mockRepository) DetailObat(ctx context.Context, kodeObat string) (*Obat, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.detailData, nil
 }
 
-func (m *mockRepository) DaftarJenis(ctx context.Context) ([]obat.JenisObat, error) {
+func (m *mockRepository) DaftarJenis(ctx context.Context) ([]JenisObat, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.jenisData, nil
 }
 
-func (m *mockRepository) DaftarGolongan(ctx context.Context) ([]obat.GolonganObat, error) {
+func (m *mockRepository) DaftarGolongan(ctx context.Context) ([]GolonganObat, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.golonganData, nil
 }
 
-func (m *mockRepository) DaftarKategori(ctx context.Context) ([]obat.KategoriObat, error) {
+func (m *mockRepository) DaftarKategori(ctx context.Context) ([]KategoriObat, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.kategoriData, nil
 }
 
+func (m *mockRepository) CekKeberadaanObat(ctx context.Context, listKodeObat []string) (map[string]bool, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	res := make(map[string]bool)
+	for _, k := range listKodeObat {
+		res[k] = true
+	}
+	return res, nil
+}
+
 func TestObatService_DaftarObat(t *testing.T) {
 	repo := &mockRepository{
-		obatData: []obat.Obat{
+		obatData: []Obat{
 			{
 				KodeObat: "B001",
 				NamaObat: "Paracetamol 500mg",
@@ -66,9 +76,9 @@ func TestObatService_DaftarObat(t *testing.T) {
 		},
 		obatTotal: 1,
 	}
-	svc := obat.NewService(repo, logger.New())
+	svc := NewService(repo, logger.New())
 
-	data, meta, err := svc.DaftarObat(context.Background(), obat.FilterDaftarObat{
+	data, meta, err := svc.DaftarObat(context.Background(), FilterDaftarObat{
 		Page:  1,
 		Limit: 20,
 	})
@@ -82,8 +92,44 @@ func TestObatService_DaftarObat(t *testing.T) {
 		t.Errorf("unexpected pagination meta: %+v", meta)
 	}
 
+	// Test valid order_by options via Validate()
+	validOrderBys := []string{
+		"nama_obat",
+		"stok",
+		"nama_depo",
+		"nama_jenis",
+		"nama_golongan",
+		"nama_kategori",
+	}
+	for _, ob := range validOrderBys {
+		t.Run("ValidOrderBy_"+ob, func(t *testing.T) {
+			f := FilterDaftarObat{
+				OrderBy:   ob,
+				SortOrder: "ASC",
+				Page:      1,
+				Limit:     20,
+			}
+			if errs := f.Validate(); errs != nil {
+				t.Fatalf("expected nil validation errors for valid filter order_by=%s, got %v", ob, errs)
+			}
+		})
+	}
+
+
+	// Test invalid order_by
+	invalidOrderFilter := FilterDaftarObat{OrderBy: "invalid_column"}
+	if errs := invalidOrderFilter.Validate(); errs == nil || errs["order_by"] == "" {
+		t.Errorf("expected validation error for invalid order_by, got %v", errs)
+	}
+
+	// Test invalid sort_order
+	invalidSortFilter := FilterDaftarObat{SortOrder: "SIDEWAYS"}
+	if errs := invalidSortFilter.Validate(); errs == nil || errs["sort_order"] == "" {
+		t.Errorf("expected validation error for invalid sort_order, got %v", errs)
+	}
+
 	// Test min keyword length (< 3 chars) via Validate()
-	filter := obat.FilterDaftarObat{Keyword: "pa"}
+	filter := FilterDaftarObat{Keyword: "pa"}
 	validationErr := filter.Validate()
 	if validationErr == nil {
 		t.Fatal("expected validation error for keyword < 3 chars, got nil")
@@ -93,25 +139,26 @@ func TestObatService_DaftarObat(t *testing.T) {
 	}
 
 	repo.err = errors.New("db error")
-	_, _, err = svc.DaftarObat(context.Background(), obat.FilterDaftarObat{})
+	_, _, err = svc.DaftarObat(context.Background(), FilterDaftarObat{})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
 
+
 func TestObatService_DetailObat(t *testing.T) {
 	repo := &mockRepository{
-		detailData: &obat.Obat{
+		detailData: &Obat{
 			KodeObat: "B001",
 			NamaObat: "Paracetamol 500mg",
 			Stok:     150,
-			StokDepo: []obat.StokDepo{
+			StokDepo: []StokDepo{
 				{KodeDepo: "DPRJ", NamaDepo: "Depo Rawat Jalan", Stok: 100},
 				{KodeDepo: "DPIGD", NamaDepo: "Depo IGD", Stok: 50},
 			},
 		},
 	}
-	svc := obat.NewService(repo, logger.New())
+	svc := NewService(repo, logger.New())
 
 	// Test Success
 	detail, err := svc.DetailObat(context.Background(), "B001")
@@ -132,11 +179,11 @@ func TestObatService_DetailObat(t *testing.T) {
 
 func TestObatService_DaftarJenis(t *testing.T) {
 	repo := &mockRepository{
-		jenisData: []obat.JenisObat{
+		jenisData: []JenisObat{
 			{Kode: "J01", Nama: "Tablet"},
 		},
 	}
-	svc := obat.NewService(repo, logger.New())
+	svc := NewService(repo, logger.New())
 
 	data, err := svc.DaftarJenis(context.Background())
 	if err != nil {
@@ -149,11 +196,11 @@ func TestObatService_DaftarJenis(t *testing.T) {
 
 func TestObatService_DaftarGolongan(t *testing.T) {
 	repo := &mockRepository{
-		golonganData: []obat.GolonganObat{
+		golonganData: []GolonganObat{
 			{Kode: "G01", Nama: "Obat Bebas"},
 		},
 	}
-	svc := obat.NewService(repo, logger.New())
+	svc := NewService(repo, logger.New())
 
 	data, err := svc.DaftarGolongan(context.Background())
 	if err != nil {
@@ -166,11 +213,11 @@ func TestObatService_DaftarGolongan(t *testing.T) {
 
 func TestObatService_DaftarKategori(t *testing.T) {
 	repo := &mockRepository{
-		kategoriData: []obat.KategoriObat{
+		kategoriData: []KategoriObat{
 			{Kode: "K01", Nama: "Antibiotik"},
 		},
 	}
-	svc := obat.NewService(repo, logger.New())
+	svc := NewService(repo, logger.New())
 
 	data, err := svc.DaftarKategori(context.Background())
 	if err != nil {
@@ -180,3 +227,17 @@ func TestObatService_DaftarKategori(t *testing.T) {
 		t.Errorf("unexpected kategori data: %+v", data)
 	}
 }
+
+func TestObatService_CekKeberadaanObat(t *testing.T) {
+	repo := &mockRepository{}
+	svc := NewService(repo, logger.New())
+
+	data, err := svc.CekKeberadaanObat(context.Background(), []string{"B001", "B002"})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(data) != 2 || !data["B001"] || !data["B002"] {
+		t.Errorf("unexpected cek keberadaan data: %+v", data)
+	}
+}
+

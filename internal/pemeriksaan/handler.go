@@ -145,13 +145,13 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
 	decrypted, err := crypto.Decrypt(encryptedID, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid"))
 		return
 	}
 
@@ -200,7 +200,7 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	noRawatURL, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
@@ -255,13 +255,13 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
 	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid"))
 		return
 	}
 
@@ -322,13 +322,13 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
 	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid atau kadaluarsa"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid"))
 		return
 	}
 
