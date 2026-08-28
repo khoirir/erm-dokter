@@ -33,8 +33,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 	mux.HandleFunc("GET /api/v1/resep/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarResepByRM)))
 	mux.HandleFunc("GET /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.DetailResep)))
 	mux.HandleFunc("POST /api/v1/resep/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanResep)))
+	mux.HandleFunc("PUT /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.UpdateResep)))
 	mux.HandleFunc("DELETE /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.HapusResep)))
 }
+
 
 
 
@@ -218,28 +220,9 @@ func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i := range req.ResepDokter {
-		kodeObat, err := crypto.Decrypt(req.ResepDokter[i].IdObat, h.encryptionKey)
-		if err != nil {
-			apperror.HandleError(w, apperror.ValidationError{
-				fmt.Sprintf("resep_dokter[%d].id_obat", i): "ID obat tidak valid",
-			})
-			return
-		}
-		req.ResepDokter[i].KodeObat = kodeObat
-	}
-
-	for i := range req.ResepRacikan {
-		for j := range req.ResepRacikan[i].Detail {
-			kodeObat, err := crypto.Decrypt(req.ResepRacikan[i].Detail[j].IdObat, h.encryptionKey)
-			if err != nil {
-				apperror.HandleError(w, apperror.ValidationError{
-					fmt.Sprintf("resep_racikan[%d].detail[%d].id_obat", i, j): "ID obat tidak valid",
-				})
-				return
-			}
-			req.ResepRacikan[i].Detail[j].KodeObat = kodeObat
-		}
+	if err := h.decryptObatPayload(&req); err != nil {
+		apperror.HandleError(w, err)
+		return
 	}
 
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
@@ -261,6 +244,71 @@ func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.Success(w, "Berhasil menyimpan resep obat", resep)
+}
+
+func (h *Handler) UpdateResep(w http.ResponseWriter, r *http.Request) {
+	idKunjungan := r.PathValue("id_kunjungan")
+	statusLanjut := r.PathValue("status_lanjut")
+	idResep := r.PathValue("id_resep")
+
+	status := shared.StatusLanjut(statusLanjut)
+	if !status.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid (Ralan/Ranap)"))
+		return
+	}
+
+	noRawatURL, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
+		return
+	}
+
+	noResep, err := crypto.Decrypt(idResep, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID resep tidak valid"))
+		return
+	}
+
+	var req SimpanResepRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		return
+	}
+
+	if req.NoRawat != noRawatURL {
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		return
+	}
+
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	if err := h.decryptObatPayload(&req); err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	resep, err := h.resepService.UpdateResep(r.Context(), kodeDokter, noRawatURL, noResep, status, req)
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	if resep != nil {
+		listResep := []Resep{*resep}
+		h.encryptResepResponse(listResep, idKunjungan)
+		*resep = listResep[0]
+	}
+
+	response.Success(w, "Berhasil memperbarui resep obat", resep)
 }
 
 func (h *Handler) HapusResep(w http.ResponseWriter, r *http.Request) {
@@ -299,6 +347,36 @@ func (h *Handler) HapusResep(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, "Berhasil menghapus resep obat", nil)
 }
+
+func (h *Handler) decryptObatPayload(req *SimpanResepRequest) error {
+	valErrs := make(apperror.ValidationError)
+
+	for i := range req.ResepDokter {
+		kodeObat, err := crypto.Decrypt(req.ResepDokter[i].IdObat, h.encryptionKey)
+		if err != nil {
+			valErrs[fmt.Sprintf("resep_dokter[%d].id_obat", i)] = "ID obat tidak valid"
+			continue
+		}
+		req.ResepDokter[i].KodeObat = kodeObat
+	}
+
+	for i := range req.ResepRacikan {
+		for j := range req.ResepRacikan[i].Detail {
+			kodeObat, err := crypto.Decrypt(req.ResepRacikan[i].Detail[j].IdObat, h.encryptionKey)
+			if err != nil {
+				valErrs[fmt.Sprintf("resep_racikan[%d].detail[%d].id_obat", i, j)] = "ID obat tidak valid"
+				continue
+			}
+			req.ResepRacikan[i].Detail[j].KodeObat = kodeObat
+		}
+	}
+
+	if len(valErrs) > 0 {
+		return valErrs
+	}
+	return nil
+}
+
 
 
 func (h *Handler) encryptResepResponse(daftarResep []Resep, defaultIdKunjungan string) {

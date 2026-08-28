@@ -1882,7 +1882,68 @@ paths:
                 "404":
                     description: Data resep obat tidak ditemukan pada kunjungan ini
 
+        put:
+            tags: [Resep]
+            summary: Edit / Update Resep Obat
+            description: |
+                Memperbarui resep obat (non-racikan dan/atau racikan) yang telah dibuat dokter dengan nomor resep yang tetap.
+
+                ### Aturan Bisnis & Validasi:
+                - **Dokter Pembuat**: Hanya dokter yang membuat resep (`kd_dokter == claims.KodeDokter`) yang berhak mengedit.
+                - **Proteksi Farmasi**: Resep yang **sudah divalidasi oleh apotek** (`tgl_perawatan != 0000-00-00` && `jam != 00:00:00`) atau **sudah diserahkan ke pasien** (`tgl_penyerahan != 0000-00-00` && `jam_penyerahan != 00:00:00`) **terkunci permanen dan ditolak**.
+                - **Proteksi 48 Jam (Rawat Jalan)**: Batas waktu pengeditan maksimal 48 jam dari waktu registrasi pasien.
+                - **Validasi Ranap**: Pasien rawat inap tidak boleh berstatus checkout/selesai.
+                - **Atomisitas Transaksi**: Header `resep_obat` diperbarui dan detail resep di-*replace* secara atomik dalam 1 transaksi DB.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Jenis perawatan (Ralan atau Ranap)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                      example: Ralan
+                - name: id_resep
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Resep Obat
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanResepRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui resep obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Resep"
+                "400":
+                    description: Validasi payload gagal (obat tidak ditemukan, format salah, ranap tidak aktif)
+                "403":
+                    description: Ditolak karena bukan dokter pembuat, resep telah diproses farmasi, atau lewat batas 48 jam
+                "404":
+                    description: Data resep obat tidak ditemukan pada kunjungan ini
+
         delete:
+
             tags: [Resep]
             summary: Hapus / Batalkan Resep Obat
             description: |

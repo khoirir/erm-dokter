@@ -100,8 +100,10 @@ internal/
 - `GET /api/v1/resep/pasien/{id_pasien}/{status_lanjut}` (Riwayat resep seluruh kunjungan by RM).
 - `GET /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}` (Detail resep obat).
 - `POST /api/v1/resep/{id_kunjungan}/{status_lanjut}` (Simpan resep obat baru non-racikan & racikan, transaksi DB atomik, proteksi 48 jam Ralan & validasi status kamar inap).
+- `PUT /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}` (Edit / update resep obat: nomor resep tetap, replace children atomik, proteksi kepemilikan dokter & proteksi validasi apotek farmasi).
 - `DELETE /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}` (Hapus / batalkan resep obat: proteksi kepemilikan dokter pembuat, validasi/penyerahan farmasi, proteksi 48 jam rawat jalan, dan transaksi DB atomik di 4 tabel).
 - Hierarki data: `Resep` &rarr; `ResepDokter` (non-racikan) & `ResepDokterRacikan` (header: `jumlah_racikan`, `kode_racik`, `metode_racik`) &rarr; `ResepDokterRacikanDetail` (`jumlah` bahan).
+
 
 
 ---
