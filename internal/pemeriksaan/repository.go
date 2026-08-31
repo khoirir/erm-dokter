@@ -224,7 +224,7 @@ func (r *repository) DaftarPemeriksaan(ctx context.Context, listNoRawat []string
 
 func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statusLanjut shared.StatusLanjut) (*Pemeriksaan, error) {
 	var query string
-	var args []interface{}
+	var args []any
 
 	switch statusLanjut {
 	case shared.StatusLanjutRawatJalan:

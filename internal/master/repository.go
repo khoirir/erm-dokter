@@ -11,6 +11,7 @@ import (
 type Repository interface {
 	DaftarPenjamin(ctx context.Context) ([]Penjamin, error)
 	DaftarDepo(ctx context.Context) ([]Depo, error)
+	DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
 }
 
 type repository struct {
@@ -69,6 +70,30 @@ func (r *repository) DaftarDepo(ctx context.Context) ([]Depo, error) {
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error saat iterasi depo: %w", err)
+	}
+
+	return list, nil
+}
+
+func (r *repository) DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error) {
+	query := `SELECT kd_poli AS kode, nm_poli AS nama FROM poliklinik WHERE status = '1' ORDER BY nm_poli ASC`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("gagal query daftar poliklinik: %w", err)
+	}
+	defer rows.Close()
+
+	var list []Poliklinik
+	for rows.Next() {
+		var p Poliklinik
+		if err := rows.Scan(&p.Kode, &p.Nama); err != nil {
+			return nil, fmt.Errorf("gagal scan data poliklinik: %w", err)
+		}
+		list = append(list, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error saat iterasi poliklinik: %w", err)
 	}
 
 	return list, nil
