@@ -87,7 +87,7 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 			dtb.letak_barang AS komposisi,
 			dtb.ralan AS harga,
 			dtb.kode_sat AS satuan,
-			COALESCE((SELECT SUM(gdb.stok) FROM gudangbarang gdb WHERE gdb.kode_brng = dtb.kode_brng AND ` + shared.InClauseDepoFarmasi("gdb.kd_bangsal") + `), 0) AS stok,
+			0 AS stok,
 			dtb.kapasitas,
 			'' AS kode_depo,
 			'Semua Depo' AS nama_depo,
@@ -115,7 +115,7 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 	}
 
 	if filter.Keyword != "" {
-		keywordPattern := "%" + filter.Keyword + "%"
+		keywordPattern := filter.Keyword + "%"
 		conditions = append(conditions, "(dtb.nama_brng LIKE ? OR dtb.letak_barang LIKE ?)")
 		args = append(args, keywordPattern, keywordPattern)
 	}
@@ -125,33 +125,39 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 		whereClause = " AND " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := "SELECT COUNT(*) " + baseFrom + whereClause
-	var total int64
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("gagal menghitung total data obat: %w", err)
-	}
-
-	if total == 0 {
-		return []Obat{}, 0, nil
-	}
+	countFrom := r.buildCountFrom(filter)
+	countWhere := r.buildCountWhere(filter)
+	countQuery := "SELECT COUNT(*) " + countFrom + countWhere
+	countArgs := r.buildCountArgs(filter)
 
 	builder, exists := orderByMapping[filter.OrderBy]
 	if !exists {
 		builder = orderByMapping["nama_obat"]
 	}
 	orderClause := " ORDER BY " + builder(filter.SortOrder)
-
 	selectQuery := selectCols + baseFrom + whereClause + orderClause + " LIMIT ? OFFSET ?"
-
-
 	dataArgs := append(args, filter.Limit, filter.Offset())
+
+	type countResult struct {
+		total int64
+		err   error
+	}
+	ch := make(chan countResult, 1)
+
+	go func() {
+		var total int64
+		err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total)
+		ch <- countResult{total, err}
+	}()
+
 	rows, err := r.db.QueryContext(ctx, selectQuery, dataArgs...)
 	if err != nil {
+		<-ch
 		return nil, 0, fmt.Errorf("gagal query daftar obat: %w", err)
 	}
 	defer rows.Close()
 
-	var listObat []Obat
+	listObat := make([]Obat, 0)
 	for rows.Next() {
 		var o Obat
 		if err := rows.Scan(
@@ -171,16 +177,138 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 			&o.KodeKategori,
 			&o.NamaKategori,
 		); err != nil {
+			<-ch
 			return nil, 0, fmt.Errorf("gagal scan data obat: %w", err)
 		}
 		listObat = append(listObat, o)
 	}
 
 	if err := rows.Err(); err != nil {
+		<-ch
 		return nil, 0, fmt.Errorf("error saat iterasi data obat: %w", err)
 	}
 
-	return listObat, total, nil
+	cr := <-ch
+	if cr.err != nil {
+		return nil, 0, fmt.Errorf("gagal menghitung total data obat: %w", cr.err)
+	}
+	if filter.Depo == "" && len(listObat) > 0 {
+		if err := r.hydrateStok(ctx, listObat); err != nil {
+			return nil, 0, fmt.Errorf("gagal mengambil data stok obat: %w", err)
+		}
+	}
+
+	return listObat, cr.total, nil
+}
+
+func (r *repository) buildCountFrom(filter FilterDaftarObat) string {
+	from := "FROM databarang dtb "
+
+	if filter.Depo != "" {
+		from += "INNER JOIN gudangbarang gdb ON dtb.kode_brng = gdb.kode_brng "
+	}
+	if filter.Jenis != "" {
+		from += "INNER JOIN jenis jn ON dtb.kdjns = jn.kdjns "
+	}
+	if filter.Golongan != "" {
+		from += "INNER JOIN golongan_barang gb ON dtb.kode_golongan = gb.kode "
+	}
+	if filter.Kategori != "" {
+		from += "INNER JOIN kategori_barang kb ON dtb.kode_kategori = kb.kode "
+	}
+
+	return from
+}
+
+func (r *repository) buildCountWhere(filter FilterDaftarObat) string {
+	conditions := []string{"dtb.status = '1'"}
+
+	if filter.Depo != "" {
+		conditions = append(conditions, "gdb.kd_bangsal = ?")
+	}
+	if filter.Jenis != "" {
+		conditions = append(conditions, "dtb.kdjns = ?")
+	}
+	if filter.Golongan != "" {
+		conditions = append(conditions, "dtb.kode_golongan = ?")
+	}
+	if filter.Kategori != "" {
+		conditions = append(conditions, "dtb.kode_kategori = ?")
+	}
+	if filter.Keyword != "" {
+		conditions = append(conditions, "(dtb.nama_brng LIKE ? OR dtb.letak_barang LIKE ?)")
+	}
+
+	return " WHERE " + strings.Join(conditions, " AND ")
+}
+
+func (r *repository) buildCountArgs(filter FilterDaftarObat) []any {
+	var args []any
+
+	if filter.Depo != "" {
+		args = append(args, filter.Depo)
+	}
+	if filter.Jenis != "" {
+		args = append(args, filter.Jenis)
+	}
+	if filter.Golongan != "" {
+		args = append(args, filter.Golongan)
+	}
+	if filter.Kategori != "" {
+		args = append(args, filter.Kategori)
+	}
+	if filter.Keyword != "" {
+		keywordPattern := filter.Keyword + "%"
+		args = append(args, keywordPattern, keywordPattern)
+	}
+
+	return args
+}
+
+func (r *repository) hydrateStok(ctx context.Context, listObat []Obat) error {
+	kodeList := make([]string, len(listObat))
+	for i, o := range listObat {
+		kodeList[i] = o.KodeObat
+	}
+
+	placeholders := shared.CreateInPlaceholders(len(kodeList))
+	query := fmt.Sprintf(`SELECT kode_brng, SUM(stok) AS total_stok 
+		FROM gudangbarang 
+		WHERE kode_brng IN (%s) AND %s 
+		GROUP BY kode_brng`, placeholders, shared.InClauseDepoFarmasi("kd_bangsal"))
+
+	args := make([]any, len(kodeList))
+	for i, k := range kodeList {
+		args[i] = k
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	stokMap := make(map[string]float64)
+	for rows.Next() {
+		var kode string
+		var totalStok float64
+		if err := rows.Scan(&kode, &totalStok); err != nil {
+			return err
+		}
+		stokMap[kode] = totalStok
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range listObat {
+		if stok, ok := stokMap[listObat[i].KodeObat]; ok {
+			listObat[i].Stok = stok
+		}
+	}
+
+	return nil
 }
 
 func (r *repository) DetailObat(ctx context.Context, kodeObat string) (*Obat, error) {
