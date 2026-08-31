@@ -76,8 +76,8 @@ func TestSimpanPenilaianMedisRalanRequest_Sanitize_Defaults(t *testing.T) {
 	if req.NoRawat != "2026/04/22/000001" {
 		t.Errorf("expected trimmed no_rawat, got %s", req.NoRawat)
 	}
-	if req.TanggalPemeriksaan == "" {
-		t.Error("expected default TanggalPemeriksaan to be populated")
+	if req.TanggalPenilaian == "" {
+		t.Error("expected default TanggalPenilaian to be populated")
 	}
 	if req.KeluhanUtama != "Demam tinggi" {
 		t.Errorf("expected trimmed keluhan utama, got %s", req.KeluhanUtama)
@@ -251,35 +251,35 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 	}
 }
 
-func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPemeriksaan(t *testing.T) {
+func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPenilaian(t *testing.T) {
 	// 1. Invalid date format
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
-			TanggalPemeriksaan: "31-08-2026", // format salah
-			KeluhanUtama:       "Demam",
-			Diagnosis:          "Febris",
-			TataLaksana:        "Paracetamol",
+			TanggalPenilaian: "31-08-2026", // format salah
+			KeluhanUtama:     "Demam",
+			Diagnosis:        "Febris",
+			TataLaksana:      "Paracetamol",
 		},
 	}
 	errs := req.Validate()
-	if errs == nil || errs["tanggal_pemeriksaan"] == "" {
-		t.Errorf("expected error on invalid tanggal_pemeriksaan format, got: %+v", errs)
+	if errs == nil || errs["tanggal_penilaian"] == "" {
+		t.Errorf("expected error on invalid tanggal_penilaian format, got: %+v", errs)
 	}
 
 	// 2. Future date
 	future := "2099-01-01 10:00:00"
-	req.TanggalPemeriksaan = future
+	req.TanggalPenilaian = future
 	errs = req.Validate()
-	if errs == nil || errs["tanggal_pemeriksaan"] == "" {
-		t.Errorf("expected error on future tanggal_pemeriksaan, got: %+v", errs)
+	if errs == nil || errs["tanggal_penilaian"] == "" {
+		t.Errorf("expected error on future tanggal_penilaian, got: %+v", errs)
 	}
 
 	// 3. Valid past date
-	req.TanggalPemeriksaan = "2026-04-22 09:30:00"
+	req.TanggalPenilaian = "2026-04-22 09:30:00"
 	errs = req.Validate()
 	if errs != nil {
-		t.Fatalf("expected valid tanggal_pemeriksaan to have no errors, got: %+v", errs)
+		t.Fatalf("expected valid tanggal_penilaian to have no errors, got: %+v", errs)
 	}
 }
 
@@ -301,10 +301,10 @@ func TestUpdatePenilaianMedisRalanRequest_Validation(t *testing.T) {
 	// 2. Valid update request
 	req = UpdatePenilaianMedisRalanRequest{
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
-			TanggalPemeriksaan: "2026-04-22 09:30:00",
-			KeluhanUtama:       "Batuk pilek",
-			Diagnosis:          "ISPA",
-			TataLaksana:        "Amoxicillin 3x500mg",
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Batuk pilek",
+			Diagnosis:        "ISPA",
+			TataLaksana:      "Amoxicillin 3x500mg",
 		},
 	}
 	errs = req.Validate()

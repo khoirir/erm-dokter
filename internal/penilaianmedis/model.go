@@ -135,7 +135,7 @@ func GetReferensiPenilaianMedis() ReferensiPenilaianMedis {
 }
 
 type DataPenilaianMedisRalan struct {
-	TanggalPemeriksaan      string    `json:"tanggal_pemeriksaan"`
+	TanggalPenilaian        string    `json:"tanggal_penilaian"`
 	Anamnesis               Anamnesis `json:"anamnesis"`
 	Hubungan                string    `json:"hubungan"`
 	KeluhanUtama            string    `json:"keluhan_utama"`
@@ -175,11 +175,11 @@ type DataPenilaianMedisRalan struct {
 }
 
 func (d *DataPenilaianMedisRalan) Sanitize() {
-	d.TanggalPemeriksaan = strings.TrimSpace(d.TanggalPemeriksaan)
-	if d.TanggalPemeriksaan == "" {
-		d.TanggalPemeriksaan = time.Now().Format("2006-01-02 15:04:05")
-	} else if len(d.TanggalPemeriksaan) == 10 {
-		d.TanggalPemeriksaan = fmt.Sprintf("%s %s", d.TanggalPemeriksaan, time.Now().Format("15:04:05"))
+	d.TanggalPenilaian = strings.TrimSpace(d.TanggalPenilaian)
+	if d.TanggalPenilaian == "" {
+		d.TanggalPenilaian = time.Now().Format("2006-01-02 15:04:05")
+	} else if len(d.TanggalPenilaian) == 10 {
+		d.TanggalPenilaian = fmt.Sprintf("%s %s", d.TanggalPenilaian, time.Now().Format("15:04:05"))
 	}
 
 	d.Anamnesis = Anamnesis(strings.TrimSpace(string(d.Anamnesis)))
@@ -358,10 +358,10 @@ func (d *DataPenilaianMedisRalan) Validate(errs apperror.ValidationError) {
 		errs["kulit"] = "Status pemeriksaan kulit tidak valid"
 	}
 
-	if t, err := time.ParseInLocation("2006-01-02 15:04:05", d.TanggalPemeriksaan, time.Local); err != nil {
-		errs["tanggal_pemeriksaan"] = "Format tanggal pemeriksaan harus YYYY-MM-DD HH:mm:ss (contoh: 2026-08-31 09:30:00) atau YYYY-MM-DD"
+	if t, err := time.ParseInLocation("2006-01-02 15:04:05", d.TanggalPenilaian, time.Local); err != nil {
+		errs["tanggal_penilaian"] = "Format tanggal penilaian harus YYYY-MM-DD HH:mm:ss (contoh: 2026-08-31 09:30:00) atau YYYY-MM-DD"
 	} else if t.After(time.Now()) {
-		errs["tanggal_pemeriksaan"] = "Waktu pemeriksaan tidak boleh melebihi waktu saat ini"
+		errs["tanggal_penilaian"] = "Waktu penilaian medis tidak boleh melebihi waktu saat ini"
 	}
 
 	if d.Diagnosis == "" {

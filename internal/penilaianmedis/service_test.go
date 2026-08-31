@@ -220,27 +220,27 @@ func TestService_SimpanPenilaianMedisRalan_WaktuPemeriksaanBeforeRegistrasi(t *t
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "10:00:00", exists: true}
 	svc := NewService(repo, rjSvc, log, testKey)
 
-	// Pemeriksaan jam 08:00 (lebih awal dari registrasi jam 10:00)
+	// Penilaian medis jam 08:00 (lebih awal dari registrasi jam 10:00)
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
-			TanggalPemeriksaan: today + " 08:00:00",
-			KeluhanUtama:       "Demam",
-			Diagnosis:          "Febris",
-			TataLaksana:        "Paracetamol",
+			TanggalPenilaian: today + " 08:00:00",
+			KeluhanUtama:     "Demam",
+			Diagnosis:        "Febris",
+			TataLaksana:      "Paracetamol",
 		},
 	}
 
 	_, err := svc.SimpanPenilaianMedisRalan(context.Background(), "DR001", "2026/04/22/000001", req)
 	if err == nil {
-		t.Fatal("expected validation error when waktu_pemeriksaan is before waktu_registrasi")
+		t.Fatal("expected validation error when waktu penilaian is before waktu_registrasi")
 	}
 	var valErr apperror.ValidationError
 	if !errors.As(err, &valErr) {
 		t.Fatalf("expected ValidationError, got %v", err)
 	}
-	if valErr["tanggal_pemeriksaan"] == "" {
-		t.Errorf("expected error on tanggal_pemeriksaan, got: %+v", valErr)
+	if valErr["tanggal_penilaian"] == "" {
+		t.Errorf("expected error on tanggal_penilaian, got: %+v", valErr)
 	}
 }
 

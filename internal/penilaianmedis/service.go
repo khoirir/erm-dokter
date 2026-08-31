@@ -88,7 +88,7 @@ func (s *service) SimpanPenilaianMedisRalan(ctx context.Context, kodeDokterLogin
 		return nil, errs
 	}
 
-	if err := s.validasiWaktuPenilaianMedis(ctx, noRawat, req.TanggalPemeriksaan, "dibuat"); err != nil {
+	if err := s.validasiWaktuPenilaianMedis(ctx, noRawat, req.TanggalPenilaian, "dibuat"); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +131,7 @@ func (s *service) UpdatePenilaianMedisRalan(ctx context.Context, kodeDokterLogin
 		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah penilaian medis ini karena dibuat oleh dokter lain (%s)", existing.NamaDokter))
 	}
 
-	if err := s.validasiWaktuPenilaianMedis(ctx, noRawat, req.TanggalPemeriksaan, "diubah"); err != nil {
+	if err := s.validasiWaktuPenilaianMedis(ctx, noRawat, req.TanggalPenilaian, "diubah"); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +193,7 @@ func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tglP
 		waktuPemeriksaan, errPer := time.ParseInLocation("2006-01-02 15:04:05", tglPeriksa, time.Local)
 		if errReg == nil && errPer == nil && waktuPemeriksaan.Before(waktuRegistrasi) {
 			errs := apperror.ValidationError{
-				"tanggal_pemeriksaan": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeriksa, tglRegStr, jamRegStr),
+				"tanggal_penilaian": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeriksa, tglRegStr, jamRegStr),
 			}
 			s.log.Warn("Validasi waktu penilaian medis gagal untuk no_rawat %s: %+v", noRawat, errs)
 			return errs

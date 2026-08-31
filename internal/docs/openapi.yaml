@@ -904,7 +904,7 @@ components:
                 tanggal_registrasi:
                     type: string
                     example: "2026-04-22"
-                tanggal_pemeriksaan:
+                tanggal_penilaian:
                     type: string
                     example: "2026-04-22 09:30:00"
                 kode_dokter:
@@ -1033,7 +1033,7 @@ components:
                     type: string
                     description: Nomor rawat kunjungan (harus sama dengan yang terenkripsi di id_kunjungan)
                     example: "2026/04/22/000001"
-                tanggal_pemeriksaan:
+                tanggal_penilaian:
                     type: string
                     description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
                     example: "2026-04-22 09:30:00"
@@ -1153,7 +1153,7 @@ components:
                 - diagnosis
                 - tata_laksana
             properties:
-                tanggal_pemeriksaan:
+                tanggal_penilaian:
                     type: string
                     description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
                     example: "2026-04-22 09:30:00"
