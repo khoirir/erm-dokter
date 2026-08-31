@@ -10,9 +10,10 @@ import (
 )
 
 type mockRepository struct {
-	penjaminData []master.Penjamin
-	depoData     []master.Depo
-	err          error
+	penjaminData   []master.Penjamin
+	depoData       []master.Depo
+	poliklinikData []master.Poliklinik
+	err            error
 }
 
 func (m *mockRepository) DaftarPenjamin(ctx context.Context) ([]master.Penjamin, error) {
@@ -27,6 +28,13 @@ func (m *mockRepository) DaftarDepo(ctx context.Context) ([]master.Depo, error) 
 		return nil, m.err
 	}
 	return m.depoData, nil
+}
+
+func (m *mockRepository) DaftarPoliklinik(ctx context.Context) ([]master.Poliklinik, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.poliklinikData, nil
 }
 
 func TestMasterService_DaftarPenjamin(t *testing.T) {
@@ -70,6 +78,29 @@ func TestMasterService_DaftarDepo(t *testing.T) {
 
 	repo.err = errors.New("db error")
 	_, err = svc.DaftarDepo(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestMasterService_DaftarPoliklinik(t *testing.T) {
+	repo := &mockRepository{
+		poliklinikData: []master.Poliklinik{
+			{Kode: "INT", Nama: "Poli Penyakit Dalam"},
+		},
+	}
+	svc := master.NewService(repo, logger.New())
+
+	data, err := svc.DaftarPoliklinik(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(data) != 1 || data[0].Kode != "INT" {
+		t.Errorf("unexpected poliklinik data: %+v", data)
+	}
+
+	repo.err = errors.New("db error")
+	_, err = svc.DaftarPoliklinik(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

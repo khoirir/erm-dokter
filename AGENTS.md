@@ -67,6 +67,7 @@ internal/
 ### A. Auth (`/api/v1/auth`)
 
 - `POST /api/v1/auth/login` (Verifikasi password AES Khanza untuk dokter).
+- `POST /api/v1/auth/logout` (Logout dokter & terminasi sesi client).
 - `GET /api/v1/auth/profile` (Profile dokter dari token).
 
 ### B. Rawat Jalan (`/api/v1/rawat-jalan`)
@@ -89,6 +90,7 @@ internal/
 
 - `GET /api/v1/master/penjamin` (Daftar asuransi/penjamin).
 - `GET /api/v1/master/depo` (Daftar depo obat).
+- `GET /api/v1/master/poliklinik` (Daftar master unit/poliklinik aktif).
 - `GET /api/v1/obat` (Pencarian obat per depo, stok > 0, keyword min 3 char, pagination).
 - `GET /api/v1/obat/{id_obat}` (Detail obat & harga).
 
@@ -104,7 +106,12 @@ internal/
 - `DELETE /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}` (Hapus / batalkan resep obat: proteksi kepemilikan dokter pembuat, validasi/penyerahan farmasi, proteksi 48 jam rawat jalan, dan transaksi DB atomik di 4 tabel).
 - Hierarki data: `Resep` &rarr; `ResepDokter` (non-racikan) & `ResepDokterRacikan` (header: `jumlah_racikan`, `kode_racik`, `metode_racik`) &rarr; `ResepDokterRacikanDetail` (`jumlah` bahan).
 
+### F. Rujukan Internal Poli (`/api/v1/rujukan-internal`)
 
+- `GET /api/v1/rujukan-internal/opsi-poli` (Daftar dokter & poliklinik tujuan rujukan aktif dari jadwal, mengecualikan dokter yang sedang login).
+- `GET /api/v1/rujukan-internal/{id_kunjungan}` (Daftar rujukan internal yang dibuat pada kunjungan pasien).
+- `POST /api/v1/rujukan-internal/{id_kunjungan}` (Simpan rujukan internal baru: proteksi diri sendiri, proteksi duplikasi ke dokter yang sama, proteksi 48 jam rawat jalan).
+- `DELETE /api/v1/rujukan-internal/{id_kunjungan}/{id_rujukan}` (Batalkan / hapus rujukan internal dengan proteksi 48 jam & validasi kesesuaian kunjungan).
 
 ---
 
@@ -135,9 +142,14 @@ Berdasarkan diskusi mendalam mengenai perilaku operasional riil di Rumah Sakit &
     - Jika resep sudah diserahkan ke pasien, kolom `resep_obat.tgl_penyerahan != '0000-00-00'` dan `resep_obat.jam_penyerahan != '00:00:00'`.
     - Resep yang sudah divalidasi atau diserahkan farmasi **terkunci permanen dari edit dan hapus oleh dokter**.
 
+6. **Composite Primary Key pada Rujukan Internal (`rujukan_internal_poli`)**:
+    - Primary key di Khanza: `(no_rawat, kd_dokter)`.
+    - Service memvalidasi secara preventif agar tidak terjadi *duplicate entry* ke dokter yang sama sebelum query `INSERT` dieksekusi.
+    - Public Identifier dienkripsi composite URL-safe (`no_rawat~kd_poli~kd_dokter`).
+
 ---
 
 ## 5. Roadmap / Modul Berikutnya
 
-Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, dan **Resep Obat (CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
+Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, **Resep Obat (CRUD Lengkap)**, dan **Rujukan Internal Poli (CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
 

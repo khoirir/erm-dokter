@@ -18,8 +18,14 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux, loginRateLimit func(http.HandlerFunc) http.HandlerFunc) {
+func (h *Handler) RegisterRoutes(
+	mux *http.ServeMux,
+	loginRateLimit func(http.HandlerFunc) http.HandlerFunc,
+	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
+	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
+) {
 	mux.HandleFunc("POST /api/v1/auth/login", loginRateLimit(h.Login))
+	mux.HandleFunc("POST /api/v1/auth/logout", authMiddleware(timeoutMiddleware(h.Logout)))
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -41,4 +47,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.Success(w, "Login berhasil", resp)
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	response.Success(w, "Logout berhasil", nil)
 }

@@ -28,7 +28,7 @@ func GenerateToken(kodeDokter, namaUser, secretKey string, duration time.Duratio
 }
 
 func ValidateToken(tokenStr, secretKey string) (*Claims, error) {
-	tkn, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+	tkn, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("metode enkripsi token tidak valid")
 		}

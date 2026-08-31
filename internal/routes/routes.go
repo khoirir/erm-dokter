@@ -13,20 +13,22 @@ import (
 	"erm-dokter/internal/pemeriksaan"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
+	"erm-dokter/internal/rujukaninternal"
 )
 
 type RouteConfig struct {
-	Mux                *http.ServeMux
-	HealthHandler      *health.Handler
-	DocsHandler        *docs.Handler
-	AuthHandler        *auth.Handler
-	MasterHandler      *master.Handler
-	ObatHandler        *obat.Handler
-	RawatJalanHandler  *rawatjalan.Handler
-	PemeriksaanHandler *pemeriksaan.Handler
-	ResepHandler       *resep.Handler
-	AuthMiddleware     func(http.HandlerFunc) http.HandlerFunc
-	TimeoutMiddleware  func(http.HandlerFunc) http.HandlerFunc
+	Mux                    *http.ServeMux
+	HealthHandler          *health.Handler
+	DocsHandler            *docs.Handler
+	AuthHandler            *auth.Handler
+	MasterHandler          *master.Handler
+	ObatHandler            *obat.Handler
+	RawatJalanHandler      *rawatjalan.Handler
+	PemeriksaanHandler     *pemeriksaan.Handler
+	ResepHandler           *resep.Handler
+	RujukanInternalHandler *rujukaninternal.Handler
+	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
+	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
 }
 
 func NewRouteConfig(
@@ -38,20 +40,22 @@ func NewRouteConfig(
 	rawatJalanHandler *rawatjalan.Handler,
 	pemeriksaanHandler *pemeriksaan.Handler,
 	resepHandler *resep.Handler,
+	rujukanInternalHandler *rujukaninternal.Handler,
 	jwtSecret string,
 ) *RouteConfig {
 	return &RouteConfig{
-		Mux:                http.NewServeMux(),
-		HealthHandler:      healthHandler,
-		DocsHandler:        docsHandler,
-		AuthHandler:        authHandler,
-		MasterHandler:      masterHandler,
-		ObatHandler:        obatHandler,
-		RawatJalanHandler:  rawatJalanHandler,
-		PemeriksaanHandler: pemeriksaanHandler,
-		ResepHandler:       resepHandler,
-		AuthMiddleware:     middleware.JWTMiddleware(jwtSecret),
-		TimeoutMiddleware:  middleware.TimeoutMiddleware(30 * time.Second),
+		Mux:                    http.NewServeMux(),
+		HealthHandler:          healthHandler,
+		DocsHandler:            docsHandler,
+		AuthHandler:            authHandler,
+		MasterHandler:          masterHandler,
+		ObatHandler:            obatHandler,
+		RawatJalanHandler:      rawatJalanHandler,
+		PemeriksaanHandler:     pemeriksaanHandler,
+		ResepHandler:           resepHandler,
+		RujukanInternalHandler: rujukanInternalHandler,
+		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
+		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
 	}
 }
 
@@ -60,12 +64,13 @@ func (c *RouteConfig) Setup() {
 
 	c.HealthHandler.RegisterRoutes(c.Mux)
 	c.DocsHandler.RegisterRoutes(c.Mux)
-	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit)
+	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.MasterHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ObatHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.PemeriksaanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResepHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.RujukanInternalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {

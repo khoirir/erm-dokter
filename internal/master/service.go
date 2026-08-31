@@ -9,6 +9,7 @@ import (
 type Service interface {
 	DaftarPenjamin(ctx context.Context) ([]Penjamin, error)
 	DaftarDepo(ctx context.Context) ([]Depo, error)
+	DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
 }
 
 type service struct {
@@ -40,3 +41,13 @@ func (s *service) DaftarDepo(ctx context.Context) ([]Depo, error) {
 	}
 	return data, nil
 }
+
+func (s *service) DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error) {
+	data, err := s.repo.DaftarPoliklinik(ctx)
+	if err != nil {
+		s.log.Error("Gagal mengambil daftar poliklinik: %v", err)
+		return nil, err
+	}
+	return data, nil
+}
+

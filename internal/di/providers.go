@@ -21,6 +21,7 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		provideRawatJalan(db, cfg, log),
 		providePemeriksaan(db, cfg, log),
 		provideResep(db, cfg, log),
+		provideRujukanInternal(db, cfg, log),
 		cfg.JWTSecret,
 	)
 }

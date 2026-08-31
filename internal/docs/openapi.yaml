@@ -28,7 +28,7 @@ tags:
     - name: Auth
       description: Autentikasi Dokter & Manajemen Sesi
     - name: Master
-      description: Master Data Database (Penjamin, Depo Farmasi)
+      description: Master Data Database (Penjamin, Depo Farmasi, Poliklinik)
     - name: Obat
       description: Katalog Obat, Ketersediaan Stok per Depo & Master Klasifikasi Obat
     - name: Rawat Jalan
@@ -37,6 +37,8 @@ tags:
       description: Rekam Medis Pasien (SOAP & Tanda-Tanda Vital)
     - name: Resep
       description: Riwayat Peresepan Obat Pasien (Non-Racikan & Racikan)
+    - name: Rujukan Internal
+      description: Konsul & Rujukan Pasien Antar Poliklinik / Dokter Internal RS
 
 components:
     securitySchemes:
@@ -216,6 +218,73 @@ components:
                 nama:
                     type: string
                     example: Depo Rawat Jalan
+
+        Poliklinik:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: INT
+                nama:
+                    type: string
+                    example: Penyakit Dalam
+
+        OpsiPoliDokter:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted ID composite key (KodePoli~KodeDokter)
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                kode_poli:
+                    type: string
+                    example: "INT"
+                nama_poli:
+                    type: string
+                    example: "Penyakit Dalam"
+                kode_dokter:
+                    type: string
+                    example: "DR002"
+                nama_dokter:
+                    type: string
+                    example: "dr. Fulan, Sp.PD"
+
+        RujukanInternal:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted ID composite key (NoRawat~KodePoli~KodeDokter)
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
+                no_rawat:
+                    type: string
+                    example: "2026/04/22/000001"
+                kode_poli:
+                    type: string
+                    example: "INT"
+                nama_poli:
+                    type: string
+                    example: "Penyakit Dalam"
+                kode_dokter:
+                    type: string
+                    example: "DR002"
+                nama_dokter:
+                    type: string
+                    example: "dr. Fulan, Sp.PD"
+
+        SimpanRujukanRequest:
+            type: object
+            required:
+                - id_tujuan
+            properties:
+                id_tujuan:
+                    type: string
+                    description: Encrypted ID opsi tujuan dokter dan poli (didapatkan dari endpoint /rujukan-internal/opsi-poli)
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
 
         JenisObat:
             type: object
@@ -845,6 +914,24 @@ paths:
                 "429":
                     description: Terlalu banyak percobaan login (Rate limit 10 req/menit)
 
+    /api/v1/auth/logout:
+        post:
+            tags: [Auth]
+            summary: Logout Dokter
+            description: |
+                Endpoint logout untuk mengakhiri sesi dokter dan menginstruksikan client untuk membersihkan Bearer Token JWT.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Logout Berhasil
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "401":
+                    description: Token tidak ada atau sudah kadaluarsa
+
     /api/v1/master/penjamin:
         get:
             tags: [Master]
@@ -890,6 +977,30 @@ paths:
                                               type: array
                                               items:
                                                   $ref: "#/components/schemas/Depo"
+
+    /api/v1/master/poliklinik:
+        get:
+            tags: [Master]
+            summary: Daftar Master Poliklinik
+            description: Mengambil daftar master poliklinik / unit rawat jalan yang aktif.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar poliklinik
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Poliklinik"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
 
     /api/v1/obat:
         get:
@@ -1990,5 +2101,157 @@ paths:
                     description: Ditolak karena bukan dokter pembuat, resep telah divalidasi/diserahkan farmasi, atau melebihi batas waktu 48 jam
                 "404":
                     description: Data resep obat tidak ditemukan pada kunjungan ini
+
+    /api/v1/rujukan-internal/opsi-poli:
+        get:
+            tags: [Rujukan Internal]
+            summary: Daftar Opsi Dokter & Poliklinik Rujukan
+            description: |
+                Mengambil daftar opsi dokter dan poliklinik tujuan rujukan internal yang aktif berpraktek (berdasarkan tabel `jadwal`).
+                - Otomatis mengecualikan dokter yang sedang login (`kd_dokter != dokter_login`).
+                - ID publik pada response dienkripsi AES-GCM composite key (`kd_poli~kd_dokter`) untuk digunakan sebagai payload `id_tujuan` saat membuat rujukan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian nama poliklinik atau nama dokter (opsional)
+                  schema:
+                      type: string
+                      example: jantung
+            responses:
+                "200":
+                    description: Berhasil mengambil opsi dokter dan poliklinik rujukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiPoliDokter"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+
+    /api/v1/rujukan-internal/{id_kunjungan}:
+        get:
+            tags: [Rujukan Internal]
+            summary: Daftar Rujukan Internal Pasien per Kunjungan
+            description: Mengambil seluruh rujukan internal / konsul antar-poli yang dibuat untuk kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar rujukan internal
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/RujukanInternal"
+                "400":
+                    description: ID kunjungan tidak valid
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+
+        post:
+            tags: [Rujukan Internal]
+            summary: Simpan Rujukan Internal Baru
+            description: |
+                Menyimpan rujukan internal pasien ke dokter dan poliklinik lain.
+                
+                ### Aturan Bisnis & Validasi:
+                - **Proteksi Diri Sendiri**: Dokter tidak dapat membuat rujukan internal ke dirinya sendiri.
+                - **Proteksi Duplikasi**: Pasien tidak dapat dirujuk ke dokter yang sama lebih dari 1 kali pada kunjungan yang sama.
+                - **Proteksi Batas Waktu 48 Jam**: Pembuatan rujukan ditolak jika waktu registrasi rawat jalan telah melewati batas waktu 48 jam.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanRujukanRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan rujukan internal
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/RujukanInternal"
+                "400":
+                    description: ID tujuan tidak valid, format JSON salah, atau duplikasi rujukan
+                "403":
+                    description: Melebihi batas waktu maksimal 48 jam
+                "404":
+                    description: Data kunjungan pasien tidak ditemukan
+
+    /api/v1/rujukan-internal/{id_kunjungan}/{id_rujukan}:
+        delete:
+            tags: [Rujukan Internal]
+            summary: Batalkan / Hapus Rujukan Internal
+            description: |
+                Membatalkan rujukan internal pasien yang telah dibuat.
+                
+                ### Aturan Bisnis:
+                - **Validasi Kunjungan**: ID rujukan harus cocok dengan ID kunjungan pasien pada URL.
+                - **Proteksi Batas Waktu 48 Jam**: Pembatalan rujukan ditolak jika telah melewati batas waktu 48 jam.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                - name: id_rujukan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Rujukan (NoRawat~KodePoli~KodeDokter)
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil membatalkan rujukan internal
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "400":
+                    description: ID kunjungan atau ID rujukan tidak valid
+                "403":
+                    description: Melebihi batas waktu 48 jam atau ID rujukan tidak cocok dengan kunjungan
+                "404":
+                    description: Data rujukan internal tidak ditemukan
+
 
 

@@ -19,14 +19,14 @@ func New() *Logger {
 	}
 }
 
-func (l *Logger) Info(msg string, v ...interface{}) {
+func (l *Logger) Info(msg string, v ...any) {
 	l.infoLog.Printf(msg, v...)
 }
 
-func (l *Logger) Warn(msg string, v ...interface{}) {
+func (l *Logger) Warn(msg string, v ...any) {
 	l.warnLog.Printf(msg, v...)
 }
 
-func (l *Logger) Error(msg string, v ...interface{}) {
+func (l *Logger) Error(msg string, v ...any) {
 	l.errorLog.Printf(msg, v...)
 }
