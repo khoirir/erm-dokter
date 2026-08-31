@@ -39,6 +39,8 @@ tags:
       description: Riwayat Peresepan Obat Pasien (Non-Racikan & Racikan)
     - name: Rujukan Internal
       description: Konsul & Rujukan Pasien Antar Poliklinik / Dokter Internal RS
+    - name: Penilaian Medis
+      description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan / Ralan, Ranap, IGD)
 
 components:
     securitySchemes:
@@ -855,6 +857,414 @@ components:
                     type: string
                     enum: [Ralan, Ranap]
                     example: Ralan
+
+        ReferensiPenilaianMedis:
+            type: object
+            properties:
+                anamnesis:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                keadaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                kesadaran:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                status_fisik:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+
+        PenilaianMedisRalan:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_pasien:
+                    type: string
+                    description: Encrypted ID Nomor Rekam Medis Pasien
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
+                no_rawat:
+                    type: string
+                    example: "2026/04/22/000001"
+                no_rkm_medis:
+                    type: string
+                    example: "123456"
+                kode_poli:
+                    type: string
+                    example: "INT"
+                nama_poli:
+                    type: string
+                    example: "Penyakit Dalam"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-04-22"
+                tanggal_pemeriksaan:
+                    type: string
+                    example: "2026-04-22 09:30:00"
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Handi, Sp.PD"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Demam tinggi sejak 3 hari yang lalu disertai menggigil"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Pasien mengeluh demam naik turun, mual, dan pusing"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Riwayat gastritis 1 tahun lalu"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Tidak ada riwayat hipertensi atau DM"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Sudah minum Paracetamol namun demam masih naik"
+                riwayat_alergi:
+                    type: string
+                    example: "Tidak ada riwayat alergi obat/makanan"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Sedang
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "88"
+                respirasi:
+                    type: string
+                    example: "20"
+                suhu_tubuh:
+                    type: string
+                    example: "38.5"
+                spo2:
+                    type: string
+                    example: "98"
+                berat_badan:
+                    type: string
+                    example: "60"
+                tinggi_badan:
+                    type: string
+                    example: "165"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                telinga_hidung_tenggorok:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                kulit:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Nyeri tekan epigastrium (+), turgor kulit baik"
+                keterangan_lokalis:
+                    type: string
+                    example: "Regio abdomen datar, supel, bising usus normal"
+                pemeriksaan_penunjang:
+                    type: string
+                    example: "Darah Lengkap: Hb 14.2, Leukosit 8.500, Trombosit 180.000, Widal (-)"
+                diagnosis:
+                    type: string
+                    example: "Febris H-3 e.c Susp. Viral Infection"
+                tata_laksana:
+                    type: string
+                    example: "IVFD RL 20 tpm, Paracetamol tab 3x500mg, Antasida sirup 3x1 C"
+                konsultasi_rujukan:
+                    type: string
+                    example: "Rawat Jalan Poli Penyakit Dalam"
+
+        SimpanPenilaianMedisRalanRequest:
+            type: object
+            required:
+                - no_rawat
+                - keluhan_utama
+                - diagnosis
+                - tata_laksana
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan (harus sama dengan yang terenkripsi di id_kunjungan)
+                    example: "2026/04/22/000001"
+                tanggal_pemeriksaan:
+                    type: string
+                    description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
+                    example: "2026-04-22 09:30:00"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    description: Wajib diisi jika anamnesis Alloanamnesis
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Demam tinggi sejak 3 hari"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Demam naik turun disertai pusing dan mual"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Tidak ada"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Tidak ada"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Paracetamol 500mg"
+                riwayat_alergi:
+                    type: string
+                    example: "Tidak ada"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Sedang
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "88"
+                respirasi:
+                    type: string
+                    example: "20"
+                suhu_tubuh:
+                    type: string
+                    example: "38.5"
+                spo2:
+                    type: string
+                    example: "98"
+                berat_badan:
+                    type: string
+                    example: "60"
+                tinggi_badan:
+                    type: string
+                    example: "165"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                telinga_hidung_tenggorok:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                kulit:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Nyeri tekan epigastrium (+)"
+                keterangan_lokalis:
+                    type: string
+                    example: ""
+                pemeriksaan_penunjang:
+                    type: string
+                    example: "Darah Lengkap"
+                diagnosis:
+                    type: string
+                    example: "Febris H-3 e.c Susp. Viral Infection"
+                tata_laksana:
+                    type: string
+                    example: "Paracetamol tab 3x500mg"
+                konsultasi_rujukan:
+                    type: string
+                    example: ""
+
+        UpdatePenilaianMedisRalanRequest:
+            type: object
+            required:
+                - keluhan_utama
+                - diagnosis
+                - tata_laksana
+            properties:
+                tanggal_pemeriksaan:
+                    type: string
+                    description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
+                    example: "2026-04-22 09:30:00"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    description: Wajib diisi jika anamnesis Alloanamnesis
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Demam tinggi sejak 3 hari"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Demam naik turun disertai pusing dan mual"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Tidak ada"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Tidak ada"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Paracetamol 500mg"
+                riwayat_alergi:
+                    type: string
+                    example: "Tidak ada"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Sedang
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "88"
+                respirasi:
+                    type: string
+                    example: "20"
+                suhu_tubuh:
+                    type: string
+                    example: "38.5"
+                spo2:
+                    type: string
+                    example: "98"
+                berat_badan:
+                    type: string
+                    example: "60"
+                tinggi_badan:
+                    type: string
+                    example: "165"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                telinga_hidung_tenggorok:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                kulit:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Nyeri tekan epigastrium (+)"
+                keterangan_lokalis:
+                    type: string
+                    example: ""
+                pemeriksaan_penunjang:
+                    type: string
+                    example: "Darah Lengkap"
+                diagnosis:
+                    type: string
+                    example: "Febris H-3 e.c Susp. Viral Infection"
+                tata_laksana:
+                    type: string
+                    example: "Paracetamol tab 3x500mg"
+                konsultasi_rujukan:
+                    type: string
+                    example: ""
 
 paths:
     /health:
@@ -2252,6 +2662,206 @@ paths:
                     description: Melebihi batas waktu 48 jam atau ID rujukan tidak cocok dengan kunjungan
                 "404":
                     description: Data rujukan internal tidak ditemukan
+
+    /api/v1/penilaian-medis/referensi:
+        get:
+            summary: Daftar Opsi Dropdown Penilaian Medis
+            description: Mengambil seluruh daftar opsi dropdown (anamnesis, keadaan umum, tingkat kesadaran, dan status pemeriksaan fisik) untuk formulir asesmen medis.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil opsi referensi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil opsi referensi penilaian medis
+                                    data:
+                                        $ref: "#/components/schemas/ReferensiPenilaianMedis"
+
+    /api/v1/penilaian-medis/ralan/{id_kunjungan}:
+        get:
+            summary: Detail Penilaian Awal Medis Rawat Jalan
+            description: Mengambil data asesmen awal medis dokter umum rawat jalan berdasarkan ID kunjungan terenkripsi.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail penilaian medis
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail penilaian awal medis rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisRalan"
+                "404":
+                    description: Data penilaian awal medis tidak ditemukan
+        post:
+            summary: Simpan Penilaian Awal Medis Rawat Jalan
+            description: Menyimpan data asesmen awal medis dokter umum baru dengan proteksi 48 jam dan pencegahan duplikasi.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPenilaianMedisRalanRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan penilaian awal medis
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan penilaian awal medis rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisRalan"
+                "400":
+                    description: Validasi input gagal atau data sudah ada
+                "403":
+                    description: Melebihi batas waktu 48 jam
+        put:
+            summary: Update Penilaian Awal Medis Rawat Jalan
+            description: Memperbarui data asesmen awal medis dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdatePenilaianMedisRalanRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui penilaian awal medis
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui penilaian awal medis rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisRalan"
+                "400":
+                    description: Validasi input gagal
+                "403":
+                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data penilaian awal medis tidak ditemukan
+        delete:
+            summary: Hapus Penilaian Awal Medis Rawat Jalan
+            description: Menghapus data asesmen awal medis dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus penilaian awal medis
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "403":
+                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data penilaian awal medis tidak ditemukan
+
+    /api/v1/penilaian-medis/ralan/pasien/{id_pasien}:
+        get:
+            summary: Riwayat Penilaian Awal Medis Rawat Jalan Pasien
+            description: Mengambil seluruh riwayat asesmen awal medis rawat jalan pasien berdasarkan nomor rekam medis terenkripsi.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat penilaian awal medis pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat penilaian awal medis rawat jalan pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PenilaianMedisRalan"
 
 
 

@@ -60,6 +60,14 @@ internal/
     - **Layer Service**: Seluruh pencatatan log teknis terpusat dilakukan di layer Service menggunakan `s.log.Error(...)`, `s.log.Warn(...)`, dan `s.log.Info(...)`.
     - **Layer Handler**: Error ditangani terpusat menggunakan `apperror.HandleError(w, err)` untuk membedakan HTTP Status Code (400, 403, 404, 500).
 
+7. **Batasan Akses Database Langsung**:
+    - **DILARANG KERAS mengakses atau meng-query database secara langsung** (melalui skrip, perintah shell CLI, kode ad-hoc, dll.) untuk melihat schema atau data tabel.
+    - Seluruh informasi mengenai struktur tabel, nama kolom, primary key, tipe data, dan query bisnis **wajib bersumber langsung dari input / instruksi USER**.
+
+8. **Standar Pengujian (Testing by Unit Test)**:
+    - **Wajib menggunakan Unit Test Go murni (`go test ./...`)** untuk memverifikasi setiap perubahan logika bisnis, validasi request/model, enkripsi/dekripsi URL, dan penanganan error.
+    - **DILARANG melakukan pengujian manual via `curl` / skrip ad-hoc** terhadap running server. Seluruh skenario pengujian (sukses, validasi gagal, duplikasi, pembatasan waktu, hak akses dokter) harus dicakup secara otomatis di file `_test.go` terkait.
+
 ---
 
 ## 3. Fitur yang Telah Selesai Diimplementasikan
@@ -113,6 +121,15 @@ internal/
 - `POST /api/v1/rujukan-internal/{id_kunjungan}` (Simpan rujukan internal baru: proteksi diri sendiri, proteksi duplikasi ke dokter yang sama, proteksi 48 jam rawat jalan).
 - `DELETE /api/v1/rujukan-internal/{id_kunjungan}/{id_rujukan}` (Batalkan / hapus rujukan internal dengan proteksi 48 jam & validasi kesesuaian kunjungan).
 
+### G. Penilaian Awal Medis Rawat Jalan (`/api/v1/penilaian-medis`)
+
+- `GET /api/v1/penilaian-medis/referensi` (Daftar opsi global dropdown: Anamnesis, Keadaan, Kesadaran, Status Fisik).
+- `GET /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Detail penilaian awal medis dokter umum rawat jalan per kunjungan).
+- `GET /api/v1/penilaian-medis/ralan/pasien/{id_pasien}` (Riwayat penilaian awal medis dokter umum rawat jalan seluruh kunjungan by RM).
+- `POST /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Simpan asesmen medis rawat jalan baru: auto-default Fisik "Normal", proteksi duplikasi per no_rawat, & proteksi 48 jam).
+- `PUT /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Update asesmen medis: proteksi dokter pembuat & proteksi 48 jam).
+- `DELETE /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Hapus asesmen medis: proteksi dokter pembuat & proteksi 48 jam).
+
 ---
 
 ## 4. Keputusan Bisnis & Catatan Operasional RS (PENTING)
@@ -147,9 +164,13 @@ Berdasarkan diskusi mendalam mengenai perilaku operasional riil di Rumah Sakit &
     - Service memvalidasi secara preventif agar tidak terjadi *duplicate entry* ke dokter yang sama sebelum query `INSERT` dieksekusi.
     - Public Identifier dienkripsi composite URL-safe (`no_rawat~kd_poli~kd_dokter`).
 
+7. **Primary Key pada Penilaian Awal Medis Rawat Jalan (`penilaian_medis_ralan`)**:
+    - Primary key di Khanza: `no_rawat`.
+    - 1 Kunjungan hanya memiliki 1 asesmen awal medis ralan. Simpan baru (`POST`) menolak jika sudah ada data asesmen pada `no_rawat` tersebut (anjurkan dokter menggunakan `PUT` untuk mengubah).
+
 ---
 
 ## 5. Roadmap / Modul Berikutnya
 
-Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, **Resep Obat (CRUD Lengkap)**, dan **Rujukan Internal Poli (CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
+Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, **Resep Obat (CRUD Lengkap)**, **Rujukan Internal Poli (CRUD Lengkap)**, dan **Penilaian Awal Medis Rawat Jalan (CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
 

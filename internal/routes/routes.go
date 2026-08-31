@@ -12,6 +12,7 @@ import (
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pemeriksaan"
 	"erm-dokter/internal/rawatjalan"
+	"erm-dokter/internal/penilaianmedis"
 	"erm-dokter/internal/resep"
 	"erm-dokter/internal/rujukaninternal"
 )
@@ -27,6 +28,7 @@ type RouteConfig struct {
 	PemeriksaanHandler     *pemeriksaan.Handler
 	ResepHandler           *resep.Handler
 	RujukanInternalHandler *rujukaninternal.Handler
+	PenilaianMedisHandler  *penilaianmedis.Handler
 	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
 }
@@ -41,6 +43,7 @@ func NewRouteConfig(
 	pemeriksaanHandler *pemeriksaan.Handler,
 	resepHandler *resep.Handler,
 	rujukanInternalHandler *rujukaninternal.Handler,
+	penilaianMedisHandler *penilaianmedis.Handler,
 	jwtSecret string,
 ) *RouteConfig {
 	return &RouteConfig{
@@ -54,6 +57,7 @@ func NewRouteConfig(
 		PemeriksaanHandler:     pemeriksaanHandler,
 		ResepHandler:           resepHandler,
 		RujukanInternalHandler: rujukanInternalHandler,
+		PenilaianMedisHandler:  penilaianMedisHandler,
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
 	}
@@ -71,6 +75,7 @@ func (c *RouteConfig) Setup() {
 	c.PemeriksaanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResepHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RujukanInternalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.PenilaianMedisHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {
