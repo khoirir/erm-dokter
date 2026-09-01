@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
+	Logout(ctx context.Context, kodeDokter string)
 }
 
 type service struct {
@@ -52,3 +53,12 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 		NamaDokter: user.NamaUser,
 	}, nil
 }
+
+func (s *service) Logout(ctx context.Context, kodeDokter string) {
+	if kodeDokter != "" {
+		s.log.Info("Dokter %s berhasil logout", kodeDokter)
+	} else {
+		s.log.Info("Pengguna berhasil logout")
+	}
+}
+

@@ -49,7 +49,7 @@ func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokte
 
 	kunjungan, err := s.repo.DetailKunjungan(ctx, noRawat, kodeDokter)
 	if err != nil {
-		s.log.Error("Gagal query detail kunjungan %s: %v", noRawat, err)
+		s.log.Error("Gagal query detail kunjungan %s oleh dokter %s: %v", noRawat, kodeDokter, err)
 		return nil, err
 	}
 

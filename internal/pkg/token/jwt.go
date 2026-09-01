@@ -46,3 +46,13 @@ func ValidateToken(tokenStr, secretKey string) (*Claims, error) {
 
 	return claims, nil
 }
+
+func ExtractClaimsUnverified(tokenStr string) (*Claims, error) {
+	claims := &Claims{}
+	_, _, err := jwt.NewParser().ParseUnverified(tokenStr, claims)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+

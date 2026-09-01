@@ -1266,6 +1266,403 @@ components:
                     type: string
                     example: ""
 
+        PenilaianMedisIGD:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_pasien:
+                    type: string
+                    description: Encrypted ID Nomor Rekam Medis Pasien
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
+                no_rawat:
+                    type: string
+                    example: "2026/04/22/000002"
+                no_rkm_medis:
+                    type: string
+                    example: "654321"
+                kode_poli:
+                    type: string
+                    example: "IGD"
+                nama_poli:
+                    type: string
+                    example: "Instalasi Gawat Darurat"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-04-22"
+                tanggal_penilaian:
+                    type: string
+                    example: "2026-04-22 09:30:00"
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Handi, Sp.PD"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada hebat tembus ke belakang sejak 1 jam SMRS"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Nyeri dada menjalar ke lengan kiri dan leher, keringat dingin"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Hipertensi tidak terkontrol 5 tahun"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Ayah riwayat PJK"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Amlodipine 10mg"
+                alergi:
+                    type: string
+                    example: "Tidak ada"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Berat
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "150/95"
+                nadi:
+                    type: string
+                    example: "105"
+                respirasi:
+                    type: string
+                    example: "24"
+                suhu_tubuh:
+                    type: string
+                    example: "36.7"
+                spo2:
+                    type: string
+                    example: "96"
+                berat_badan:
+                    type: string
+                    example: "70"
+                tinggi_badan:
+                    type: string
+                    example: "172"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                mata:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                leher:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Abnormal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Akral dingin (+), diaphoresis (+)"
+                keterangan_lokalis:
+                    type: string
+                    example: "Regio Thoraks: S1 S2 reguler, gallop (-)"
+                ekg:
+                    type: string
+                    example: "ST Elevasi 2mm di Lead V1-V4, T Inverted di II, III, aVF"
+                radiologi:
+                    type: string
+                    example: "Cor: Cardiomegaly (CTR 56%), Pulmo: Corakan bronkovaskular normal"
+                laboratorium:
+                    type: string
+                    example: "Troponin I: 1.45 ng/mL (Kritis), CK-MB: 48 U/L, GDS: 140 mg/dL"
+                diagnosis:
+                    type: string
+                    example: "Acute Anterior STEMI Killip I"
+                tata_laksana:
+                    type: string
+                    example: "O2 kanul 3 lpm, Aspilet 320mg chewable, Clopidogrel 300mg, Rujuk Cathlab"
+
+        SimpanPenilaianMedisIGDRequest:
+            type: object
+            required:
+                - no_rawat
+                - keluhan_utama
+                - diagnosis
+                - tata_laksana
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan (harus sama dengan yang terenkripsi di id_kunjungan)
+                    example: "2026/04/22/000002"
+                tanggal_penilaian:
+                    type: string
+                    description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
+                    example: "2026-04-22 09:30:00"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    description: Wajib diisi jika anamnesis Alloanamnesis
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada hebat tembus ke belakang sejak 1 jam SMRS"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Nyeri dada menjalar ke lengan kiri dan leher, keringat dingin"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Hipertensi tidak terkontrol 5 tahun"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Ayah riwayat PJK"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Amlodipine 10mg"
+                alergi:
+                    type: string
+                    example: "Tidak ada"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Berat
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "150/95"
+                nadi:
+                    type: string
+                    example: "105"
+                respirasi:
+                    type: string
+                    example: "24"
+                suhu_tubuh:
+                    type: string
+                    example: "36.7"
+                spo2:
+                    type: string
+                    example: "96"
+                berat_badan:
+                    type: string
+                    example: "70"
+                tinggi_badan:
+                    type: string
+                    example: "172"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                mata:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                leher:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Abnormal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Akral dingin (+), diaphoresis (+)"
+                keterangan_lokalis:
+                    type: string
+                    example: "Regio Thoraks: S1 S2 reguler, gallop (-)"
+                ekg:
+                    type: string
+                    example: "ST Elevasi 2mm di Lead V1-V4"
+                radiologi:
+                    type: string
+                    example: "Cardiomegaly"
+                laboratorium:
+                    type: string
+                    example: "Troponin I Positif"
+                diagnosis:
+                    type: string
+                    example: "Acute Anterior STEMI Killip I"
+                tata_laksana:
+                    type: string
+                    example: "O2 kanul 3 lpm, Aspilet 320mg, Clopidogrel 300mg, Rujuk Cathlab"
+
+        UpdatePenilaianMedisIGDRequest:
+            type: object
+            required:
+                - keluhan_utama
+                - diagnosis
+                - tata_laksana
+            properties:
+                tanggal_penilaian:
+                    type: string
+                    description: Format YYYY-MM-DD HH:mm:ss atau YYYY-MM-DD. Kosong saat simpan akan diisi waktu sekarang.
+                    example: "2026-04-22 09:30:00"
+                anamnesis:
+                    type: string
+                    enum: [Autoanamnesis, Alloanamnesis]
+                    example: Autoanamnesis
+                hubungan:
+                    type: string
+                    description: Wajib diisi jika anamnesis Alloanamnesis
+                    example: ""
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada hebat tembus ke belakang sejak 1 jam SMRS"
+                riwayat_penyakit_sekarang:
+                    type: string
+                    example: "Nyeri dada menjalar ke lengan kiri dan leher, keringat dingin"
+                riwayat_penyakit_dahulu:
+                    type: string
+                    example: "Hipertensi tidak terkontrol 5 tahun"
+                riwayat_penyakit_keluarga:
+                    type: string
+                    example: "Ayah riwayat PJK"
+                riwayat_pengobatan:
+                    type: string
+                    example: "Amlodipine 10mg"
+                alergi:
+                    type: string
+                    example: "Tidak ada"
+                keadaan:
+                    type: string
+                    enum: [Sehat, Sakit Ringan, Sakit Sedang, Sakit Berat]
+                    example: Sakit Berat
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Apatis, Somnolen, Sopor, Koma]
+                    example: Compos Mentis
+                tensi:
+                    type: string
+                    example: "150/95"
+                nadi:
+                    type: string
+                    example: "105"
+                respirasi:
+                    type: string
+                    example: "24"
+                suhu_tubuh:
+                    type: string
+                    example: "36.7"
+                spo2:
+                    type: string
+                    example: "96"
+                berat_badan:
+                    type: string
+                    example: "70"
+                tinggi_badan:
+                    type: string
+                    example: "172"
+                kepala:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                mata:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                gigi:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                leher:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                thoraks:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Abnormal
+                abdomen:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                genital:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Tidak Diperiksa
+                ekstremitas:
+                    type: string
+                    enum: [Normal, Abnormal, Tidak Diperiksa]
+                    example: Normal
+                keterangan_fisik:
+                    type: string
+                    example: "Akral dingin (+), diaphoresis (+)"
+                keterangan_lokalis:
+                    type: string
+                    example: "Regio Thoraks: S1 S2 reguler, gallop (-)"
+                ekg:
+                    type: string
+                    example: "ST Elevasi 2mm di Lead V1-V4"
+                radiologi:
+                    type: string
+                    example: "Cardiomegaly"
+                laboratorium:
+                    type: string
+                    example: "Troponin I Positif"
+                diagnosis:
+                    type: string
+                    example: "Acute Anterior STEMI Killip I"
+                tata_laksana:
+                    type: string
+                    example: "O2 kanul 3 lpm, Aspilet 320mg, Clopidogrel 300mg, Rujuk Cathlab"
+
 paths:
     /health:
         get:
@@ -2862,6 +3259,182 @@ paths:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisRalan"
+
+    /api/v1/penilaian-medis/igd/{id_kunjungan}:
+        get:
+            summary: Detail Penilaian Awal Medis Gawat Darurat (IGD)
+            description: Mengambil data asesmen awal medis IGD lengkap per kunjungan pasien.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail penilaian awal medis IGD
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail penilaian awal medis IGD
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisIGD"
+                "404":
+                    description: Data penilaian awal medis IGD tidak ditemukan
+        post:
+            summary: Simpan Penilaian Awal Medis Gawat Darurat (IGD)
+            description: Menyimpan data asesmen awal medis IGD baru dengan proteksi 48 jam dan pencegahan duplikasi per kunjungan.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPenilaianMedisIGDRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan penilaian awal medis IGD
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan penilaian awal medis IGD
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisIGD"
+                "400":
+                    description: Validasi input gagal atau data sudah ada
+                "403":
+                    description: Melebihi batas waktu 48 jam
+        put:
+            summary: Update Penilaian Awal Medis Gawat Darurat (IGD)
+            description: Memperbarui data asesmen awal medis IGD dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdatePenilaianMedisIGDRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui penilaian awal medis IGD
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui penilaian awal medis IGD
+                                    data:
+                                        $ref: "#/components/schemas/PenilaianMedisIGD"
+                "400":
+                    description: Validasi input gagal
+                "403":
+                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data penilaian awal medis IGD tidak ditemukan
+        delete:
+            summary: Hapus Penilaian Awal Medis Gawat Darurat (IGD)
+            description: Menghapus data asesmen awal medis IGD dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus penilaian awal medis IGD
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "403":
+                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data penilaian awal medis IGD tidak ditemukan
+
+    /api/v1/penilaian-medis/igd/pasien/{id_pasien}:
+        get:
+            summary: Riwayat Penilaian Awal Medis Gawat Darurat (IGD) Pasien
+            description: Mengambil seluruh riwayat asesmen awal medis IGD pasien berdasarkan nomor rekam medis terenkripsi.
+            tags:
+                - Penilaian Medis
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat penilaian awal medis IGD pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat penilaian awal medis IGD pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PenilaianMedisIGD"
+
 
 
 

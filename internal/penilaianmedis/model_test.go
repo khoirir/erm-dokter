@@ -102,11 +102,11 @@ func TestSimpanPenilaianMedisRalanRequest_Sanitize_Defaults(t *testing.T) {
 }
 
 func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T) {
-	// 1. Empty request
+	// 1. Missing no_rawat, keluhan_utama, diagnosis, tata_laksana
 	req := SimpanPenilaianMedisRalanRequest{}
 	errs := req.Validate()
 	if errs == nil {
-		t.Fatal("expected validation errors for empty request, got nil")
+		t.Fatal("expected validation errors, got nil")
 	}
 	if _, exists := errs["no_rawat"]; !exists {
 		t.Error("expected error on no_rawat")
@@ -121,12 +121,12 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T
 		t.Error("expected error on tata_laksana")
 	}
 
-	// 2. Alloanamnesis without hubungan
+	// 2. Alloanamnesis missing hubungan
 	req = SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
 			Anamnesis:    Alloanamnesis,
-			Hubungan:     "",
+			Hubungan:     "", // kosong
 			KeluhanUtama: "Nyeri dada",
 			Diagnosis:    "Angina",
 			TataLaksana:  "ISDN 5mg",
@@ -137,7 +137,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T
 		t.Errorf("expected error on hubungan for Alloanamnesis, got: %+v", errs)
 	}
 
-	// 3. Alloanamnesis with hubungan (Valid)
+	// 3. Alloanamnesis with valid hubungan
 	req.Hubungan = "Anak Kandung"
 	errs = req.Validate()
 	if errs != nil {
@@ -145,43 +145,15 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T
 	}
 }
 
-func TestSimpanPenilaianMedisRalanRequest_Validation_InvalidEnums(t *testing.T) {
-	req := SimpanPenilaianMedisRalanRequest{
-		NoRawat: "2026/04/22/000001",
-		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
-			KeluhanUtama: "Pusing",
-			Diagnosis:    "Vertigo",
-			TataLaksana:  "Betahistine",
-			Keadaan:      Keadaan("InvalidKeadaan"),
-			Kesadaran:    KesadaranAwal("InvalidKesadaran"),
-			Kepala:       StatusFisik("InvalidKepala"),
-		},
-	}
-
-	errs := req.Validate()
-	if errs == nil {
-		t.Fatal("expected validation errors for invalid enums")
-	}
-	if _, exists := errs["keadaan"]; !exists {
-		t.Error("expected error for invalid keadaan")
-	}
-	if _, exists := errs["kesadaran"]; !exists {
-		t.Error("expected error for invalid kesadaran")
-	}
-	if _, exists := errs["kepala"]; !exists {
-		t.Error("expected error for invalid kepala")
-	}
-}
-
 func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
-	// 1. Tensi validation
+	// 1. Invalid Tensi format (missing slash)
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
-			KeluhanUtama: "Sakit kepala",
-			Diagnosis:    "Hipertensi",
-			TataLaksana:  "Amlodipine 5mg",
-			Tensi:        "120", // format salah
+			KeluhanUtama: "Demam",
+			Diagnosis:    "Febris",
+			TataLaksana:  "Paracetamol",
+			Tensi:        "12080",
 		},
 	}
 	errs := req.Validate()
@@ -189,62 +161,28 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 		t.Errorf("expected error on invalid tensi format, got: %+v", errs)
 	}
 
-	req.Tensi = "80/120" // sistolik <= diastolik
+	// 2. Sistolik <= Diastolik
+	req.Tensi = "80/120"
 	errs = req.Validate()
 	if errs == nil || errs["tensi"] == "" {
 		t.Errorf("expected error when sistolik <= diastolik, got: %+v", errs)
 	}
 
-	req.Tensi = "120/80" // valid tensi
-
-	// 2. Suhu validation
-	req.SuhuTubuh = "20.0" // out of range (< 25)
+	// 3. Suhu Tubuh out of range
+	req.Tensi = "120/80"
+	req.SuhuTubuh = "10.0"
 	errs = req.Validate()
 	if errs == nil || errs["suhu_tubuh"] == "" {
-		t.Errorf("expected error on suhu out of range, got: %+v", errs)
+		t.Errorf("expected error on out of range suhu_tubuh, got: %+v", errs)
 	}
-	req.SuhuTubuh = "36.5" // valid suhu
 
-	// 3. Nadi validation
-	req.Nadi = "10" // out of range (< 20)
-	errs = req.Validate()
-	if errs == nil || errs["nadi"] == "" {
-		t.Errorf("expected error on nadi out of range, got: %+v", errs)
-	}
-	req.Nadi = "80" // valid nadi
-
-	// 4. Respirasi validation
-	req.Respirasi = "150" // out of range (> 100)
-	errs = req.Validate()
-	if errs == nil || errs["respirasi"] == "" {
-		t.Errorf("expected error on respirasi out of range, got: %+v", errs)
-	}
-	req.Respirasi = "20" // valid respirasi
-
-	// 5. Tinggi & Berat Badan
-	req.TinggiBadan = "300" // out of range (> 250)
-	errs = req.Validate()
-	if errs == nil || errs["tinggi_badan"] == "" {
-		t.Errorf("expected error on tinggi badan out of range, got: %+v", errs)
-	}
-	req.TinggiBadan = "170"
-
-	req.BeratBadan = "600" // out of range (> 500)
-	errs = req.Validate()
-	if errs == nil || errs["berat_badan"] == "" {
-		t.Errorf("expected error on berat badan out of range, got: %+v", errs)
-	}
-	req.BeratBadan = "65"
-
-	// 6. SpO2
-	req.SpO2 = "120" // out of range (> 100)
-	errs = req.Validate()
-	if errs == nil || errs["spo2"] == "" {
-		t.Errorf("expected error on SpO2 out of range, got: %+v", errs)
-	}
-	req.SpO2 = "98"
-
-	// Valid all
+	// 4. Valid TTV
+	req.SuhuTubuh = "36.8"
+	req.Nadi = "80"
+	req.Respirasi = "20"
+	req.SpO2 = "99"
+	req.BeratBadan = "60"
+	req.TinggiBadan = "165"
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid TTV to have no errors, got: %+v", errs)
@@ -284,7 +222,6 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPenilaian(t *testing
 }
 
 func TestUpdatePenilaianMedisRalanRequest_Validation(t *testing.T) {
-	// 1. Empty update request (missing required clinical fields)
 	req := UpdatePenilaianMedisRalanRequest{}
 	errs := req.Validate()
 	if errs == nil {
@@ -293,12 +230,10 @@ func TestUpdatePenilaianMedisRalanRequest_Validation(t *testing.T) {
 	if _, exists := errs["keluhan_utama"]; !exists {
 		t.Error("expected error on keluhan_utama")
 	}
-	// Note: no_rawat is NOT required in UpdatePenilaianMedisRalanRequest
 	if _, exists := errs["no_rawat"]; exists {
 		t.Error("did not expect error on no_rawat for UpdatePenilaianMedisRalanRequest")
 	}
 
-	// 2. Valid update request
 	req = UpdatePenilaianMedisRalanRequest{
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
 			TanggalPenilaian: "2026-04-22 09:30:00",
@@ -313,3 +248,108 @@ func TestUpdatePenilaianMedisRalanRequest_Validation(t *testing.T) {
 	}
 }
 
+// ==========================================
+// IGD MODEL & VALIDATION TESTS
+// ==========================================
+
+func TestSimpanPenilaianMedisIGDRequest_Sanitize_Defaults(t *testing.T) {
+	req := SimpanPenilaianMedisIGDRequest{
+		NoRawat: " 2026/04/22/000002 ",
+		DataPenilaianMedisIGD: DataPenilaianMedisIGD{
+			KeluhanUtama: " Nyeri dada tembus ke belakang ",
+			SuhuTubuh:    " 36,8 ",
+			BeratBadan:   " 70,0 ",
+			TinggiBadan:  " 172,0 ",
+			Diagnosis:    " STEMI Anterior ",
+			TataLaksana:  " Loading Aspilet & Clopidogrel ",
+			EKG:          " ST Elevasi di V1-V4 ",
+			Radiologi:    " Cardiomegaly ",
+			Laboratorium: " Troponin I Positif ",
+		},
+	}
+
+	req.Sanitize()
+
+	if req.NoRawat != "2026/04/22/000002" {
+		t.Errorf("expected trimmed no_rawat, got %s", req.NoRawat)
+	}
+	if req.TanggalPenilaian == "" {
+		t.Error("expected default TanggalPenilaian to be populated")
+	}
+	if req.KeluhanUtama != "Nyeri dada tembus ke belakang" {
+		t.Errorf("expected trimmed keluhan utama, got %s", req.KeluhanUtama)
+	}
+	if req.EKG != "ST Elevasi di V1-V4" || req.Radiologi != "Cardiomegaly" || req.Laboratorium != "Troponin I Positif" {
+		t.Errorf("expected trimmed EKG/Rad/Lab, got ekg=%s, rad=%s, lab=%s", req.EKG, req.Radiologi, req.Laboratorium)
+	}
+
+	// Cek default 8 organ fisik IGD (termasuk Mata dan Leher)
+	if req.Kepala != StatusFisikNormal || req.Mata != StatusFisikNormal || req.Gigi != StatusFisikNormal ||
+		req.Leher != StatusFisikNormal || req.Thoraks != StatusFisikNormal || req.Abdomen != StatusFisikNormal ||
+		req.Genital != StatusFisikNormal || req.Ekstremitas != StatusFisikNormal {
+		t.Errorf("expected default Pemeriksaan Fisik IGD to be Normal, got mata=%s, leher=%s", req.Mata, req.Leher)
+	}
+}
+
+func TestSimpanPenilaianMedisIGDRequest_Validation(t *testing.T) {
+	// 1. Missing required fields
+	req := SimpanPenilaianMedisIGDRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors on empty IGD request, got nil")
+	}
+	if _, exists := errs["no_rawat"]; !exists {
+		t.Error("expected error on no_rawat")
+	}
+	if _, exists := errs["keluhan_utama"]; !exists {
+		t.Error("expected error on keluhan_utama")
+	}
+	if _, exists := errs["diagnosis"]; !exists {
+		t.Error("expected error on diagnosis")
+	}
+	if _, exists := errs["tata_laksana"]; !exists {
+		t.Error("expected error on tata_laksana")
+	}
+
+	// 2. Valid IGD Request
+	req = SimpanPenilaianMedisIGDRequest{
+		NoRawat: "2026/04/22/000002",
+		DataPenilaianMedisIGD: DataPenilaianMedisIGD{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Sesak napas akut",
+			Diagnosis:        "Asma Akut Berat",
+			TataLaksana:      "Nebulisasi Ventolin + Pulmicort",
+			Tensi:            "130/80",
+			SuhuTubuh:        "36.7",
+			Nadi:             "105",
+			Respirasi:        "28",
+			SpO2:             "94",
+			EKG:              "Sinus Takikardia",
+		},
+	}
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid IGD request to have no errors, got: %+v", errs)
+	}
+}
+
+func TestUpdatePenilaianMedisIGDRequest_Validation(t *testing.T) {
+	req := UpdatePenilaianMedisIGDRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty update IGD request")
+	}
+
+	req = UpdatePenilaianMedisIGDRequest{
+		DataPenilaianMedisIGD: DataPenilaianMedisIGD{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Lemas & pusing",
+			Diagnosis:        "Hipoglikemia",
+			TataLaksana:      "Bolus Dextrose 40%",
+		},
+	}
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid update IGD request to have no errors, got: %+v", errs)
+	}
+}

@@ -121,14 +121,21 @@ internal/
 - `POST /api/v1/rujukan-internal/{id_kunjungan}` (Simpan rujukan internal baru: proteksi diri sendiri, proteksi duplikasi ke dokter yang sama, proteksi 48 jam rawat jalan).
 - `DELETE /api/v1/rujukan-internal/{id_kunjungan}/{id_rujukan}` (Batalkan / hapus rujukan internal dengan proteksi 48 jam & validasi kesesuaian kunjungan).
 
-### G. Penilaian Awal Medis Rawat Jalan (`/api/v1/penilaian-medis`)
+### G. Penilaian Awal Medis (`/api/v1/penilaian-medis`)
 
 - `GET /api/v1/penilaian-medis/referensi` (Daftar opsi global dropdown: Anamnesis, Keadaan, Kesadaran, Status Fisik).
-- `GET /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Detail penilaian awal medis dokter umum rawat jalan per kunjungan).
-- `GET /api/v1/penilaian-medis/ralan/pasien/{id_pasien}` (Riwayat penilaian awal medis dokter umum rawat jalan seluruh kunjungan by RM).
-- `POST /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Simpan asesmen medis rawat jalan baru: auto-default Fisik "Normal", proteksi duplikasi per no_rawat, & proteksi 48 jam).
-- `PUT /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Update asesmen medis: proteksi dokter pembuat & proteksi 48 jam).
-- `DELETE /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Hapus asesmen medis: proteksi dokter pembuat & proteksi 48 jam).
+- **Rawat Jalan (`/ralan`)**:
+  - `GET /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Detail penilaian awal medis dokter umum rawat jalan per kunjungan).
+  - `GET /api/v1/penilaian-medis/ralan/pasien/{id_pasien}` (Riwayat penilaian awal medis rawat jalan seluruh kunjungan by RM).
+  - `POST /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Simpan asesmen medis rawat jalan baru: auto-default Fisik "Normal", proteksi duplikasi per no_rawat, & proteksi 48 jam).
+  - `PUT /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Update asesmen medis ralan: proteksi dokter pembuat & proteksi 48 jam).
+  - `DELETE /api/v1/penilaian-medis/ralan/{id_kunjungan}` (Hapus asesmen medis ralan: proteksi dokter pembuat & proteksi 48 jam).
+- **Gawat Darurat (`/igd`)**:
+  - `GET /api/v1/penilaian-medis/igd/{id_kunjungan}` (Detail penilaian awal medis IGD per kunjungan: memuat EKG, Radiologi, Lab, Mata, Leher).
+  - `GET /api/v1/penilaian-medis/igd/pasien/{id_pasien}` (Riwayat penilaian awal medis IGD seluruh kunjungan by RM).
+  - `POST /api/v1/penilaian-medis/igd/{id_kunjungan}` (Simpan asesmen medis IGD baru: auto-default Fisik "Normal", proteksi duplikasi per no_rawat, & proteksi 48 jam).
+  - `PUT /api/v1/penilaian-medis/igd/{id_kunjungan}` (Update asesmen medis IGD: proteksi dokter pembuat & proteksi 48 jam).
+  - `DELETE /api/v1/penilaian-medis/igd/{id_kunjungan}` (Hapus asesmen medis IGD: proteksi dokter pembuat & proteksi 48 jam).
 
 ---
 
@@ -164,13 +171,16 @@ Berdasarkan diskusi mendalam mengenai perilaku operasional riil di Rumah Sakit &
     - Service memvalidasi secara preventif agar tidak terjadi *duplicate entry* ke dokter yang sama sebelum query `INSERT` dieksekusi.
     - Public Identifier dienkripsi composite URL-safe (`no_rawat~kd_poli~kd_dokter`).
 
-7. **Primary Key pada Penilaian Awal Medis Rawat Jalan (`penilaian_medis_ralan`)**:
+7. **Primary Key pada Penilaian Awal Medis (`penilaian_medis_ralan` & `penilaian_medis_igd`)**:
     - Primary key di Khanza: `no_rawat`.
-    - 1 Kunjungan hanya memiliki 1 asesmen awal medis ralan. Simpan baru (`POST`) menolak jika sudah ada data asesmen pada `no_rawat` tersebut (anjurkan dokter menggunakan `PUT` untuk mengubah).
+    - 1 Kunjungan memiliki 1 asesmen awal per tabel (Ralan / IGD).
+    - Simpan baru (`POST`) menolak jika sudah ada data asesmen pada `no_rawat` tersebut (anjurkan dokter menggunakan `PUT` untuk mengubah).
+    - Menangani kasus rujukan silang Poli $\leftrightarrow$ IGD secara aman dengan tabel independen per unit layanan.
 
 ---
 
 ## 5. Roadmap / Modul Berikutnya
 
-Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, **Resep Obat (CRUD Lengkap)**, **Rujukan Internal Poli (CRUD Lengkap)**, dan **Penilaian Awal Medis Rawat Jalan (CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
+Domain **Auth**, **Master**, **Rawat Jalan**, **Pemeriksaan Medis (SOAP)**, **Obat**, **Resep Obat (CRUD Lengkap)**, **Rujukan Internal Poli (CRUD Lengkap)**, dan **Penilaian Awal Medis (Ralan & IGD CRUD Lengkap)** telah selesai diimplementasikan secara komprehensif.
+
 

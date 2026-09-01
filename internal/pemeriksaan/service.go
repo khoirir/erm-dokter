@@ -121,7 +121,7 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 				"jam_pemeriksaan": errMsg,
 			}
 		}
-		s.log.Error("Gagal menyimpan pemeriksaan no_rawat %s (%s): %v", req.NoRawat, statusLanjut, err)
+		s.log.Error("Gagal menyimpan pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", req.NoRawat, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 
@@ -195,7 +195,7 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 				"jam_pemeriksaan": errMsg,
 			}
 		}
-		s.log.Error("Gagal memperbarui pemeriksaan no_rawat %s (%s): %v", id.NoRawat, statusLanjut, err)
+		s.log.Error("Gagal memperbarui pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", id.NoRawat, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 
@@ -259,7 +259,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	}
 
 	if err := s.repo.HapusPemeriksaan(ctx, id, statusLanjut); err != nil {
-		s.log.Error("Gagal menghapus pemeriksaan no_rawat %s (%s): %v", id.NoRawat, statusLanjut, err)
+		s.log.Error("Gagal menghapus pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", id.NoRawat, statusLanjut, kodeDokter, err)
 		return err
 	}
 

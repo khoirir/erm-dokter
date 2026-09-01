@@ -98,7 +98,7 @@ func (s *service) SimpanResep(ctx context.Context, kodeDokter string, statusLanj
 
 	resep, err := s.repo.SimpanResep(ctx, kodeDokter, statusLanjut, req)
 	if err != nil {
-		s.log.Error("Gagal menyimpan resep obat no_rawat %s (%s): %v", req.NoRawat, statusLanjut, err)
+		s.log.Error("Gagal menyimpan resep obat no_rawat %s (%s) oleh dokter %s: %v", req.NoRawat, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 
@@ -109,7 +109,7 @@ func (s *service) SimpanResep(ctx context.Context, kodeDokter string, statusLanj
 func (s *service) HapusResep(ctx context.Context, kodeDokter, noRawat, noResep string, statusLanjut shared.StatusLanjut) error {
 	resep, err := s.repo.DetailResep(ctx, noResep)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail resep %s untuk hapus: %v", noResep, err)
+		s.log.Error("Gagal mengambil detail resep %s untuk hapus oleh dokter %s: %v", noResep, kodeDokter, err)
 		return err
 	}
 	if resep == nil || resep.NoRawat != noRawat {
@@ -128,7 +128,7 @@ func (s *service) HapusResep(ctx context.Context, kodeDokter, noRawat, noResep s
 
 
 	if err := s.repo.HapusResep(ctx, noResep); err != nil {
-		s.log.Error("Gagal menghapus resep obat no_resep %s untuk no_rawat %s: %v", noResep, noRawat, err)
+		s.log.Error("Gagal menghapus resep obat no_resep %s untuk no_rawat %s oleh dokter %s: %v", noResep, noRawat, kodeDokter, err)
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (s *service) HapusResep(ctx context.Context, kodeDokter, noRawat, noResep s
 func (s *service) UpdateResep(ctx context.Context, kodeDokter, noRawat, noResep string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error) {
 	resep, err := s.repo.DetailResep(ctx, noResep)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail resep %s untuk edit: %v", noResep, err)
+		s.log.Error("Gagal mengambil detail resep %s untuk edit oleh dokter %s: %v", noResep, kodeDokter, err)
 		return nil, err
 	}
 	if resep == nil || resep.NoRawat != noRawat {
@@ -168,7 +168,7 @@ func (s *service) UpdateResep(ctx context.Context, kodeDokter, noRawat, noResep 
 
 	updatedResep, err := s.repo.UpdateResep(ctx, noResep, req)
 	if err != nil {
-		s.log.Error("Gagal memperbarui resep obat no_resep %s (%s): %v", noResep, statusLanjut, err)
+		s.log.Error("Gagal memperbarui resep obat no_resep %s (%s) oleh dokter %s: %v", noResep, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 

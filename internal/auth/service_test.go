@@ -118,3 +118,11 @@ func TestLogin_DatabaseError(t *testing.T) {
 		t.Error("database error should NOT be a BusinessError")
 	}
 }
+
+func TestLogout(t *testing.T) {
+	log := logger.New()
+	uc := auth.NewService(&mockAuthRepository{}, "test-secret", log)
+	uc.Logout(context.Background(), "DK001")
+	uc.Logout(context.Background(), "")
+}
+

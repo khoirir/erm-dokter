@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/shared/apperror"
 )
@@ -50,5 +51,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	kodeDokter, _ := middleware.GetKodeDokter(r.Context())
+	h.authService.Logout(r.Context(), kodeDokter)
 	response.Success(w, "Logout berhasil", nil)
 }
+
