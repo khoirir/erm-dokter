@@ -41,6 +41,8 @@ tags:
       description: Konsul & Rujukan Pasien Antar Poliklinik / Dokter Internal RS
     - name: Penilaian Medis
       description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan / Ralan, Ranap, IGD)
+    - name: Tindakan
+      description: Master Data & Katalog Tindakan Medis / Laboratorium
 
 components:
     securitySchemes:
@@ -1662,6 +1664,235 @@ components:
                 tata_laksana:
                     type: string
                     example: "O2 kanul 3 lpm, Aspilet 320mg, Clopidogrel 300mg, Rujuk Cathlab"
+
+        TindakanLab:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier terenkripsi URL-safe
+                    example: "wVf8s0p..."
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan lab di database
+                    example: "PK001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan / pemeriksaan laboratorium
+                    example: "DARAH LENGKAP"
+                biaya:
+                    type: number
+                    format: double
+                    description: Total tarif pemeriksaan
+                    example: 75000
+
+        TemplateLab:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pemeriksaan terenkripsi URL-safe
+                    example: "tX9kL2..."
+                nama_pemeriksaan:
+                    type: string
+                    description: Nama sub-item parameter pengujian
+                    example: "Hemoglobin"
+                satuan:
+                    type: string
+                    description: Satuan hasil lab
+                    example: "g/dL"
+                nilai_rujukan_ld:
+                    type: string
+                    description: Nilai rujukan normal Laki-laki Dewasa
+                    example: "13.5 - 17.5"
+                nilai_rujukan_la:
+                    type: string
+                    description: Nilai rujukan normal Laki-laki Anak
+                    example: "11.5 - 15.5"
+                nilai_rujukan_pd:
+                    type: string
+                    description: Nilai rujukan normal Perempuan Dewasa
+                    example: "12.0 - 16.0"
+                nilai_rujukan_pa:
+                    type: string
+                    description: Nilai rujukan normal Perempuan Anak
+                    example: "11.5 - 15.5"
+
+        DetailTindakanLab:
+            allOf:
+                - $ref: "#/components/schemas/TindakanLab"
+                - type: object
+                  properties:
+                      templates:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/TemplateLab"
+
+        ItemHasilLabPK:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pemeriksaan terenkripsi URL-safe
+                    example: "tX9kL2..."
+                nama_pemeriksaan:
+                    type: string
+                    description: Nama parameter pemeriksaan
+                    example: "Hemoglobin"
+                nilai:
+                    type: string
+                    description: Nilai hasil pengujian
+                    example: "14.2"
+                satuan:
+                    type: string
+                    description: Satuan hasil lab
+                    example: "g/dL"
+                nilai_rujukan:
+                    type: string
+                    description: Nilai rujukan normal
+                    example: "13.5 - 17.5"
+                keterangan:
+                    type: string
+                    description: Keterangan status hasil
+                    example: "Normal"
+
+        HasilLabPA:
+            type: object
+            properties:
+                diagnosa_klinik:
+                    type: string
+                    description: Diagnosa klinis pengirim
+                    example: "Tumor Mammae Dextra"
+                makroskopis:
+                    type: string
+                    description: Deskripsi makroskopis jaringan
+                    example: "Diterima 1 potong jaringan kenyal..."
+                mikroskopis:
+                    type: string
+                    description: Deskripsi mikroskopis jaringan
+                    example: "Menunjukkan proliferasi sel duktus..."
+                kesimpulan:
+                    type: string
+                    description: Kesimpulan diagnosis patologi
+                    example: "Invasive Ductal Carcinoma"
+                kesan:
+                    type: string
+                    description: Kesan keganasan
+                    example: "Maligna"
+
+        BerkasDigital:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    description: Kode master berkas digital
+                    example: "015"
+                nama_berkas:
+                    type: string
+                    description: Nama jenis berkas lampiran
+                    example: "Hasil PA FNAB"
+                id_berkas:
+                    type: string
+                    description: Token terenkripsi URL-safe untuk streaming berkas
+                    example: "bK8mQ1..."
+                url_berkas:
+                    type: string
+                    description: Path API untuk mengalirkan file PDF/Gambar
+                    example: "/api/v1/berkas-digital/bK8mQ1..."
+
+        MasterBerkasDigital:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: "015"
+                nama:
+                    type: string
+                    example: "PATOLOGI ANATOMI"
+
+        HasilLaboratorium:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Composite identifier hasil lab terenkripsi URL-safe
+                    example: "hS8xP1..."
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "kR2mZ9..."
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan
+                    example: "2026/04/22/000001"
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan laboratorium
+                    example: "LAB001"
+                nama_tindakan:
+                    type: string
+                    description: Nama pemeriksaan laboratorium
+                    example: "DARAH LENGKAP"
+                kategori:
+                    type: string
+                    description: Kategori laboratorium (PK, PA, MB)
+                    example: "PK"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                tanggal_periksa:
+                    type: string
+                    format: date
+                    example: "2026-04-22"
+                jam_periksa:
+                    type: string
+                    example: "10:00:00"
+                dokter_perujuk:
+                    type: object
+                    properties:
+                        kode_dokter:
+                            type: string
+                            example: "DR001"
+                        nama_dokter:
+                            type: string
+                            example: "dr. Handi"
+                dokter_pj:
+                    type: object
+                    properties:
+                        kode_dokter:
+                            type: string
+                            example: "DR002"
+                        nama_dokter:
+                            type: string
+                            example: "dr. Budi, Sp.PK"
+                petugas:
+                    type: object
+                    properties:
+                        nip:
+                            type: string
+                            example: "P001"
+                        nama:
+                            type: string
+                            example: "Siti Analis"
+                detail_pk:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ItemHasilLabPK"
+                detail_pa:
+                    $ref: "#/components/schemas/HasilLabPA"
+
+        HasilLaboratoriumKunjungan:
+            type: object
+            properties:
+                hasil_pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/HasilLaboratorium"
+                berkas_digital:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/BerkasDigital"
 
 paths:
     /health:
@@ -3434,6 +3665,405 @@ paths:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisIGD"
+
+    /api/v1/tindakan/lab/{kategori}:
+        get:
+            summary: Daftar & Pencarian Master Tindakan Laboratorium
+            description: Mengambil daftar tindakan / paket pemeriksaan laboratorium berdasarkan kategori (PK, PA, MB) dengan pencarian keyword dan paginasi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  description: Kategori laboratorium (PK, PA, MB)
+                  schema:
+                      type: string
+                      enum: [PK, PA, MB]
+                      example: PK
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian nama pemeriksaan (minimal 3 karakter)
+                  schema:
+                      type: string
+                      example: Darah
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                      type: integer
+                      default: 1
+                      example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                      type: integer
+                      default: 20
+                      example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar tindakan laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar tindakan laboratorium
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/TindakanLab"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi kategori atau query parameter gagal
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+
+    /api/v1/tindakan/lab/{kategori}/{id_tindakan}:
+        get:
+            summary: Detail Tindakan Laboratorium & Template Sub-Item
+            description: Mengambil detail tarif tindakan laboratorium beserta sub-item parameter pengujian dan nilai rujukannya.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  description: Kategori laboratorium (PK, PA, MB)
+                  schema:
+                      type: string
+                      enum: [PK, PA, MB]
+                      example: PK
+                - name: id_tindakan
+                  in: path
+                  required: true
+                  description: Identifier tindakan laboratorium terenkripsi URL-safe
+                  schema:
+                      type: string
+                      example: "wVf8s0p..."
+            responses:
+                "200":
+                    description: Berhasil mengambil detail tindakan laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail tindakan laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/DetailTindakanLab"
+                "400":
+                    description: Kategori atau ID tindakan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+                "404":
+                    description: Data tindakan laboratorium tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+
+    /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}:
+        get:
+            summary: Riwayat Hasil Laboratorium Kunjungan
+            description: Mengambil riwayat hasil pemeriksaan laboratorium pada 1 kunjungan pasien berdasarkan kategori (PK, PA, MB) dan status lanjut (Semua, Ralan, Ranap).
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [PK, PA, MB]
+                      example: PK
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      example: "kR2mZ9..."
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                      example: Semua
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                      example: "2026-04-01,2026-04-30"
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/HasilLaboratoriumKunjungan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi parameter gagal
+
+    /api/v1/laboratorium/{kategori}/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            summary: Riwayat Hasil Laboratorium Pasien (Semua Kunjungan by RM)
+            description: Mengambil riwayat hasil pemeriksaan laboratorium seluruh kunjungan pasien berdasarkan No RM.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [PK, PA, MB]
+                      example: PK
+                - name: id_pasien
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      example: "pS9xN1..."
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                      example: Semua
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                      example: "2026-04-01,2026-04-30"
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil laboratorium pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil laboratorium pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilLaboratorium"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+
+    /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}/{id_hasil}:
+        get:
+            summary: Detail Hasil Laboratorium
+            description: Mengambil detail spesifik hasil pemeriksaan laboratorium beserta rincian parameter atau teks PA dan berkas digital.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [PK, PA, MB]
+                      example: PK
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      example: "kR2mZ9..."
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                      example: Semua
+                - name: id_hasil
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      example: "hS8xP1..."
+            responses:
+                "200":
+                    description: Berhasil mengambil detail hasil laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail hasil laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/HasilLaboratorium"
+                "400":
+                    description: Parameter tidak valid
+                "404":
+                    description: Data tidak ditemukan
+
+    /api/v1/master/berkas-digital:
+        get:
+            summary: Master Kategori Berkas Digital
+            description: Mengambil seluruh daftar referensi kategori berkas digital aktif di rumah sakit dari master_berkas_digital.
+            tags:
+                - Master Data
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil master berkas digital
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil master berkas digital
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/MasterBerkasDigital"
+
+    /api/v1/berkas-digital/{id_berkas}:
+        get:
+            summary: Secure Stream Berkas Digital Universal (PDF / Gambar)
+            description: Mengalirkan (reverse proxy stream) dokumen PDF atau gambar dari server penyimpanan Khanza secara aman untuk seluruh modul RS (Laboratorium, Radiologi, EKG, USG, dll.).
+            tags:
+                - Berkas Digital
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_berkas
+                  in: path
+                  required: true
+                  description: Token URL berkas terenkripsi
+                  schema:
+                      type: string
+                      example: "bK8mQ1..."
+            responses:
+                "200":
+                    description: File stream PDF / Gambar
+                    content:
+                        application/pdf:
+                            schema:
+                                type: string
+                                format: binary
+                        image/jpeg:
+                            schema:
+                                type: string
+                                format: binary
+                        image/png:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: Token berkas tidak valid
+                "404":
+                    description: Berkas tidak ditemukan di server penyimpanan
+
+
+
 
 
 

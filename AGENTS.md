@@ -68,6 +68,13 @@ internal/
     - **Wajib menggunakan Unit Test Go murni (`go test ./...`)** untuk memverifikasi setiap perubahan logika bisnis, validasi request/model, enkripsi/dekripsi URL, dan penanganan error.
     - **DILARANG melakukan pengujian manual via `curl` / skrip ad-hoc** terhadap running server. Seluruh skenario pengujian (sukses, validasi gagal, duplikasi, pembatasan waktu, hak akses dokter) harus dicakup secara otomatis di file `_test.go` terkait.
 
+9. **Standar Penamaan Variabel & Parameter (Lengkap & Tanpa Singkatan)**:
+    - Gunakan penamaan yang ekspresif, jelas, dan **TIDAK disingkat secara ambigu** pada parameter fungsi/method, variabel lokal, dan field struct (contoh: gunakan `kodeTindakan` bukan `kdJenisPrw`, `tanggalPeriksa` bukan `tglPeriksa`, `jamPeriksa` bukan `jam`, `tanggalRegistrasi` bukan `tglRegistrasi`, `jamRegistrasi` bukan `jamReg`).
+
+10. **Batasan Komunikasi Antar-Paket / Cross-Package (Clean Architecture & Enkapsulasi)**:
+    - Komunikasi atau pemanggilan fungsi lintas modul domain (**cross-package**) **WAJIB melalui Layer Service** (`PackageA.Service` &rarr; `PackageB.Service`).
+    - **DILARANG KERAS menginjeksi atau memanggil Repository package lain secara langsung** ke dalam Service modul yang berbeda. Repository adalah kepemilikan internal (*privat*) masing-masing modul.
+
 ---
 
 ## 3. Fitur yang Telah Selesai Diimplementasikan
@@ -135,7 +142,23 @@ internal/
   - `GET /api/v1/penilaian-medis/igd/pasien/{id_pasien}` (Riwayat penilaian awal medis IGD seluruh kunjungan by RM).
   - `POST /api/v1/penilaian-medis/igd/{id_kunjungan}` (Simpan asesmen medis IGD baru: auto-default Fisik "Normal", proteksi duplikasi per no_rawat, & proteksi 48 jam).
   - `PUT /api/v1/penilaian-medis/igd/{id_kunjungan}` (Update asesmen medis IGD: proteksi dokter pembuat & proteksi 48 jam).
-  - `DELETE /api/v1/penilaian-medis/igd/{id_kunjungan}` (Hapus asesmen medis IGD: proteksi dokter pembuat & proteksi 48 jam).
+### H. Master Tindakan Laboratorium (`/api/v1/tindakan/lab`)
+
+- `GET /api/v1/tindakan/lab/{kategori}` (Daftar & pencarian master tindakan lab per kategori PK/PA/MB, filter keyword min 3 char, paginasi).
+- `GET /api/v1/tindakan/lab/{kategori}/{id_tindakan}` (Detail tarif tindakan lab beserta sub-item parameter pengujian dan nilai rujukan dari `template_laboratorium`, diurutkan berdasarkan `urut ASC, id_template ASC`).
+
+### I. Hasil Laboratorium Pasien (`/api/v1/laboratorium`)
+
+- `GET /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}` (Riwayat hasil lab per kunjungan pasien, filter tanggal rentang, paginasi).
+- `GET /api/v1/laboratorium/{kategori}/pasien/{id_pasien}/{status_lanjut}` (Riwayat hasil lab pasien seluruh kunjungan by No RM).
+- `GET /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}/{id_hasil}` (Detail hasil lab spesifik).
+- Menampilkan data lengkap: dokter perujuk, dokter penanggung jawab, petugas analis, rincian parameter PK (`detail_periksa_lab` + `template_laboratorium`), deskripsi teks PA (`detail_periksa_labpa`), serta lampiran berkas digital (`berkas_digital_perawatan`).
+- Mendukung berkas digital per kategori dari `.env`: `KODE_BERKAS_LAB_PK=005`, `KODE_BERKAS_LAB_PA=015`, `KODE_BERKAS_LAB_MB=010`.
+
+### J. Berkas Digital Universal (`/api/v1/berkas-digital`, `/api/v1/master/berkas-digital`)
+
+- `GET /api/v1/berkas-digital/{id_berkas}` (Secure reverse proxy streamer dokumen PDF/gambar universal untuk seluruh modul RS tanpa membocorkan IP/path internal server penyimpanan).
+- `GET /api/v1/master/berkas-digital` (Daftar master referensi 29+ kategori berkas digital rumah sakit).
 
 ---
 

@@ -5,7 +5,7 @@ import { Rate, Trend } from "k6/metrics";
 const BASE_URL = __ENV.BASE_URL || "http://192.168.30.153:8082/api/v1";
 const USERNAME = __ENV.API_USERNAME || __ENV.DOKTER_USERNAME || "DRHANDI";
 const PASSWORD = __ENV.API_PASSWORD || __ENV.DOKTER_PASSWORD || "1";
-const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | all
+const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | all
 
 const errorRate = new Rate("errors");
 const obatDuration = new Trend("obat_duration");
@@ -14,6 +14,10 @@ const pemeriksaanKunjunganDuration = new Trend("pemeriksaan_kunjungan_duration")
 const pemeriksaanPasienDuration = new Trend("pemeriksaan_pasien_duration");
 const resepKunjunganDuration = new Trend("resep_kunjungan_duration");
 const resepPasienDuration = new Trend("resep_pasien_duration");
+const tindakanLabDuration = new Trend("tindakan_lab_duration");
+const tindakanLabDetailDuration = new Trend("tindakan_lab_detail_duration");
+const laboratoriumKunjunganDuration = new Trend("laboratorium_kunjungan_duration");
+const laboratoriumPasienDuration = new Trend("laboratorium_pasien_duration");
 
 export const options = {
     scenarios: {
@@ -69,6 +73,8 @@ const statusPemeriksaanList = ["Belum", "Sudah"];
 const penjaminList = ["BPJ", "UMU"];
 const obatKeywords = ["PARA", "AMOX", "INJ", "TAB", "SYR", "OMEP", "CETIR", "DEXA"];
 const antreanKeywords = ["Ahmad", "Siti", "Budi", "Dewi", "Rina"];
+const kategoriLabList = ["pk", "pa", "mb"];
+const labKeywords = ["Darah", "Urin", "Glukosa", "Kolesterol", "Kultur", "Biopsi", "SGOT", "SGPT", "Ureum", "Kreatinin"];
 const today = "2026-04-22,2026-04-22";
 
 export function setup() {
@@ -96,7 +102,6 @@ export function setup() {
 
     console.log(`[SETUP] Login berhasil untuk: ${namaDokter} (${USERNAME})`);
 
-    // Fetch antrean untuk mendapatkan id_kunjungan & id_pasien aktif
     const authHeaders = {
         headers: {
             "Accept": "application/json",
@@ -104,6 +109,7 @@ export function setup() {
         },
     };
 
+    // Fetch antrean untuk mendapatkan id_kunjungan & id_pasien aktif
     const antreanRes = http.get(`${BASE_URL}/rawat-jalan/antrean?tanggal=${today}&page=1&limit=20`, authHeaders);
     let kunjungans = [];
     let pasiens = [];
@@ -114,13 +120,27 @@ export function setup() {
         pasiens = items.map((i) => i.id_pasien).filter(Boolean);
     }
 
+    // Fetch sample tindakan lab per kategori untuk detail endpoint test
+    const tindakanLabSamples = {};
+    for (const kat of kategoriLabList) {
+        const labRes = http.get(`${BASE_URL}/tindakan/lab/${kat}?page=1&limit=10`, authHeaders);
+        if (labRes.status === 200) {
+            const items = labRes.json("data") || [];
+            tindakanLabSamples[kat] = items.map((i) => i.id).filter(Boolean);
+        } else {
+            tindakanLabSamples[kat] = [];
+        }
+    }
+
     console.log(`[SETUP] Berhasil mengambil ${kunjungans.length} sampel ID kunjungan & ${pasiens.length} ID pasien.`);
+    console.log(`[SETUP] Sampel Tindakan Lab: PK=${(tindakanLabSamples.pk || []).length}, PA=${(tindakanLabSamples.pa || []).length}, MB=${(tindakanLabSamples.mb || []).length}`);
     console.log(`[SETUP] Target Endpoint: ${ENDPOINT}`);
 
     return {
         token: token,
         kunjungans: kunjungans,
         pasiens: pasiens,
+        tindakanLabSamples: tindakanLabSamples,
     };
 }
 
@@ -268,6 +288,78 @@ function requestResepPasien(params, data) {
     return res;
 }
 
+function requestTindakanLab(params) {
+    const kategori = kategoriLabList[Math.floor(Math.random() * kategoriLabList.length)];
+    const scenario = Math.random();
+    let url = `${BASE_URL}/tindakan/lab/${kategori}`;
+
+    if (scenario < 0.5) {
+        const keyword = labKeywords[Math.floor(Math.random() * labKeywords.length)];
+        url += `?keyword=${keyword}&page=1&limit=20`;
+    } else if (scenario < 0.8) {
+        const page = Math.floor(Math.random() * 3) + 1;
+        url += `?page=${page}&limit=20`;
+    } else {
+        url += `?page=1&limit=50`;
+    }
+
+    const res = http.get(url, params);
+    tindakanLabDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestTindakanLabDetail(params, data) {
+    const samples = data.tindakanLabSamples || {};
+    const availableCategories = Object.keys(samples).filter((k) => samples[k] && samples[k].length > 0);
+
+    if (availableCategories.length === 0) {
+        return requestTindakanLab(params);
+    }
+
+    const kat = availableCategories[Math.floor(Math.random() * availableCategories.length)];
+    const idList = samples[kat];
+    const idTindakan = idList[Math.floor(Math.random() * idList.length)];
+
+    const url = `${BASE_URL}/tindakan/lab/${kat}/${idTindakan}`;
+    const res = http.get(url, params);
+    tindakanLabDetailDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestLaboratoriumKunjungan(params, data) {
+    if (!data.kunjungans || data.kunjungans.length === 0) {
+        return requestTindakanLab(params);
+    }
+
+    const idKunjungan = data.kunjungans[Math.floor(Math.random() * data.kunjungans.length)];
+    const kategori = Math.random() < 0.6 ? "pk" : "pa";
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+
+    const url = `${BASE_URL}/laboratorium/${kategori}/${idKunjungan}/${statusLanjut}?page=1&limit=5`;
+    const res = http.get(url, params);
+    laboratoriumKunjunganDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestLaboratoriumPasien(params, data) {
+    if (!data.pasiens || data.pasiens.length === 0) {
+        return requestTindakanLab(params);
+    }
+
+    const idPasien = data.pasiens[Math.floor(Math.random() * data.pasiens.length)];
+    const kategori = Math.random() < 0.6 ? "pk" : "pa";
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+
+    const url = `${BASE_URL}/laboratorium/${kategori}/pasien/${idPasien}/${statusLanjut}?page=1&limit=5`;
+    const res = http.get(url, params);
+    laboratoriumPasienDuration.add(res.timings.duration);
+    return res;
+}
+
+export default function (data) {
+    mixedWorkload(data);
+}
+
 export function mixedWorkload(data) {
     const params = {
         headers: {
@@ -293,21 +385,39 @@ export function mixedWorkload(data) {
         res = requestResepPasien(params, data);
     } else if (ENDPOINT === "resep") {
         res = Math.random() < 0.5 ? requestResepKunjungan(params, data) : requestResepPasien(params, data);
+    } else if (ENDPOINT === "tindakan_lab") {
+        res = requestTindakanLab(params);
+    } else if (ENDPOINT === "tindakan_lab_detail") {
+        res = requestTindakanLabDetail(params, data);
+    } else if (ENDPOINT === "tindakan") {
+        res = Math.random() < 0.6 ? requestTindakanLab(params) : requestTindakanLabDetail(params, data);
+    } else if (ENDPOINT === "laboratorium_kunjungan") {
+        res = requestLaboratoriumKunjungan(params, data);
+    } else if (ENDPOINT === "laboratorium_pasien") {
+        res = requestLaboratoriumPasien(params, data);
+    } else if (ENDPOINT === "laboratorium") {
+        res = Math.random() < 0.5 ? requestLaboratoriumKunjungan(params, data) : requestLaboratoriumPasien(params, data);
     } else {
         // Mode 'all': bagi beban ke seluruh modul
         const rand = Math.random();
-        if (rand < 0.30) {
+        if (rand < 0.15) {
             res = requestAntrean(params);
-        } else if (rand < 0.55) {
+        } else if (rand < 0.30) {
             res = requestObat(params);
-        } else if (rand < 0.70) {
+        } else if (rand < 0.45) {
             res = requestPemeriksaanKunjungan(params, data);
-        } else if (rand < 0.85) {
+        } else if (rand < 0.60) {
             res = requestPemeriksaanPasien(params, data);
-        } else if (rand < 0.92) {
+        } else if (rand < 0.70) {
             res = requestResepKunjungan(params, data);
-        } else {
+        } else if (rand < 0.80) {
             res = requestResepPasien(params, data);
+        } else if (rand < 0.88) {
+            res = requestTindakanLab(params);
+        } else if (rand < 0.94) {
+            res = requestLaboratoriumKunjungan(params, data);
+        } else {
+            res = requestLaboratoriumPasien(params, data);
         }
     }
 
@@ -316,10 +426,10 @@ export function mixedWorkload(data) {
         "response time acceptable": (r) => r.timings.duration < 1000,
         "content type is JSON": (r) =>
             r.headers["Content-Type"] && r.headers["Content-Type"].includes("application/json"),
-        "success is true": (r) => {
+        "success or status OK": (r) => {
             try {
                 const body = r.json();
-                return body && body.success === true;
+                return body && (body.code === 200 || body.status === "OK" || body.success === true);
             } catch (_) {
                 return false;
             }
@@ -338,26 +448,18 @@ export function teardown() {
     console.log("[TEARDOWN] Performance test selesai.");
 }
 
-// Cara menjalankan:
-// # Test riwayat resep (kunjungan + pasien)
-// k6 run -e ENDPOINT=resep k6-script.js
+// Cara menjalankan pengujian k6:
+// # Test seluruh endpoint riwayat laboratorium (kunjungan + pasien):
+// k6 run -e ENDPOINT=laboratorium k6-script.js
 //
-// # Test hanya riwayat resep kunjungan:
-// k6 run -e ENDPOINT=resep_kunjungan k6-script.js
+// # Test hanya riwayat hasil lab kunjungan:
+// k6 run -e ENDPOINT=laboratorium_kunjungan k6-script.js
 //
-// # Test hanya riwayat resep per pasien (seluruh rekam medis):
-// k6 run -e ENDPOINT=resep_pasien k6-script.js
+// # Test hanya riwayat hasil lab pasien by RM:
+// k6 run -e ENDPOINT=laboratorium_pasien k6-script.js
 //
-// # Test riwayat pemeriksaan (SOAP):
-// k6 run -e ENDPOINT=pemeriksaan k6-script.js
+// # Test master tindakan lab:
+// k6 run -e ENDPOINT=tindakan k6-script.js
 //
-// # Test master obat:
-// k6 run -e ENDPOINT=obat k6-script.js
-//
-// # Test antrean:
-// k6 run -e ENDPOINT=antrean k6-script.js
-//
-// # Test seluruh endpoint bersamaan:
+// # Test seluruh modul backend ERM Dokter:
 // k6 run k6-script.js
-
-

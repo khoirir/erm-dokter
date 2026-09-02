@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -24,6 +25,10 @@ type Config struct {
 	EncryptionKey        string
 	CORSOrigin           string
 	MaxEditRekamMedisJam int
+	URLBerkasDigital     string
+	KodeBerkasLabPK      []string
+	KodeBerkasLabPA      []string
+	KodeBerkasLabMB      []string
 }
 
 func Load() *Config {
@@ -34,6 +39,19 @@ func Load() *Config {
 	maxEditJam, _ := strconv.Atoi(getEnvOrDefault("MAX_EDIT_REKAM_MEDIS_JAM", "48"))
 	if maxEditJam <= 0 {
 		maxEditJam = 48
+	}
+
+	parseKodeSlice := func(envKey string) []string {
+		raw := strings.TrimSpace(os.Getenv(envKey))
+		var result []string
+		if raw != "" {
+			for _, k := range strings.Split(raw, ",") {
+				if kTrim := strings.TrimSpace(k); kTrim != "" {
+					result = append(result, kTrim)
+				}
+			}
+		}
+		return result
 	}
 
 	cfg := &Config{
@@ -51,17 +69,23 @@ func Load() *Config {
 		EncryptionKey:        os.Getenv("ENCRYPTION_KEY"),
 		CORSOrigin:           getEnvOrDefault("CORS_ORIGIN", "*"),
 		MaxEditRekamMedisJam: maxEditJam,
+		URLBerkasDigital:     os.Getenv("URL_BERKAS_DIGITAL"),
+		KodeBerkasLabPK:      parseKodeSlice("KODE_BERKAS_LAB_PK"),
+		KodeBerkasLabPA:      parseKodeSlice("KODE_BERKAS_LAB_PA"),
+		KodeBerkasLabMB:      parseKodeSlice("KODE_BERKAS_LAB_MB"),
 	}
 	return cfg
 }
 
 func (c *Config) Validate() error {
 	required := map[string]string{
-		"DB_HOST":        c.DBHost,
-		"DB_USER":        c.DBUser,
-		"DB_NAME":        c.DBName,
-		"JWT_SECRET":     c.JWTSecret,
-		"ENCRYPTION_KEY": c.EncryptionKey,
+		"DB_HOST":            c.DBHost,
+		"DB_USER":            c.DBUser,
+		"DB_NAME":            c.DBName,
+		"JWT_SECRET":         c.JWTSecret,
+		"ENCRYPTION_KEY":     c.EncryptionKey,
+		"URL_BERKAS_DIGITAL": c.URLBerkasDigital,
+		"KODE_BERKAS_LAB_PA": os.Getenv("KODE_BERKAS_LAB_PA"),
 	}
 	for key, val := range required {
 		if val == "" {

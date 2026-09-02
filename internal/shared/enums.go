@@ -32,3 +32,19 @@ func (s SortOrder) IsValid() bool {
 	}
 }
 
+type KategoriLab string
+
+const (
+	KategoriLabPK KategoriLab = "PK"
+	KategoriLabPA KategoriLab = "PA"
+	KategoriLabMB KategoriLab = "MB"
+)
+
+func (k KategoriLab) IsValid() bool {
+	switch k {
+	case KategoriLabPK, KategoriLabPA, KategoriLabMB:
+		return true
+	default:
+		return false
+	}
+}
