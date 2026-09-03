@@ -14,8 +14,10 @@ import (
 )
 
 type mockRepository struct {
-	daftarTindakanLabFn    func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, int, error)
-	getDetailTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error)
+	daftarTindakanLabFn        func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, int, error)
+	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error)
+	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
+	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
 
 func (m *mockRepository) DaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, int, error) {
@@ -30,6 +32,20 @@ func (m *mockRepository) GetDetailTindakanLab(ctx context.Context, kategori shar
 		return m.getDetailTindakanLabFn(ctx, kategori, kodeTindakan)
 	}
 	return nil, nil, nil
+}
+
+func (m *mockRepository) CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
+	if m.cekKeberadaanTindakanLabFn != nil {
+		return m.cekKeberadaanTindakanLabFn(ctx, kategori, listKodeTindakan)
+	}
+	return make(map[string]bool), nil
+}
+
+func (m *mockRepository) CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error) {
+	if m.cekKeberadaanTemplateLabFn != nil {
+		return m.cekKeberadaanTemplateLabFn(ctx, listKodeTindakan, templateMap)
+	}
+	return make(map[string]map[int]bool), nil
 }
 
 const testJWTSecret = "secret-key-32-bytes-testing-12345"

@@ -16,6 +16,8 @@ import (
 type Service interface {
 	GetDaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter FilterDaftarTindakanLab) ([]TindakanLab, shared.PaginationMeta, error)
 	GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*DetailTindakanLab, error)
+	CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
+	CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
 
 type service struct {
@@ -93,3 +95,22 @@ func (s *service) GetDetailTindakanLab(ctx context.Context, kategori shared.Kate
 		Templates:   templates,
 	}, nil
 }
+
+func (s *service) CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
+	res, err := s.repo.CekKeberadaanTindakanLab(ctx, kategori, listKodeTindakan)
+	if err != nil {
+		s.log.Error("Gagal memeriksa keberadaan tindakan lab di repository: %v", err)
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *service) CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error) {
+	res, err := s.repo.CekKeberadaanTemplateLab(ctx, listKodeTindakan, templateMap)
+	if err != nil {
+		s.log.Error("Gagal memeriksa keberadaan template lab di repository: %v", err)
+		return nil, err
+	}
+	return res, nil
+}
+

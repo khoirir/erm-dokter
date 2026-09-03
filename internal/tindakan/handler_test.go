@@ -13,8 +13,10 @@ import (
 )
 
 type mockService struct {
-	getDaftarTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error)
-	getDetailTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error)
+	getDaftarTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error)
+	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error)
+	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
+	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
 
 func (m *mockService) GetDaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error) {
@@ -29,6 +31,20 @@ func (m *mockService) GetDetailTindakanLab(ctx context.Context, kategori shared.
 		return m.getDetailTindakanLabFn(ctx, kategori, encryptedId)
 	}
 	return nil, nil
+}
+
+func (m *mockService) CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
+	if m.cekKeberadaanTindakanLabFn != nil {
+		return m.cekKeberadaanTindakanLabFn(ctx, kategori, listKodeTindakan)
+	}
+	return make(map[string]bool), nil
+}
+
+func (m *mockService) CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error) {
+	if m.cekKeberadaanTemplateLabFn != nil {
+		return m.cekKeberadaanTemplateLabFn(ctx, listKodeTindakan, templateMap)
+	}
+	return make(map[string]map[int]bool), nil
 }
 
 func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {

@@ -2,21 +2,23 @@ package laboratorium
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	"erm-dokter/internal/shared"
 )
 
-func (r *repository) DaftarHasilLabMB(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) DaftarHasilLabMB(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	return r.queryRiwayatLabMB(ctx, "pl.no_rawat = ?", noRawat, statusLanjut, filter)
 }
 
-func (r *repository) DaftarHasilLabMBByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) DaftarHasilLabMBByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	return r.queryRiwayatLabMB(ctx, "rp.no_rkm_medis = ?", noRM, statusLanjut, filter)
 }
 
-func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	var conditions []string
 	var args []any
 
@@ -59,7 +61,7 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 	}
 
 	if total == 0 {
-		return []HasilLaboratoriumDB{}, 0, nil
+		return []HasilLaboratorium{}, 0, nil
 	}
 
 	filter.Sanitize()
@@ -96,9 +98,9 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 	}
 	defer rows.Close()
 
-	var list []HasilLaboratoriumDB
+	var list []HasilLaboratorium
 	for rows.Next() {
-		var item HasilLaboratoriumDB
+		var item HasilLaboratorium
 		err = rows.Scan(
 			&item.NoRawat,
 			&item.KodeTindakan,
@@ -107,18 +109,18 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 			&item.Status,
 			&item.TanggalPeriksa,
 			&item.JamPeriksa,
-			&item.KodeDokterPerujuk,
-			&item.NamaDokterPerujuk,
-			&item.KodeDokterPJ,
-			&item.NamaDokterPJ,
-			&item.NipPetugas,
-			&item.NamaPetugas,
+			&item.DokterPerujuk.KodeDokter,
+			&item.DokterPerujuk.NamaDokter,
+			&item.DokterPJ.KodeDokter,
+			&item.DokterPJ.NamaDokter,
+			&item.Petugas.Nip,
+			&item.Petugas.Nama,
 		)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		item.DetailPK = []ItemHasilLabPKDB{}
+		item.DetailPK = []ItemHasilLabPK{}
 		list = append(list, item)
 	}
 
@@ -129,7 +131,7 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 	return list, total, nil
 }
 
-func (r *repository) DetailHasilLabMB(ctx context.Context, noRawat string, kodeTindakan string, tanggalPeriksa string, jamPeriksa string) (*HasilLaboratoriumDB, error) {
+func (r *repository) DetailHasilLabMB(ctx context.Context, noRawat string, kodeTindakan string, tanggalPeriksa string, jamPeriksa string) (*HasilLaboratorium, error) {
 	query := `
 		SELECT 
 			pl.no_rawat,
@@ -154,7 +156,7 @@ func (r *repository) DetailHasilLabMB(ctx context.Context, noRawat string, kodeT
 		WHERE pl.no_rawat = ? AND pl.kd_jenis_prw = ? AND pl.tgl_periksa = ? AND pl.jam = ? AND pl.kategori = 'MB'
 	`
 
-	var item HasilLaboratoriumDB
+	var item HasilLaboratorium
 	err := r.db.QueryRowContext(ctx, query, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa).Scan(
 		&item.NoRawat,
 		&item.KodeTindakan,
@@ -163,17 +165,20 @@ func (r *repository) DetailHasilLabMB(ctx context.Context, noRawat string, kodeT
 		&item.Status,
 		&item.TanggalPeriksa,
 		&item.JamPeriksa,
-		&item.KodeDokterPerujuk,
-		&item.NamaDokterPerujuk,
-		&item.KodeDokterPJ,
-		&item.NamaDokterPJ,
-		&item.NipPetugas,
-		&item.NamaPetugas,
+		&item.DokterPerujuk.KodeDokter,
+		&item.DokterPerujuk.NamaDokter,
+		&item.DokterPJ.KodeDokter,
+		&item.DokterPJ.NamaDokter,
+		&item.Petugas.Nip,
+		&item.Petugas.Nama,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
 		return nil, err
 	}
 
-	item.DetailPK = []ItemHasilLabPKDB{}
+	item.DetailPK = []ItemHasilLabPK{}
 	return &item, nil
 }

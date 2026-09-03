@@ -17,23 +17,6 @@ type PetugasInfo struct {
 	Nama string `json:"nama"`
 }
 
-type ItemHasilLabPK struct {
-	IdTemplate      string `json:"id_template,omitempty"`
-	NamaPemeriksaan string `json:"nama_pemeriksaan"`
-	Nilai           string `json:"nilai"`
-	Satuan          string `json:"satuan"`
-	NilaiRujukan    string `json:"nilai_rujukan"`
-	Keterangan      string `json:"keterangan"`
-}
-
-type HasilLabPA struct {
-	DiagnosaKlinik string `json:"diagnosa_klinik"`
-	Makroskopis    string `json:"makroskopis"`
-	Mikroskopis    string `json:"mikroskopis"`
-	Kesimpulan     string `json:"kesimpulan"`
-	Kesan          string `json:"kesan"`
-}
-
 type BerkasDigital struct {
 	Kode       string `json:"kode"`
 	NamaBerkas string `json:"nama_berkas"`
@@ -97,41 +80,4 @@ func (f *FilterRiwayatLab) Validate() apperror.ValidationError {
 		return errs
 	}
 	return nil
-}
-
-// Database Scanned Structs
-
-type HasilLaboratoriumDB struct {
-	NoRawat           string
-	KodeTindakan      string
-	NamaTindakan      string
-	Kategori          string
-	Status            string
-	TanggalPeriksa    string
-	JamPeriksa        string
-	KodeDokterPerujuk string
-	NamaDokterPerujuk string
-	KodeDokterPJ      string
-	NamaDokterPJ      string
-	NipPetugas        string
-	NamaPetugas       string
-	DetailPK          []ItemHasilLabPKDB
-	DetailPA          *HasilLabPADB
-}
-
-type ItemHasilLabPKDB struct {
-	IdTemplate      int
-	NamaPemeriksaan string
-	Nilai           string
-	Satuan          string
-	NilaiRujukan    string
-	Keterangan      string
-}
-
-type HasilLabPADB struct {
-	DiagnosaKlinik string
-	Makroskopis    string
-	Mikroskopis    string
-	Kesimpulan     string
-	Kesan          string
 }

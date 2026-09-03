@@ -10,15 +10,15 @@ import (
 	"erm-dokter/internal/shared"
 )
 
-func (r *repository) DaftarHasilLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) DaftarHasilLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	return r.queryRiwayatLabPA(ctx, "pl.no_rawat = ?", noRawat, statusLanjut, filter)
 }
 
-func (r *repository) DaftarHasilLabPAByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) DaftarHasilLabPAByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	return r.queryRiwayatLabPA(ctx, "rp.no_rkm_medis = ?", noRM, statusLanjut, filter)
 }
 
-func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratoriumDB, int, error) {
+func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
 	var conditions []string
 	var args []any
 
@@ -61,7 +61,7 @@ func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, 
 	}
 
 	if total == 0 {
-		return []HasilLaboratoriumDB{}, 0, nil
+		return []HasilLaboratorium{}, 0, nil
 	}
 
 	filter.Sanitize()
@@ -98,9 +98,9 @@ func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, 
 	}
 	defer rows.Close()
 
-	var list []HasilLaboratoriumDB
+	var list []HasilLaboratorium
 	for rows.Next() {
-		var item HasilLaboratoriumDB
+		var item HasilLaboratorium
 		err = rows.Scan(
 			&item.NoRawat,
 			&item.KodeTindakan,
@@ -109,12 +109,12 @@ func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, 
 			&item.Status,
 			&item.TanggalPeriksa,
 			&item.JamPeriksa,
-			&item.KodeDokterPerujuk,
-			&item.NamaDokterPerujuk,
-			&item.KodeDokterPJ,
-			&item.NamaDokterPJ,
-			&item.NipPetugas,
-			&item.NamaPetugas,
+			&item.DokterPerujuk.KodeDokter,
+			&item.DokterPerujuk.NamaDokter,
+			&item.DokterPJ.KodeDokter,
+			&item.DokterPJ.NamaDokter,
+			&item.Petugas.Nip,
+			&item.Petugas.Nama,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -136,7 +136,7 @@ func (r *repository) queryRiwayatLabPA(ctx context.Context, whereClause string, 
 	return list, total, nil
 }
 
-func (r *repository) DetailHasilLabPA(ctx context.Context, noRawat string, kodeTindakan string, tanggalPeriksa string, jamPeriksa string) (*HasilLaboratoriumDB, error) {
+func (r *repository) DetailHasilLabPA(ctx context.Context, noRawat string, kodeTindakan string, tanggalPeriksa string, jamPeriksa string) (*HasilLaboratorium, error) {
 	query := `
 		SELECT 
 			pl.no_rawat,
@@ -161,7 +161,7 @@ func (r *repository) DetailHasilLabPA(ctx context.Context, noRawat string, kodeT
 		WHERE pl.no_rawat = ? AND pl.kd_jenis_prw = ? AND pl.tgl_periksa = ? AND pl.jam = ? AND pl.kategori = 'PA'
 	`
 
-	var item HasilLaboratoriumDB
+	var item HasilLaboratorium
 	err := r.db.QueryRowContext(ctx, query, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa).Scan(
 		&item.NoRawat,
 		&item.KodeTindakan,
@@ -170,14 +170,17 @@ func (r *repository) DetailHasilLabPA(ctx context.Context, noRawat string, kodeT
 		&item.Status,
 		&item.TanggalPeriksa,
 		&item.JamPeriksa,
-		&item.KodeDokterPerujuk,
-		&item.NamaDokterPerujuk,
-		&item.KodeDokterPJ,
-		&item.NamaDokterPJ,
-		&item.NipPetugas,
-		&item.NamaPetugas,
+		&item.DokterPerujuk.KodeDokter,
+		&item.DokterPerujuk.NamaDokter,
+		&item.DokterPJ.KodeDokter,
+		&item.DokterPJ.NamaDokter,
+		&item.Petugas.Nip,
+		&item.Petugas.Nama,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
 		return nil, err
 	}
 
@@ -190,7 +193,7 @@ func (r *repository) DetailHasilLabPA(ctx context.Context, noRawat string, kodeT
 	return &item, nil
 }
 
-func (r *repository) fetchDetailPA(ctx context.Context, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa string) (*HasilLabPADB, error) {
+func (r *repository) fetchDetailPA(ctx context.Context, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa string) (*HasilLabPA, error) {
 	query := `
 		SELECT 
 			COALESCE(diagnosa_klinik, '') AS diagnosa_klinik,
@@ -203,7 +206,7 @@ func (r *repository) fetchDetailPA(ctx context.Context, noRawat, kodeTindakan, t
 		LIMIT 1
 	`
 
-	var pa HasilLabPADB
+	var pa HasilLabPA
 	err := r.db.QueryRowContext(ctx, query, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa).Scan(
 		&pa.DiagnosaKlinik,
 		&pa.Makroskopis,
@@ -213,7 +216,7 @@ func (r *repository) fetchDetailPA(ctx context.Context, noRawat, kodeTindakan, t
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return &HasilLabPADB{
+			return &HasilLabPA{
 				DiagnosaKlinik: "",
 				Makroskopis:    "",
 				Mikroskopis:    "",

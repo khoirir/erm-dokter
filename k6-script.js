@@ -5,7 +5,7 @@ import { Rate, Trend } from "k6/metrics";
 const BASE_URL = __ENV.BASE_URL || "http://192.168.30.153:8082/api/v1";
 const USERNAME = __ENV.API_USERNAME || __ENV.DOKTER_USERNAME || "DRHANDI";
 const PASSWORD = __ENV.API_PASSWORD || __ENV.DOKTER_PASSWORD || "1";
-const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | all
+const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | all
 
 const errorRate = new Rate("errors");
 const obatDuration = new Trend("obat_duration");
@@ -18,6 +18,9 @@ const tindakanLabDuration = new Trend("tindakan_lab_duration");
 const tindakanLabDetailDuration = new Trend("tindakan_lab_detail_duration");
 const laboratoriumKunjunganDuration = new Trend("laboratorium_kunjungan_duration");
 const laboratoriumPasienDuration = new Trend("laboratorium_pasien_duration");
+const permintaanLabKunjunganDuration = new Trend("permintaan_lab_kunjungan_duration");
+const permintaanLabPasienDuration = new Trend("permintaan_lab_pasien_duration");
+const permintaanLabDetailDuration = new Trend("permintaan_lab_detail_duration");
 
 export const options = {
     scenarios: {
@@ -132,8 +135,23 @@ export function setup() {
         }
     }
 
+    // Fetch sample permintaan lab PK jika ada
+    const permintaanLabSamples = [];
+    for (const idKunj of kunjungans.slice(0, 10)) {
+        const pRes = http.get(`${BASE_URL}/laboratorium/pk/permintaan/${idKunj}/Semua`, authHeaders);
+        if (pRes.status === 200) {
+            const items = pRes.json("data") || [];
+            for (const item of items) {
+                if (item.id) {
+                    permintaanLabSamples.push({ id_kunjungan: idKunj, id_permintaan: item.id });
+                }
+            }
+        }
+    }
+
     console.log(`[SETUP] Berhasil mengambil ${kunjungans.length} sampel ID kunjungan & ${pasiens.length} ID pasien.`);
     console.log(`[SETUP] Sampel Tindakan Lab: PK=${(tindakanLabSamples.pk || []).length}, PA=${(tindakanLabSamples.pa || []).length}, MB=${(tindakanLabSamples.mb || []).length}`);
+    console.log(`[SETUP] Sampel Permintaan Lab PK: ${permintaanLabSamples.length}`);
     console.log(`[SETUP] Target Endpoint: ${ENDPOINT}`);
 
     return {
@@ -141,6 +159,7 @@ export function setup() {
         kunjungans: kunjungans,
         pasiens: pasiens,
         tindakanLabSamples: tindakanLabSamples,
+        permintaanLabSamples: permintaanLabSamples,
     };
 }
 
@@ -356,6 +375,53 @@ function requestLaboratoriumPasien(params, data) {
     return res;
 }
 
+function requestPermintaanLabKunjungan(params, data) {
+    if (!data.kunjungans || data.kunjungans.length === 0) {
+        return requestTindakanLab(params);
+    }
+
+    const idKunjungan = data.kunjungans[Math.floor(Math.random() * data.kunjungans.length)];
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+    const url = `${BASE_URL}/laboratorium/pk/permintaan/${idKunjungan}/${statusLanjut}`;
+    const res = http.get(url, params);
+    permintaanLabKunjunganDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestPermintaanLabPasien(params, data) {
+    if (!data.pasiens || data.pasiens.length === 0) {
+        return requestTindakanLab(params);
+    }
+
+    const idPasien = data.pasiens[Math.floor(Math.random() * data.pasiens.length)];
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+    const scenario = Math.random();
+    let url = `${BASE_URL}/laboratorium/pk/permintaan/pasien/${idPasien}/${statusLanjut}`;
+
+    if (scenario < 0.5) {
+        url += `?page=1&limit=10`;
+    } else {
+        url += `?tanggal=2025-01-01,2026-12-31&page=1&limit=10`;
+    }
+
+    const res = http.get(url, params);
+    permintaanLabPasienDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestPermintaanLabDetail(params, data) {
+    const samples = data.permintaanLabSamples || [];
+    if (samples.length === 0) {
+        return requestPermintaanLabKunjungan(params, data);
+    }
+
+    const sample = samples[Math.floor(Math.random() * samples.length)];
+    const url = `${BASE_URL}/laboratorium/pk/permintaan/${sample.id_kunjungan}/Semua/${sample.id_permintaan}`;
+    const res = http.get(url, params);
+    permintaanLabDetailDuration.add(res.timings.duration);
+    return res;
+}
+
 export default function (data) {
     mixedWorkload(data);
 }
@@ -395,29 +461,57 @@ export function mixedWorkload(data) {
         res = requestLaboratoriumKunjungan(params, data);
     } else if (ENDPOINT === "laboratorium_pasien") {
         res = requestLaboratoriumPasien(params, data);
+    } else if (ENDPOINT === "permintaan_lab_kunjungan") {
+        res = requestPermintaanLabKunjungan(params, data);
+    } else if (ENDPOINT === "permintaan_lab_pasien") {
+        res = requestPermintaanLabPasien(params, data);
+    } else if (ENDPOINT === "permintaan_lab_detail") {
+        res = requestPermintaanLabDetail(params, data);
+    } else if (ENDPOINT === "permintaan_lab") {
+        const randP = Math.random();
+        if (randP < 0.45) {
+            res = requestPermintaanLabKunjungan(params, data);
+        } else if (randP < 0.85) {
+            res = requestPermintaanLabPasien(params, data);
+        } else {
+            res = requestPermintaanLabDetail(params, data);
+        }
     } else if (ENDPOINT === "laboratorium") {
-        res = Math.random() < 0.5 ? requestLaboratoriumKunjungan(params, data) : requestLaboratoriumPasien(params, data);
+        const randLab = Math.random();
+        if (randLab < 0.25) {
+            res = requestLaboratoriumKunjungan(params, data);
+        } else if (randLab < 0.50) {
+            res = requestLaboratoriumPasien(params, data);
+        } else if (randLab < 0.70) {
+            res = requestPermintaanLabKunjungan(params, data);
+        } else if (randLab < 0.90) {
+            res = requestPermintaanLabPasien(params, data);
+        } else {
+            res = requestPermintaanLabDetail(params, data);
+        }
     } else {
         // Mode 'all': bagi beban ke seluruh modul
         const rand = Math.random();
-        if (rand < 0.15) {
+        if (rand < 0.12) {
             res = requestAntrean(params);
-        } else if (rand < 0.30) {
+        } else if (rand < 0.24) {
             res = requestObat(params);
-        } else if (rand < 0.45) {
+        } else if (rand < 0.36) {
             res = requestPemeriksaanKunjungan(params, data);
-        } else if (rand < 0.60) {
+        } else if (rand < 0.48) {
             res = requestPemeriksaanPasien(params, data);
-        } else if (rand < 0.70) {
+        } else if (rand < 0.58) {
             res = requestResepKunjungan(params, data);
-        } else if (rand < 0.80) {
+        } else if (rand < 0.68) {
             res = requestResepPasien(params, data);
-        } else if (rand < 0.88) {
+        } else if (rand < 0.76) {
             res = requestTindakanLab(params);
-        } else if (rand < 0.94) {
+        } else if (rand < 0.84) {
             res = requestLaboratoriumKunjungan(params, data);
-        } else {
+        } else if (rand < 0.92) {
             res = requestLaboratoriumPasien(params, data);
+        } else {
+            res = requestPermintaanLabKunjungan(params, data);
         }
     }
 
