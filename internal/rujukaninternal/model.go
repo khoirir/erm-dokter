@@ -28,12 +28,16 @@ func ParseIdOpsiPoliDokter(decryptedKey string) (IdOpsiPoliDokter, error) {
 	}, nil
 }
 
-type OpsiPoliDokter struct {
-	Id         string `json:"id"`
+type InfoPoliDokter struct {
 	KodePoli   string `json:"kode_poli"`
 	NamaPoli   string `json:"nama_poli"`
 	KodeDokter string `json:"kode_dokter"`
 	NamaDokter string `json:"nama_dokter"`
+}
+
+type OpsiPoliDokter struct {
+	Id string `json:"id"`
+	InfoPoliDokter
 }
 
 func (o *OpsiPoliDokter) CompositeKey() string {
@@ -66,10 +70,7 @@ type RujukanInternal struct {
 	Id          string `json:"id"`
 	IdKunjungan string `json:"id_kunjungan"`
 	NoRawat     string `json:"no_rawat"`
-	KodePoli    string `json:"kode_poli"`
-	NamaPoli    string `json:"nama_poli"`
-	KodeDokter  string `json:"kode_dokter"`
-	NamaDokter  string `json:"nama_dokter"`
+	InfoPoliDokter
 }
 
 func (r *RujukanInternal) CompositeKey() string {
@@ -85,11 +86,10 @@ func (req *SimpanRujukanRequest) Sanitize() {
 }
 
 func (req *SimpanRujukanRequest) Validate() apperror.ValidationError {
-	req.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	if req.IdTujuan == "" {
-		errs["id_tujuan"] = "tujuan rujukan dokter dan poliklinik wajib dipilih"
+		errs["id_tujuan"] = "Tujuan rujukan dokter dan poliklinik wajib dipilih"
 	}
 
 	if len(errs) > 0 {

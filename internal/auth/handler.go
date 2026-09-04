@@ -25,7 +25,7 @@ func (h *Handler) RegisterRoutes(
 	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
 	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
 ) {
-	mux.HandleFunc("POST /api/v1/auth/login", loginRateLimit(h.Login))
+	mux.HandleFunc("POST /api/v1/auth/login", loginRateLimit(timeoutMiddleware(h.Login)))
 	mux.HandleFunc("POST /api/v1/auth/logout", authMiddleware(timeoutMiddleware(h.Logout)))
 }
 
@@ -36,6 +36,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize()
 	if errs := req.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return

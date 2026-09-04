@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 )
 
 type Repository interface {
@@ -47,12 +47,12 @@ func (r *repository) VerifikasiLogin(ctx context.Context, username string, passw
 		&user.NamaUser,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("gagal memverifikasi login: %w", err)
+		return nil, err
 	}
 
 	return &user, nil

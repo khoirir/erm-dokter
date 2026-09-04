@@ -3,7 +3,6 @@ package rujukaninternal
 import (
 	"context"
 	"database/sql"
-	"fmt"
 )
 
 type Repository interface {
@@ -49,7 +48,7 @@ func (r *repository) DaftarOpsiPoliDokter(ctx context.Context, kodeDokterLogin, 
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query opsi poli dokter: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -62,13 +61,13 @@ func (r *repository) DaftarOpsiPoliDokter(ctx context.Context, kodeDokterLogin, 
 			&item.KodeDokter,
 			&item.NamaDokter,
 		); err != nil {
-			return nil, fmt.Errorf("gagal scan opsi poli dokter: %w", err)
+			return nil, err
 		}
 		list = append(list, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterasi opsi poli dokter: %w", err)
+		return nil, err
 	}
 
 	return list, nil
@@ -91,7 +90,7 @@ const selectRujukanInternal = `
 func (r *repository) DaftarRujukanInternalByNoRawat(ctx context.Context, noRawat string) ([]RujukanInternal, error) {
 	rows, err := r.db.QueryContext(ctx, selectRujukanInternal, noRawat)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query rujukan internal: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -105,13 +104,13 @@ func (r *repository) DaftarRujukanInternalByNoRawat(ctx context.Context, noRawat
 			&item.KodeDokter,
 			&item.NamaDokter,
 		); err != nil {
-			return nil, fmt.Errorf("gagal scan rujukan internal: %w", err)
+			return nil, err
 		}
 		list = append(list, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterasi rujukan internal: %w", err)
+		return nil, err
 	}
 
 	return list, nil
@@ -127,7 +126,7 @@ func (r *repository) CekRujukanInternalAda(ctx context.Context, noRawat, kdDokte
 	var count int
 	err := r.db.QueryRowContext(ctx, countRujukanInternalByDokter, noRawat, kdDokter).Scan(&count)
 	if err != nil {
-		return false, fmt.Errorf("gagal cek rujukan internal: %w", err)
+		return false, err
 	}
 	return count > 0, nil
 }
@@ -140,7 +139,7 @@ const insertRujukanInternal = `
 func (r *repository) SimpanRujukanInternal(ctx context.Context, noRawat, kdPoli, kdDokter string) error {
 	_, err := r.db.ExecContext(ctx, insertRujukanInternal, noRawat, kdDokter, kdPoli)
 	if err != nil {
-		return fmt.Errorf("gagal insert rujukan internal: %w", err)
+		return err
 	}
 	return nil
 }
@@ -153,11 +152,11 @@ const deleteRujukanInternal = `
 func (r *repository) HapusRujukanInternal(ctx context.Context, noRawat, kdDokter string) error {
 	res, err := r.db.ExecContext(ctx, deleteRujukanInternal, noRawat, kdDokter)
 	if err != nil {
-		return fmt.Errorf("gagal delete rujukan internal: %w", err)
+		return err
 	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("gagal cek hasil delete rujukan internal: %w", err)
+		return err
 	}
 	if rowsAffected == 0 {
 		return sql.ErrNoRows

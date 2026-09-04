@@ -50,6 +50,13 @@ func (k *KunjunganRawatJalan) FormatNoRekamMedis() string {
 	return formatter.FormatNoRekamMedis(k.NoRekamMedis)
 }
 
+type InfoRegistrasiPasien struct {
+	TanggalRegistrasi string
+	JamRegistrasi     string
+	KodePenjamin      string
+	StatusBayar       string
+}
+
 type OpsiReferensi struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
@@ -95,8 +102,7 @@ func (f FilterAntreanDokter) Offset() int {
 	return (f.Page - 1) * f.Limit
 }
 
-func (f *FilterAntreanDokter) Validate() apperror.ValidationError {
-	f.Sanitize()
+func (f FilterAntreanDokter) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 	if !shared.SortOrder(f.SortOrder).IsValid() {
 		errs["sort_order"] = "Jenis pengurutan tidak valid"

@@ -52,6 +52,7 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 		Limit:             limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -86,7 +87,7 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DetailKunjungan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	if idKunjungan == "" {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak ditemukan"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan wajib diisi"))
 		return
 	}
 

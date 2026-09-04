@@ -12,6 +12,7 @@ type mockRepository struct {
 	daftarAntreanFunc          func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error)
 	detailKunjunganFunc        func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error)
 	riwayatKunjunganPasienFunc func(ctx context.Context, noRM string) ([]rawatjalan.KunjunganRawatJalan, error)
+	getInfoRegistrasiFunc      func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error)
 }
 
 func (m *mockRepository) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
@@ -37,6 +38,18 @@ func (m *mockRepository) RiwayatKunjunganPasien(ctx context.Context, noRM string
 
 func (m *mockRepository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
 	return "2020-01-01", "00:00:00", true, nil
+}
+
+func (m *mockRepository) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.getInfoRegistrasiFunc != nil {
+		return m.getInfoRegistrasiFunc(ctx, noRawat)
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: "2020-01-01",
+		JamRegistrasi:     "00:00:00",
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
 }
 
 func TestDaftarAntreanDokter_ValidationError(t *testing.T) {
@@ -75,6 +88,7 @@ func TestDaftarAntreanDokter_ValidOrderByOptions(t *testing.T) {
 				OrderBy:   ob,
 				SortOrder: "ASC",
 			}
+			filter.Sanitize()
 			if errs := filter.Validate(); errs != nil {
 				t.Fatalf("expected valid filter for order_by=%s, got %v", ob, errs)
 			}
@@ -85,6 +99,7 @@ func TestDaftarAntreanDokter_ValidOrderByOptions(t *testing.T) {
 
 func TestDaftarAntreanDokter_MinKeywordLength(t *testing.T) {
 	filter := rawatjalan.FilterAntreanDokter{Keyword: "ab"}
+	filter.Sanitize()
 
 	validationErr := filter.Validate()
 	if validationErr == nil {
@@ -154,6 +169,9 @@ func TestDetailKunjungan_EmptyNoRawat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty noRawat, got nil")
 	}
+	if err.Error() != "Nomor rawat wajib diisi" {
+		t.Errorf("expected 'Nomor rawat wajib diisi', got %q", err.Error())
+	}
 }
 
 func TestRiwayatKunjunganPasien_EmptyNoRM(t *testing.T) {
@@ -165,6 +183,9 @@ func TestRiwayatKunjunganPasien_EmptyNoRM(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty noRM, got nil")
 	}
+	if err.Error() != "Nomor rekam medis wajib diisi" {
+		t.Errorf("expected 'Nomor rekam medis wajib diisi', got %q", err.Error())
+	}
 }
 
 func TestGetWaktuRegistrasi_EmptyNoRawat(t *testing.T) {
@@ -175,6 +196,9 @@ func TestGetWaktuRegistrasi_EmptyNoRawat(t *testing.T) {
 	_, _, _, err := uc.GetWaktuRegistrasi(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty noRawat, got nil")
+	}
+	if err.Error() != "Nomor rawat wajib diisi" {
+		t.Errorf("expected 'Nomor rawat wajib diisi', got %q", err.Error())
 	}
 }
 
@@ -204,5 +228,63 @@ func TestRawatJalan_StaticReferences(t *testing.T) {
 		t.Errorf("expected 2 jenis antrean items, got %d", len(jenisAntrean))
 	}
 }
+
+func TestGetInfoRegistrasi(t *testing.T) {
+	ctx := context.Background()
+	log := logger.New()
+
+	t.Run("Validasi noRawat kosong", func(t *testing.T) {
+		repo := &mockRepository{}
+		svc := rawatjalan.NewService(repo, log)
+
+		_, err := svc.GetInfoRegistrasi(ctx, "")
+		if err == nil {
+			t.Fatal("harus error jika noRawat kosong")
+		}
+		if err.Error() != "Nomor rawat wajib diisi" {
+			t.Errorf("pesan error tidak sesuai: %v", err)
+		}
+	})
+
+	t.Run("Data tidak ditemukan", func(t *testing.T) {
+		repo := &mockRepository{
+			getInfoRegistrasiFunc: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+				return nil, nil
+			},
+		}
+		svc := rawatjalan.NewService(repo, log)
+
+		_, err := svc.GetInfoRegistrasi(ctx, "2026/09/04/000001")
+		if err == nil {
+			t.Fatal("harus error not found jika data nil")
+		}
+		if err.Error() != "Data kunjungan pasien tidak ditemukan" {
+			t.Errorf("pesan error tidak sesuai: %v", err)
+		}
+	})
+
+	t.Run("Sukses", func(t *testing.T) {
+		repo := &mockRepository{
+			getInfoRegistrasiFunc: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+				return &rawatjalan.InfoRegistrasiPasien{
+					TanggalRegistrasi: "2026-09-04",
+					JamRegistrasi:     "08:00:00",
+					KodePenjamin:      "BPJ",
+					StatusBayar:       "Sudah Bayar",
+				}, nil
+			},
+		}
+		svc := rawatjalan.NewService(repo, log)
+
+		info, err := svc.GetInfoRegistrasi(ctx, "2026/09/04/000001")
+		if err != nil {
+			t.Fatalf("tidak diharapkan error: %v", err)
+		}
+		if info.KodePenjamin != "BPJ" || info.StatusBayar != "Sudah Bayar" {
+			t.Errorf("data info registrasi tidak cocok: %+v", info)
+		}
+	})
+}
+
 
 

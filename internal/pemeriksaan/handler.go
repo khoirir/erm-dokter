@@ -40,13 +40,13 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	status := shared.StatusLanjut(statusLanjut)
 	if status != "Semua" && !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Semua, Ralan, Ranap)"))
 		return
 	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, err)
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
@@ -60,6 +60,7 @@ func (h *Handler) DaftarPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -88,13 +89,13 @@ func (h *Handler) DaftarPemeriksaanByRM(w http.ResponseWriter, r *http.Request) 
 
 	status := shared.StatusLanjut(statusLanjut)
 	if status != "Semua" && !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Semua, Ralan, Ranap)"))
 		return
 	}
 
 	noRekamMedis, err := crypto.Decrypt(idPasien, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, err)
+		apperror.HandleError(w, apperror.NewBusinessError("ID pasien tidak valid"))
 		return
 	}
 
@@ -108,6 +109,7 @@ func (h *Handler) DaftarPemeriksaanByRM(w http.ResponseWriter, r *http.Request) 
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -139,7 +141,7 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	status := shared.StatusLanjut(statusLanjut)
 	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 
@@ -172,11 +174,6 @@ func (h *Handler) DetailPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if pemeriksaan == nil {
-		apperror.HandleError(w, apperror.NewNotFoundError("Detail pemeriksaan tidak ditemukan"))
-		return
-	}
-
 	pemeriksaan.Id = encryptedID
 	pemeriksaan.IdKunjungan = idKunjungan
 
@@ -194,7 +191,7 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	status := shared.StatusLanjut(statusLanjut)
 	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 
@@ -215,6 +212,7 @@ func (h *Handler) SimpanPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize()
 	if errs := req.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -249,7 +247,7 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	status := shared.StatusLanjut(statusLanjut)
 	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 
@@ -259,13 +257,13 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
+	decryptedIdPemeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid"))
 		return
 	}
 
-	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPememeriksaan)
+	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPemeriksaan)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("Format ID pemeriksaan tidak valid"))
 		return
@@ -282,6 +280,7 @@ func (h *Handler) UpdatePemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize()
 	if errs := req.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -316,7 +315,7 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 
 	status := shared.StatusLanjut(statusLanjut)
 	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 
@@ -326,13 +325,13 @@ func (h *Handler) HapusPemeriksaan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decryptedIdPememeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
+	decryptedIdPemeriksaan, err := crypto.Decrypt(encryptedIdPemeriksaan, h.encryptionKey)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("ID pemeriksaan tidak valid"))
 		return
 	}
 
-	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPememeriksaan)
+	idPemeriksaan, err := ParseIdPemeriksaan(decryptedIdPemeriksaan)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("Format ID pemeriksaan tidak valid"))
 		return

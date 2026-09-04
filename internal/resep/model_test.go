@@ -12,8 +12,10 @@ func TestSimpanResepRequest_Sanitize(t *testing.T) {
 		NoRawat: " 2026/08/28/000001 ",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      "  OBAT123  ",
-				Jumlah:      10,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: "  OBAT123  ",
+					Jumlah: 10,
+				},
 				AturanPakai: "  3x1 sehari  ",
 			},
 		},
@@ -26,9 +28,11 @@ func TestSimpanResepRequest_Sanitize(t *testing.T) {
 				Keterangan:    "  Sebelum tidur  ",
 				Detail: []resep.ResepRacikanDetailInput{
 					{
-						IdObat:    "  OBAT456  ",
+						ItemObatInput: resep.ItemObatInput{
+							IdObat: "  OBAT456  ",
+							Jumlah: 5,
+						},
 						Kandungan: "  500mg  ",
-						Jumlah:    5,
 					},
 				},
 			},
@@ -70,8 +74,10 @@ func TestSimpanResepRequest_Validate_ValidNonRacikan(t *testing.T) {
 		JamPeresepan:     "08:00:00",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      "encrypted-obat-1",
-				Jumlah:      10,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: "encrypted-obat-1",
+					Jumlah: 10,
+				},
 				AturanPakai: "3 x 1 tablet",
 			},
 		},
@@ -97,14 +103,18 @@ func TestSimpanResepRequest_Validate_ValidRacikan(t *testing.T) {
 				Keterangan:    "Sesudah makan",
 				Detail: []resep.ResepRacikanDetailInput{
 					{
-						IdObat:    "encrypted-obat-1",
+						ItemObatInput: resep.ItemObatInput{
+							IdObat: "encrypted-obat-1",
+							Jumlah: 5,
+						},
 						Kandungan: "500 mg",
-						Jumlah:    5,
 					},
 					{
-						IdObat:    "encrypted-obat-2",
+						ItemObatInput: resep.ItemObatInput{
+							IdObat: "encrypted-obat-2",
+							Jumlah: 5,
+						},
 						Kandungan: "4 mg",
-						Jumlah:    5,
 					},
 				},
 			},
@@ -140,8 +150,10 @@ func TestSimpanResepRequest_Validate_InvalidDateTime(t *testing.T) {
 		JamPeresepan:     "25:70:99",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      "obat-1",
-				Jumlah:      5,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: "obat-1",
+					Jumlah: 5,
+				},
 				AturanPakai: "1x1",
 			},
 		},
@@ -168,8 +180,10 @@ func TestSimpanResepRequest_Validate_FutureTime(t *testing.T) {
 		JamPeresepan:     "12:00:00",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      "obat-1",
-				Jumlah:      5,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: "obat-1",
+					Jumlah: 5,
+				},
 				AturanPakai: "1x1",
 			},
 		},
@@ -190,8 +204,10 @@ func TestSimpanResepRequest_Validate_InvalidResepDokter(t *testing.T) {
 		NoRawat: "2026/08/28/000001",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      "",
-				Jumlah:      0,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: "",
+					Jumlah: 0,
+				},
 				AturanPakai: "",
 			},
 		},
@@ -260,8 +276,10 @@ func TestSimpanResepRequest_Validate_InvalidRacikanDetail(t *testing.T) {
 				AturanPakai:   "3x1",
 				Detail: []resep.ResepRacikanDetailInput{
 					{
-						IdObat: "",
-						Jumlah: -1,
+						ItemObatInput: resep.ItemObatInput{
+							IdObat: "",
+							Jumlah: -1,
+						},
 					},
 				},
 			},

@@ -192,8 +192,11 @@ func (r *repository) DaftarPemeriksaan(ctx context.Context, listNoRawat []string
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS t", baseQuery)
 	var totalData int
-	if err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData); err != nil || totalData == 0 {
-		return []Pemeriksaan{}, 0, err
+	if err := r.db.QueryRowContext(ctx, countQuery, baseArgs...).Scan(&totalData); err != nil {
+		return nil, 0, err
+	}
+	if totalData == 0 {
+		return make([]Pemeriksaan, 0), 0, nil
 	}
 
 	dataQuery := fmt.Sprintf("SELECT * FROM (%s) AS t ORDER BY t.tanggal_pemeriksaan DESC, t.jam_pemeriksaan DESC LIMIT ? OFFSET ?", baseQuery)
@@ -202,21 +205,21 @@ func (r *repository) DaftarPemeriksaan(ctx context.Context, listNoRawat []string
 
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {
-		return nil, 0, fmt.Errorf("gagal query data pemeriksaan: %w", err)
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var daftarPemeriksaan []Pemeriksaan
+	daftarPemeriksaan := make([]Pemeriksaan, 0)
 	for rows.Next() {
 		pemeriksaan, err := scanPemeriksaan(rows)
 		if err != nil {
-			return nil, 0, fmt.Errorf("gagal scan data pemeriksaan: %w", err)
+			return nil, 0, err
 		}
 		daftarPemeriksaan = append(daftarPemeriksaan, *pemeriksaan)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("error saat iterasi data pemeriksaan: %w", err)
+		return nil, 0, err
 	}
 
 	return daftarPemeriksaan, totalData, nil
@@ -236,7 +239,7 @@ func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, st
 		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
 
 	default:
-		return nil, fmt.Errorf("status lanjut tidak valid (Ralan atau Ranap)")
+		return nil, errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
 	row := r.db.QueryRowContext(ctx, query, args...)
@@ -245,7 +248,7 @@ func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, st
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("gagal query detail pemeriksaan: %w", err)
+		return nil, err
 	}
 
 	return pemeriksaan, nil
@@ -271,12 +274,12 @@ func (r *repository) SimpanPemeriksaan(ctx context.Context, kodeDokter string, s
 			req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi, kodeDokter,
 		}
 	default:
-		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
 	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("gagal menyimpan data pemeriksaan: %w", err)
+		return err
 	}
 
 	return nil
@@ -328,12 +331,12 @@ func (r *repository) UpdatePemeriksaan(ctx context.Context, id IdPemeriksaan, st
 			id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan,
 		}
 	default:
-		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
 	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("gagal memperbarui data pemeriksaan: %w", err)
+		return err
 	}
 
 	return nil
@@ -357,12 +360,12 @@ func (r *repository) HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, sta
 	case shared.StatusLanjutRawatInap:
 		query = deletePemeriksaanRanap
 	default:
-		return fmt.Errorf("status lanjut tidak valid (harus Ralan atau Ranap)")
+		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
 	_, err := r.db.ExecContext(ctx, query, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
 	if err != nil {
-		return fmt.Errorf("gagal menghapus data pemeriksaan: %w", err)
+		return err
 	}
 
 	return nil

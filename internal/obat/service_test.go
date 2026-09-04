@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/shared/apperror"
 )
 
 type mockRepository struct {
@@ -109,21 +110,23 @@ func TestObatService_DaftarObat(t *testing.T) {
 				Page:      1,
 				Limit:     20,
 			}
+			f.Sanitize()
 			if errs := f.Validate(); errs != nil {
 				t.Fatalf("expected nil validation errors for valid filter order_by=%s, got %v", ob, errs)
 			}
 		})
 	}
 
-
 	// Test invalid order_by
-	invalidOrderFilter := FilterDaftarObat{OrderBy: "invalid_column"}
+	invalidOrderFilter := FilterDaftarObat{OrderBy: "invalid_column", SortOrder: "ASC"}
+	invalidOrderFilter.Sanitize()
 	if errs := invalidOrderFilter.Validate(); errs == nil || errs["order_by"] == "" {
 		t.Errorf("expected validation error for invalid order_by, got %v", errs)
 	}
 
 	// Test invalid sort_order
 	invalidSortFilter := FilterDaftarObat{SortOrder: "SIDEWAYS"}
+	invalidSortFilter.Sanitize()
 	if errs := invalidSortFilter.Validate(); errs == nil || errs["sort_order"] == "" {
 		t.Errorf("expected validation error for invalid sort_order, got %v", errs)
 	}
@@ -174,6 +177,18 @@ func TestObatService_DetailObat(t *testing.T) {
 	_, err = svc.DetailObat(context.Background(), "B001")
 	if err == nil {
 		t.Fatal("expected db error, got nil")
+	}
+
+	// Test Not Found
+	repo.err = nil
+	repo.detailData = nil
+	_, err = svc.DetailObat(context.Background(), "B999")
+	if err == nil {
+		t.Fatal("expected not found error, got nil")
+	}
+	var notFoundErr *apperror.NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Fatalf("expected *apperror.NotFoundError, got %T", err)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/shared"
 )
@@ -18,10 +19,6 @@ import (
 type mockConcurrentRepo struct {
 	Repository
 	simpanResepFunc func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
-}
-
-func (m *mockConcurrentRepo) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
-	return false, false, nil
 }
 
 func (m *mockConcurrentRepo) CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error) {
@@ -51,6 +48,23 @@ type mockConcurrentRJ struct {
 
 func (m *mockConcurrentRJ) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
 	return time.Now().Format("2006-01-02"), "07:00:00", true, nil
+}
+
+func (m *mockConcurrentRJ) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: time.Now().Format("2006-01-02"),
+		JamRegistrasi:     "07:00:00",
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
+}
+
+type mockConcurrentRI struct {
+	rawatinap.Service
+}
+
+func (m *mockConcurrentRI) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
+	return false, false, nil
 }
 
 type mockConcurrentObat struct {
@@ -94,11 +108,11 @@ func TestSimpanResep_ConcurrentDoctors(t *testing.T) {
 	}
 
 	mockRJ := &mockConcurrentRJ{}
+	mockRI := &mockConcurrentRI{}
 	mockObat := &mockConcurrentObat{}
 
-
 	log := logger.New()
-	svc := NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	var wg sync.WaitGroup
 	startGate := make(chan struct{}) // Semua goroutine mulai di milidetik yang persis sama
@@ -117,8 +131,10 @@ func TestSimpanResep_ConcurrentDoctors(t *testing.T) {
 				JamPeresepan:     "08:00:00",
 				ResepDokter: []ResepDokterInput{
 					{
-						KodeObat:    "OBAT001",
-						Jumlah:      10,
+						ItemObatInput: ItemObatInput{
+							KodeObat: "OBAT001",
+							Jumlah:   10,
+						},
 						AturanPakai: "3x1",
 					},
 				},

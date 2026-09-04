@@ -13,6 +13,7 @@ type Service interface {
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
 	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
+	GetInfoRegistrasi(ctx context.Context, noRawat string) (*InfoRegistrasiPasien, error)
 
 	DaftarStatusPemeriksaan(ctx context.Context) []OpsiReferensi
 	DaftarStatusLanjut(ctx context.Context) []OpsiReferensi
@@ -44,7 +45,7 @@ func (s *service) DaftarAntreanDokter(ctx context.Context, kodeDokter string, fi
 
 func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error) {
 	if noRawat == "" {
-		return nil, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
+		return nil, apperror.NewBusinessError("Nomor rawat wajib diisi")
 	}
 
 	kunjungan, err := s.repo.DetailKunjungan(ctx, noRawat, kodeDokter)
@@ -58,7 +59,7 @@ func (s *service) DetailKunjungan(ctx context.Context, noRawat string, kodeDokte
 
 func (s *service) RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error) {
 	if noRM == "" {
-		return nil, apperror.NewBusinessError("nomor rekam medis tidak boleh kosong")
+		return nil, apperror.NewBusinessError("Nomor rekam medis wajib diisi")
 	}
 	listKunjungan, err := s.repo.RiwayatKunjunganPasien(ctx, noRM)
 	if err != nil {
@@ -70,15 +71,31 @@ func (s *service) RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]Ku
 
 func (s *service) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
 	if noRawat == "" {
-		return "", "", false, apperror.NewBusinessError("nomor rawat tidak boleh kosong")
+		return "", "", false, apperror.NewBusinessError("Nomor rawat wajib diisi")
 	}
-	tglReg, jamReg, exists, err := s.repo.GetWaktuRegistrasi(ctx, noRawat)
+	tanggalRegistrasi, jamRegistrasi, exists, err := s.repo.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal query waktu registrasi %s: %v", noRawat, err)
 		return "", "", false, err
 	}
-	return tglReg, jamReg, exists, nil
+	return tanggalRegistrasi, jamRegistrasi, exists, nil
 }
+
+func (s *service) GetInfoRegistrasi(ctx context.Context, noRawat string) (*InfoRegistrasiPasien, error) {
+	if noRawat == "" {
+		return nil, apperror.NewBusinessError("Nomor rawat wajib diisi")
+	}
+	infoReg, err := s.repo.GetInfoRegistrasi(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal query info registrasi %s: %v", noRawat, err)
+		return nil, err
+	}
+	if infoReg == nil {
+		return nil, apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
+	}
+	return infoReg, nil
+}
+
 
 func (s *service) DaftarStatusPemeriksaan(ctx context.Context) []OpsiReferensi {
 	opsi := make([]OpsiReferensi, len(ListStatusPemeriksaan))

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"erm-dokter/internal/shared"
-	"erm-dokter/internal/shared/apperror"
 )
 
 type Repository interface {
@@ -153,7 +152,7 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 	rows, err := r.db.QueryContext(ctx, selectQuery, dataArgs...)
 	if err != nil {
 		<-ch
-		return nil, 0, fmt.Errorf("gagal query daftar obat: %w", err)
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -178,23 +177,23 @@ func (r *repository) DaftarObat(ctx context.Context, filter FilterDaftarObat) ([
 			&o.NamaKategori,
 		); err != nil {
 			<-ch
-			return nil, 0, fmt.Errorf("gagal scan data obat: %w", err)
+			return nil, 0, err
 		}
 		listObat = append(listObat, o)
 	}
 
 	if err := rows.Err(); err != nil {
 		<-ch
-		return nil, 0, fmt.Errorf("error saat iterasi data obat: %w", err)
+		return nil, 0, err
 	}
 
 	cr := <-ch
 	if cr.err != nil {
-		return nil, 0, fmt.Errorf("gagal menghitung total data obat: %w", cr.err)
+		return nil, 0, cr.err
 	}
 	if filter.Depo == "" && len(listObat) > 0 {
 		if err := r.hydrateStok(ctx, listObat); err != nil {
-			return nil, 0, fmt.Errorf("gagal mengambil data stok obat: %w", err)
+			return nil, 0, err
 		}
 	}
 
@@ -350,9 +349,9 @@ func (r *repository) DetailObat(ctx context.Context, kodeObat string) (*Obat, er
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data obat tidak ditemukan")
+			return nil, nil
 		}
-		return nil, fmt.Errorf("gagal query detail obat: %w", err)
+		return nil, err
 	}
 
 	queryStok := fmt.Sprintf(`SELECT 
@@ -366,7 +365,7 @@ func (r *repository) DetailObat(ctx context.Context, kodeObat string) (*Obat, er
 
 	rows, err := r.db.QueryContext(ctx, queryStok, kodeObat)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query stok depo obat: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -374,13 +373,13 @@ func (r *repository) DetailObat(ctx context.Context, kodeObat string) (*Obat, er
 	for rows.Next() {
 		var s StokDepo
 		if err := rows.Scan(&s.KodeDepo, &s.NamaDepo, &s.Stok); err != nil {
-			return nil, fmt.Errorf("gagal scan stok depo: %w", err)
+			return nil, err
 		}
 		o.StokDepo = append(o.StokDepo, s)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error saat iterasi stok depo: %w", err)
+		return nil, err
 	}
 
 	return &o, nil
@@ -390,21 +389,21 @@ func (r *repository) DaftarJenis(ctx context.Context) ([]JenisObat, error) {
 	query := `SELECT kdjns AS kode, nama FROM jenis ORDER BY nama ASC`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query daftar jenis obat: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	var list []JenisObat
+	list := make([]JenisObat, 0)
 	for rows.Next() {
 		var j JenisObat
 		if err := rows.Scan(&j.Kode, &j.Nama); err != nil {
-			return nil, fmt.Errorf("gagal scan data jenis obat: %w", err)
+			return nil, err
 		}
 		list = append(list, j)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error saat iterasi jenis obat: %w", err)
+		return nil, err
 	}
 
 	return list, nil
@@ -414,21 +413,21 @@ func (r *repository) DaftarGolongan(ctx context.Context) ([]GolonganObat, error)
 	query := `SELECT kode, nama FROM golongan_barang ORDER BY nama ASC`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query daftar golongan obat: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	var list []GolonganObat
+	list := make([]GolonganObat, 0)
 	for rows.Next() {
 		var g GolonganObat
 		if err := rows.Scan(&g.Kode, &g.Nama); err != nil {
-			return nil, fmt.Errorf("gagal scan data golongan obat: %w", err)
+			return nil, err
 		}
 		list = append(list, g)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error saat iterasi golongan obat: %w", err)
+		return nil, err
 	}
 
 	return list, nil
@@ -438,21 +437,21 @@ func (r *repository) DaftarKategori(ctx context.Context) ([]KategoriObat, error)
 	query := `SELECT kode, nama FROM kategori_barang ORDER BY nama ASC`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query daftar kategori obat: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	var list []KategoriObat
+	list := make([]KategoriObat, 0)
 	for rows.Next() {
 		var k KategoriObat
 		if err := rows.Scan(&k.Kode, &k.Nama); err != nil {
-			return nil, fmt.Errorf("gagal scan data kategori obat: %w", err)
+			return nil, err
 		}
 		list = append(list, k)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error saat iterasi kategori obat: %w", err)
+		return nil, err
 	}
 
 	return list, nil

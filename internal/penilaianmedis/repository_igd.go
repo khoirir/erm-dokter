@@ -4,16 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 )
 
 const selectPenilaianMedisIGD = `
 	SELECT 
 		pmr.no_rawat,
-		COALESCE(rp.no_rkm_medis, '') AS no_rkm_medis,
-		COALESCE(rp.kd_poli, '') AS kode_poli,
-		COALESCE(p.nm_poli, '') AS nama_poli,
-		COALESCE(DATE_FORMAT(rp.tgl_registrasi, '%Y-%m-%d'), '') AS tanggal_registrasi,
 		COALESCE(DATE_FORMAT(pmr.tanggal, '%Y-%m-%d %H:%i:%s'), '') AS tanggal_penilaian,
 		pmr.kd_dokter,
 		COALESCE(d.nm_dokter, '') AS nama_dokter,
@@ -51,8 +46,6 @@ const selectPenilaianMedisIGD = `
 		COALESCE(pmr.diagnosis, '') AS diagnosis,
 		COALESCE(pmr.tata, '') AS tata
 	FROM penilaian_medis_igd pmr
-	INNER JOIN reg_periksa rp ON rp.no_rawat = pmr.no_rawat
-	INNER JOIN poliklinik p ON p.kd_poli = rp.kd_poli
 	INNER JOIN dokter d ON d.kd_dokter = pmr.kd_dokter
 `
 
@@ -60,10 +53,6 @@ func scanPenilaianMedisIGD(scanner interface{ Scan(dest ...any) error }) (*Penil
 	var item PenilaianMedisIGD
 	err := scanner.Scan(
 		&item.NoRawat,
-		&item.NoRM,
-		&item.KodePoli,
-		&item.NamaPoli,
-		&item.TanggalRegistrasi,
 		&item.TanggalPenilaian,
 		&item.KodeDokter,
 		&item.NamaDokter,
@@ -116,17 +105,17 @@ func (r *repository) DetailPenilaianMedisIGD(ctx context.Context, noRawat string
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, fmt.Errorf("gagal scan detail penilaian medis igd: %w", err)
+		return nil, err
 	}
 
 	return item, nil
 }
 
 func (r *repository) RiwayatPenilaianMedisIGDByNoRM(ctx context.Context, noRM string) ([]PenilaianMedisIGD, error) {
-	query := selectPenilaianMedisIGD + ` WHERE rp.no_rkm_medis = ? ORDER BY pmr.tanggal DESC`
+	query := selectPenilaianMedisIGD + ` INNER JOIN reg_periksa rp ON rp.no_rawat = pmr.no_rawat WHERE rp.no_rkm_medis = ? ORDER BY pmr.tanggal DESC`
 	rows, err := r.db.QueryContext(ctx, query, noRM)
 	if err != nil {
-		return nil, fmt.Errorf("gagal query riwayat penilaian medis igd: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -134,12 +123,12 @@ func (r *repository) RiwayatPenilaianMedisIGDByNoRM(ctx context.Context, noRM st
 	for rows.Next() {
 		item, err := scanPenilaianMedisIGD(rows)
 		if err != nil {
-			return nil, fmt.Errorf("gagal scan riwayat penilaian medis igd: %w", err)
+			return nil, err
 		}
 		list = append(list, *item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterasi riwayat penilaian medis igd: %w", err)
+		return nil, err
 	}
 
 	return list, nil
@@ -150,7 +139,7 @@ func (r *repository) CekPenilaianMedisIGDAda(ctx context.Context, noRawat string
 	var count int
 	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&count)
 	if err != nil {
-		return false, fmt.Errorf("gagal cek penilaian medis igd: %w", err)
+		return false, err
 	}
 	return count > 0, nil
 }
@@ -213,7 +202,7 @@ func (r *repository) SimpanPenilaianMedisIGD(ctx context.Context, noRawat, kodeD
 		req.TataLaksana,
 	)
 	if err != nil {
-		return fmt.Errorf("gagal insert penilaian medis igd: %w", err)
+		return err
 	}
 	return nil
 }
@@ -269,12 +258,12 @@ func (r *repository) UpdatePenilaianMedisIGD(ctx context.Context, noRawat string
 		noRawat,
 	)
 	if err != nil {
-		return fmt.Errorf("gagal update penilaian medis igd: %w", err)
+		return err
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("gagal cek rows affected update penilaian medis igd: %w", err)
+		return err
 	}
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
@@ -287,12 +276,12 @@ func (r *repository) HapusPenilaianMedisIGD(ctx context.Context, noRawat string)
 	query := `DELETE FROM penilaian_medis_igd WHERE no_rawat = ?`
 	res, err := r.db.ExecContext(ctx, query, noRawat)
 	if err != nil {
-		return fmt.Errorf("gagal hapus penilaian medis igd: %w", err)
+		return err
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("gagal cek rows affected hapus penilaian medis igd: %w", err)
+		return err
 	}
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
@@ -300,3 +289,4 @@ func (r *repository) HapusPenilaianMedisIGD(ctx context.Context, noRawat string)
 
 	return nil
 }
+

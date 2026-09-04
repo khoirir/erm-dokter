@@ -17,7 +17,6 @@ type Repository interface {
 	DaftarResepByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error)
 	DetailResep(ctx context.Context, noResep string) (*Resep, error)
 	SimpanResep(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
-	CekStatusKamarInap(ctx context.Context, noRawat string) (isAktif bool, isPernahRanap bool, err error)
 	DaftarAturanPakai(ctx context.Context, keyword string) ([]AturanPakai, error)
 	DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, error)
 	CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error)
@@ -86,7 +85,7 @@ func (r *repository) queryResep(ctx context.Context, whereClause string, paramVa
 	}
 
 	if totalData == 0 {
-		return []Resep{}, 0, nil
+		return make([]Resep, 0), 0, nil
 	}
 
 	selectQuery := fmt.Sprintf(`
@@ -331,7 +330,7 @@ func (r *repository) DaftarAturanPakai(ctx context.Context, keyword string) ([]A
 	}
 	defer rows.Close()
 
-	var list []AturanPakai
+	list := make([]AturanPakai, 0)
 	for rows.Next() {
 		var ap AturanPakai
 		if err := rows.Scan(&ap.AturanPakai); err != nil {
@@ -342,10 +341,6 @@ func (r *repository) DaftarAturanPakai(ctx context.Context, keyword string) ([]A
 
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if list == nil {
-		list = []AturanPakai{}
 	}
 
 	return list, nil
@@ -360,7 +355,7 @@ func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, erro
 	}
 	defer rows.Close()
 
-	var list []MetodeRacik
+	list := make([]MetodeRacik, 0)
 	for rows.Next() {
 		var mr MetodeRacik
 		if err := rows.Scan(&mr.Kode, &mr.Nama); err != nil {
@@ -371,10 +366,6 @@ func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, erro
 
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if list == nil {
-		list = []MetodeRacik{}
 	}
 
 	return list, nil
@@ -548,9 +539,12 @@ func (r *repository) generateNoResep(ctx context.Context, tx *sql.Tx, tglPeresep
 		prefix = parsedDate.Format("20060102")
 	}
 
-	query := `SELECT no_resep FROM resep_obat WHERE no_resep LIKE ? ORDER BY no_resep DESC LIMIT 1 FOR UPDATE`
+	minOrder := prefix + "0000"
+	maxOrder := prefix + "9999"
+
+	query := `SELECT no_resep FROM resep_obat WHERE no_resep BETWEEN ? AND ? ORDER BY no_resep DESC LIMIT 1 FOR UPDATE`
 	var lastToday string
-	err = tx.QueryRowContext(ctx, query, prefix+"%").Scan(&lastToday)
+	err = tx.QueryRowContext(ctx, query, minOrder, maxOrder).Scan(&lastToday)
 	if errors.Is(err, sql.ErrNoRows) {
 		return prefix + "0001", nil
 	}
@@ -691,31 +685,4 @@ func isDuplicateKey(err error) bool {
 	}
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "1062") || strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "primary")
-}
-
-func (r *repository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
-	query := `SELECT stts_pulang, tgl_keluar, jam_keluar 
-		FROM kamar_inap 
-		WHERE no_rawat = ? 
-		ORDER BY tgl_masuk DESC, jam_masuk DESC 
-		LIMIT 1`
-
-	var sttsPulang, tglKeluar, jamKeluar string
-	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&sttsPulang, &tglKeluar, &jamKeluar)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, false, nil
-		}
-		return false, false, err
-	}
-
-	isBelumPulangStts := sttsPulang == "-" || strings.TrimSpace(sttsPulang) == ""
-	isBelumKeluarTgl := tglKeluar == "0000-00-00" || strings.TrimSpace(tglKeluar) == ""
-	isBelumKeluarJam := jamKeluar == "00:00:00" || strings.TrimSpace(jamKeluar) == ""
-
-	if isBelumPulangStts && isBelumKeluarTgl && isBelumKeluarJam {
-		return true, true, nil
-	}
-
-	return false, true, nil
 }
