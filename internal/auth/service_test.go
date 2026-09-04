@@ -49,6 +49,20 @@ func TestLogin_EmptyPassword(t *testing.T) {
 	}
 }
 
+func TestLoginRequest_Sanitize(t *testing.T) {
+	req := auth.LoginRequest{
+		Username: "  dokter1  ",
+		Password: "  secretpass  ",
+	}
+	req.Sanitize()
+	if req.Username != "dokter1" {
+		t.Errorf("expected trimmed username 'dokter1', got '%s'", req.Username)
+	}
+	if req.Password != "secretpass" {
+		t.Errorf("expected trimmed password 'secretpass', got '%s'", req.Password)
+	}
+}
+
 func TestLogin_WrongCredentials(t *testing.T) {
 	repo := &mockAuthRepository{
 		verifikasiLoginFunc: func(ctx context.Context, username, password string) (*auth.User, error) {
@@ -66,9 +80,9 @@ func TestLogin_WrongCredentials(t *testing.T) {
 		t.Fatal("expected error for wrong credentials, got nil")
 	}
 
-	var businessErr *apperror.BusinessError
-	if !errors.As(err, &businessErr) {
-		t.Fatalf("expected *apperror.BusinessError, got %T", err)
+	var unauthorizedErr *apperror.UnauthorizedError
+	if !errors.As(err, &unauthorizedErr) {
+		t.Fatalf("expected *apperror.UnauthorizedError, got %T", err)
 	}
 }
 
@@ -113,9 +127,9 @@ func TestLogin_DatabaseError(t *testing.T) {
 		t.Fatal("expected error for database failure, got nil")
 	}
 
-	var businessErr *apperror.BusinessError
-	if errors.As(err, &businessErr) {
-		t.Error("database error should NOT be a BusinessError")
+	var unauthorizedErr *apperror.UnauthorizedError
+	if errors.As(err, &unauthorizedErr) {
+		t.Error("database error should NOT be an UnauthorizedError")
 	}
 }
 

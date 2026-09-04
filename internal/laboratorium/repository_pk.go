@@ -63,7 +63,7 @@ func (r *repository) queryRiwayatLabPK(ctx context.Context, whereClause string, 
 	}
 
 	if total == 0 {
-		return []HasilLaboratorium{}, 0, nil
+		return make([]HasilLaboratorium, 0), 0, nil
 	}
 
 	filter.Sanitize()
@@ -216,7 +216,7 @@ func (r *repository) fetchDetailPK(ctx context.Context, noRawat, kodeTindakan, t
 	}
 	defer rows.Close()
 
-	var details []ItemHasilLabPK
+	details := make([]ItemHasilLabPK, 0)
 	for rows.Next() {
 		var idTemplate int
 		var d ItemHasilLabPK
@@ -239,10 +239,6 @@ func (r *repository) fetchDetailPK(ctx context.Context, noRawat, kodeTindakan, t
 
 	if err = rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if details == nil {
-		details = []ItemHasilLabPK{}
 	}
 
 	return details, nil
@@ -289,38 +285,6 @@ func isDuplicateKey(err error) bool {
 	}
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "1062") || strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "primary")
-}
-
-func (r *repository) GetKunjunganForPermintaanPK(ctx context.Context, noRawat string) (*KunjunganInfoLabPK, error) {
-	query := `
-		SELECT 
-			rp.no_rawat,
-			rp.no_rkm_medis,
-			rp.tgl_registrasi,
-			rp.jam_reg,
-			rp.kd_pj,
-			COALESCE(pj.png_jawab, '-') AS nama_penjamin,
-			rp.status_bayar,
-			rp.status_lanjut
-		FROM reg_periksa rp
-		LEFT JOIN penjab pj ON pj.kd_pj = rp.kd_pj
-		WHERE rp.no_rawat = ?
-	`
-	var info KunjunganInfoLabPK
-	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(
-		&info.NoRawat,
-		&info.NoRkmMedis,
-		&info.TanggalRegistrasi,
-		&info.JamRegistrasi,
-		&info.KodePenjamin,
-		&info.NamaPenjamin,
-		&info.StatusBayar,
-		&info.StatusLanjut,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &info, nil
 }
 
 func (r *repository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
@@ -464,7 +428,7 @@ func (r *repository) DaftarPermintaanLabPK(ctx context.Context, noRawat string, 
 	}
 	defer rows.Close()
 
-	var list []PermintaanLabPK
+	list := make([]PermintaanLabPK, 0)
 	for rows.Next() {
 		var item PermintaanLabPK
 		err := rows.Scan(
@@ -489,9 +453,6 @@ func (r *repository) DaftarPermintaanLabPK(ctx context.Context, noRawat string, 
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-	if list == nil {
-		list = []PermintaanLabPK{}
 	}
 	return list, nil
 }
@@ -535,7 +496,7 @@ func (r *repository) DaftarPermintaanLabPKByRM(ctx context.Context, noRkmMedis s
 		return nil, 0, err
 	}
 	if total == 0 {
-		return []PermintaanLabPK{}, 0, nil
+		return make([]PermintaanLabPK, 0), 0, nil
 	}
 
 	selectQuery := fmt.Sprintf(`
@@ -687,7 +648,7 @@ func (r *repository) DetailPermintaanLabPK(ctx context.Context, noPermintaan str
 				KodeTindakan:   kodeTindakan,
 				NamaTindakan:   namaTindakan,
 				StatusBayar:    statusBayar,
-				DetailTemplate: []DetailTemplateLabPKItem{},
+				DetailTemplate: make([]DetailTemplateLabPKItem, 0),
 			}
 			pemeriksaanOrder = append(pemeriksaanOrder, kodeTindakan)
 		}

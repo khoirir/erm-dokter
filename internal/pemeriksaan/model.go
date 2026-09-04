@@ -46,31 +46,13 @@ func (p *Pemeriksaan) CompositeKey() string {
 }
 
 type Pemeriksaan struct {
-	Id                  string              `json:"id"`
-	IdKunjungan         string              `json:"id_kunjungan"`
-	NoRawat             string              `json:"no_rawat"`
-	TanggalPemeriksaan  string              `json:"tanggal_pemeriksaan"`
-	JamPemeriksaan      string              `json:"jam_pemeriksaan"`
-	SuhuTubuh           string              `json:"suhu_tubuh"`
-	Tensi               string              `json:"tensi"`
-	Nadi                string              `json:"nadi"`
-	Respirasi           string              `json:"respirasi"`
-	TinggiBadan         string              `json:"tinggi_badan"`
-	BeratBadan          string              `json:"berat_badan"`
-	SpO2                string              `json:"spo2"`
-	Gcs                 string              `json:"gcs"`
-	Kesadaran           Kesadaran           `json:"kesadaran"`
-	Keluhan             string              `json:"keluhan"`
-	Pemeriksaan         string              `json:"pemeriksaan"`
-	Alergi              string              `json:"alergi"`
-	LingkarPerut        string              `json:"lingkar_perut,omitempty"`
-	RencanaTindakLanjut string              `json:"rencana_tindak_lanjut"`
-	Penilaian           string              `json:"penilaian"`
-	Instruksi           string              `json:"instruksi"`
-	Evaluasi            string              `json:"evaluasi"`
-	KodeDokterPetugas   string              `json:"kode_dokter_petugas"`
-	NamaDokterPetugas   string              `json:"nama_dokter_petugas"`
-	StatusLanjut        shared.StatusLanjut `json:"status_lanjut"`
+	Id          string `json:"id"`
+	IdKunjungan string `json:"id_kunjungan"`
+	NoRawat     string `json:"no_rawat"`
+	DataPemeriksaan
+	KodeDokterPetugas string              `json:"kode_dokter_petugas"`
+	NamaDokterPetugas string              `json:"nama_dokter_petugas"`
+	StatusLanjut      shared.StatusLanjut `json:"status_lanjut"`
 }
 
 type OpsiReferensi struct {
@@ -100,7 +82,6 @@ func (f FilterDaftarPemeriksaan) Offset() int {
 }
 
 func (f *FilterDaftarPemeriksaan) Validate() apperror.ValidationError {
-	f.Sanitize()
 	errs := make(apperror.ValidationError)
 	if f.Tanggal != "" {
 		shared.ValidasiRentangTanggal(f.Tanggal, errs)
@@ -136,6 +117,9 @@ type DataPemeriksaan struct {
 func (d *DataPemeriksaan) Sanitize() {
 	d.TanggalPemeriksaan = strings.TrimSpace(d.TanggalPemeriksaan)
 	d.JamPemeriksaan = strings.TrimSpace(d.JamPemeriksaan)
+	if len(d.JamPemeriksaan) == 5 && strings.Count(d.JamPemeriksaan, ":") == 1 {
+		d.JamPemeriksaan += ":00"
+	}
 	d.SuhuTubuh = strings.ReplaceAll(strings.TrimSpace(d.SuhuTubuh), ",", ".")
 	d.Tensi = strings.ReplaceAll(strings.TrimSpace(d.Tensi), " ", "")
 	d.Nadi = strings.TrimSpace(d.Nadi)
@@ -156,8 +140,6 @@ func (d *DataPemeriksaan) Sanitize() {
 }
 
 func (d *DataPemeriksaan) Validate(errs apperror.ValidationError) {
-	d.Sanitize()
-
 	tgl, errTgl := time.Parse("2006-01-02", d.TanggalPemeriksaan)
 	if errTgl != nil {
 		errs["tanggal_pemeriksaan"] = "Format tanggal pemeriksaan harus YYYY-MM-DD (2026-01-01)"
@@ -284,7 +266,6 @@ func (r *SimpanPemeriksaanRequest) Sanitize() {
 }
 
 func (r *SimpanPemeriksaanRequest) Validate() apperror.ValidationError {
-	r.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	if r.NoRawat == "" {
@@ -308,7 +289,6 @@ func (r *UpdatePemeriksaanRequest) Sanitize() {
 }
 
 func (r *UpdatePemeriksaanRequest) Validate() apperror.ValidationError {
-	r.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	r.DataPemeriksaan.Validate(errs)

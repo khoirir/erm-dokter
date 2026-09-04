@@ -23,17 +23,6 @@ type TemplateLab struct {
 	NilaiRujukanPA  string `json:"nilai_rujukan_pa"`
 }
 
-type TemplateLabDB struct {
-	IdTemplate      int
-	KodeTindakan    string
-	NamaPemeriksaan string
-	Satuan          string
-	NilaiRujukanLD  string
-	NilaiRujukanLA  string
-	NilaiRujukanPD  string
-	NilaiRujukanPA  string
-}
-
 type DetailTindakanLab struct {
 	TindakanLab
 	Templates []TemplateLab `json:"templates"`
@@ -61,8 +50,7 @@ func (f FilterDaftarTindakanLab) Offset() int {
 	return (f.Page - 1) * f.Limit
 }
 
-func (f *FilterDaftarTindakanLab) Validate() apperror.ValidationError {
-	f.Sanitize()
+func (f FilterDaftarTindakanLab) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 
 	if f.Keyword != "" && len(f.Keyword) < 3 {

@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	FetchMasterBerkas(ctx context.Context) ([]MasterBerkasDigital, error)
-	FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]BerkasDigitalDB, error)
+	FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]BerkasDigitalPerawatan, error)
 }
 
 type repository struct {
@@ -34,7 +34,7 @@ func (r *repository) FetchMasterBerkas(ctx context.Context) ([]MasterBerkasDigit
 	}
 	defer rows.Close()
 
-	var list []MasterBerkasDigital
+	list := make([]MasterBerkasDigital, 0)
 	for rows.Next() {
 		var item MasterBerkasDigital
 		if err := rows.Scan(&item.Kode, &item.Nama); err != nil {
@@ -47,16 +47,12 @@ func (r *repository) FetchMasterBerkas(ctx context.Context) ([]MasterBerkasDigit
 		return nil, err
 	}
 
-	if list == nil {
-		list = []MasterBerkasDigital{}
-	}
-
 	return list, nil
 }
 
-func (r *repository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]BerkasDigitalDB, error) {
+func (r *repository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]BerkasDigitalPerawatan, error) {
 	if len(kodeList) == 0 {
-		return []BerkasDigitalDB{}, nil
+		return make([]BerkasDigitalPerawatan, 0), nil
 	}
 
 	placeholders := make([]string, len(kodeList))
@@ -86,9 +82,9 @@ func (r *repository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, k
 	}
 	defer rows.Close()
 
-	var list []BerkasDigitalDB
+	list := make([]BerkasDigitalPerawatan, 0)
 	for rows.Next() {
-		var item BerkasDigitalDB
+		var item BerkasDigitalPerawatan
 		err := rows.Scan(&item.NoRawat, &item.Kode, &item.NamaBerkas, &item.LokasiFile)
 		if err != nil {
 			return nil, err
@@ -98,10 +94,6 @@ func (r *repository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, k
 
 	if err = rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if list == nil {
-		list = []BerkasDigitalDB{}
 	}
 
 	return list, nil

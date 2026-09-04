@@ -14,8 +14,29 @@ func TestFilterAntreanDokter_Validation(t *testing.T) {
 			Page:    1,
 			Limit:   20,
 		}
+		f.Sanitize()
 		if errs := f.Validate(); errs != nil {
 			t.Errorf("Expected valid filter, got: %+v", errs)
+		}
+	})
+
+	t.Run("Sanitize defaults", func(t *testing.T) {
+		var f rawatjalan.FilterAntreanDokter
+		f.Sanitize()
+		if f.Page != 1 {
+			t.Errorf("Expected Page=1, got %d", f.Page)
+		}
+		if f.Limit != 20 {
+			t.Errorf("Expected Limit=20, got %d", f.Limit)
+		}
+		if f.OrderBy != "waktu_registrasi" {
+			t.Errorf("Expected OrderBy=waktu_registrasi, got %s", f.OrderBy)
+		}
+		if f.SortOrder != "ASC" {
+			t.Errorf("Expected SortOrder=ASC, got %s", f.SortOrder)
+		}
+		if f.Tanggal == "" {
+			t.Error("Expected non-empty default Tanggal")
 		}
 	})
 

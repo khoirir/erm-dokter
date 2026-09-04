@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"erm-dokter/internal/berkasdigital"
 	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/shared"
@@ -28,12 +29,17 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarHasilLabByRM)))
 	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}/{id_hasil}", authMiddleware(timeoutMiddleware(h.DetailHasilLab)))
 
-	// Permintaan Laboratorium PK
 	mux.HandleFunc("POST /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPK)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPK)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPKByRM)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPK)))
 	mux.HandleFunc("DELETE /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPK)))
+
+	mux.HandleFunc("POST /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPA)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPA)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPAByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPA)))
+	mux.HandleFunc("DELETE /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPA)))
 }
 
 func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +79,7 @@ func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -86,6 +93,7 @@ func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
 
 	if data != nil {
 		h.encryptHasilLabList(data.HasilPemeriksaan)
+		h.encryptBerkasDigitalList(data.BerkasDigital)
 	}
 
 	response.SuccessWithMeta(w, "Berhasil mengambil riwayat hasil laboratorium", data, meta)
@@ -128,6 +136,7 @@ func (h *Handler) DaftarHasilLabByRM(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -157,7 +166,7 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	kunjunganNoRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
@@ -165,25 +174,29 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 
 	idHasil := strings.TrimSpace(r.PathValue("id_hasil"))
 	if idHasil == "" {
-		apperror.HandleError(w, apperror.NewBusinessError("ID hasil lab wajib diisi"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID hasil laboratorium wajib diisi"))
 		return
 	}
 
-	decryptedHasil, err := crypto.Decrypt(idHasil, h.encryptionKey)
+	plainId, err := crypto.Decrypt(idHasil, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID hasil lab tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID hasil laboratorium tidak valid"))
 		return
 	}
 
-	parts := strings.Split(decryptedHasil, "~")
+	parts := strings.Split(plainId, "~")
 	if len(parts) != 4 {
-		apperror.HandleError(w, apperror.NewBusinessError("Format ID hasil lab tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format ID hasil laboratorium tidak valid"))
 		return
 	}
 
-	hasilNoRawat, kodeTindakan, tanggalPeriksa, jamPeriksa := parts[0], parts[1], parts[2], parts[3]
-	if hasilNoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewBusinessError("ID hasil lab tidak sesuai dengan kunjungan pasien"))
+	noRawat := parts[0]
+	kodeTindakan := parts[1]
+	tanggalPeriksa := parts[2]
+	jamPeriksa := parts[3]
+
+	if noRawat != kunjunganNoRawat {
+		apperror.HandleError(w, apperror.NewBusinessError("ID hasil laboratorium tidak sesuai dengan kunjungan pasien"))
 		return
 	}
 
@@ -213,5 +226,17 @@ func (h *Handler) encryptHasilLab(item *HasilLaboratorium) {
 func (h *Handler) encryptHasilLabList(items []HasilLaboratorium) {
 	for i := range items {
 		h.encryptHasilLab(&items[i])
+	}
+}
+
+func (h *Handler) encryptBerkasDigitalList(list []berkasdigital.BerkasDigital) {
+	for i := range list {
+		if list[i].IdBerkas != "" {
+			encId, err := crypto.Encrypt(list[i].IdBerkas, h.encryptionKey)
+			if err == nil {
+				list[i].IdBerkas = encId
+				list[i].UrlBerkas = "/api/v1/berkas-digital/" + encId
+			}
+		}
 	}
 }

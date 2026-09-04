@@ -13,6 +13,7 @@ func TestFilterDaftarObat_Validation(t *testing.T) {
 			Page:  1,
 			Limit: 20,
 		}
+		f.Sanitize()
 		if errs := f.Validate(); errs != nil {
 			t.Errorf("Expected nil validation errors, got: %+v", errs)
 		}

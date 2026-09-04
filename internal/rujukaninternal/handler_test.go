@@ -19,8 +19,8 @@ const testEncKey = "bafaa956-751d-4f59-98cc-574ee9dfe9f6"
 type mockRujukanService struct {
 	daftarOpsiFn    func(ctx context.Context, kodeDokterLogin string, keyword string) ([]rujukaninternal.OpsiPoliDokter, error)
 	daftarRujukanFn func(ctx context.Context, noRawat string) ([]rujukaninternal.RujukanInternal, error)
-	simpanRujukanFn func(ctx context.Context, kodeDokterLogin, noRawat string, req rujukaninternal.SimpanRujukanRequest) (*rujukaninternal.RujukanInternal, error)
-	hapusRujukanFn  func(ctx context.Context, kodeDokterLogin, noRawat, idRujukan string) error
+	simpanRujukanFn func(ctx context.Context, kodeDokterLogin, noRawat, targetKodePoli, targetKodeDokter string) (*rujukaninternal.RujukanInternal, error)
+	hapusRujukanFn  func(ctx context.Context, kodeDokterLogin, noRawat, targetKodeDokter string) error
 }
 
 func (m *mockRujukanService) DaftarOpsiPoliDokter(ctx context.Context, kodeDokterLogin string, keyword string) ([]rujukaninternal.OpsiPoliDokter, error) {
@@ -37,16 +37,16 @@ func (m *mockRujukanService) DaftarRujukanInternal(ctx context.Context, noRawat 
 	return nil, nil
 }
 
-func (m *mockRujukanService) SimpanRujukanInternal(ctx context.Context, kodeDokterLogin, noRawat string, req rujukaninternal.SimpanRujukanRequest) (*rujukaninternal.RujukanInternal, error) {
+func (m *mockRujukanService) SimpanRujukanInternal(ctx context.Context, kodeDokterLogin, noRawat, targetKodePoli, targetKodeDokter string) (*rujukaninternal.RujukanInternal, error) {
 	if m.simpanRujukanFn != nil {
-		return m.simpanRujukanFn(ctx, kodeDokterLogin, noRawat, req)
+		return m.simpanRujukanFn(ctx, kodeDokterLogin, noRawat, targetKodePoli, targetKodeDokter)
 	}
 	return nil, nil
 }
 
-func (m *mockRujukanService) HapusRujukanInternal(ctx context.Context, kodeDokterLogin, noRawat, idRujukan string) error {
+func (m *mockRujukanService) HapusRujukanInternal(ctx context.Context, kodeDokterLogin, noRawat, targetKodeDokter string) error {
 	if m.hapusRujukanFn != nil {
-		return m.hapusRujukanFn(ctx, kodeDokterLogin, noRawat, idRujukan)
+		return m.hapusRujukanFn(ctx, kodeDokterLogin, noRawat, targetKodeDokter)
 	}
 	return nil
 }
@@ -64,26 +64,41 @@ func TestRujukanInternalHandler(t *testing.T) {
 	encTujuan, _ := crypto.Encrypt("INT~DR02", testEncKey)
 
 	mockSvc := &mockRujukanService{
-		daftarRujukanFn: func(ctx context.Context, noRawat string) ([]rujukaninternal.RujukanInternal, error) {
-			return []rujukaninternal.RujukanInternal{
+		daftarOpsiFn: func(ctx context.Context, kodeDokterLogin string, keyword string) ([]rujukaninternal.OpsiPoliDokter, error) {
+			return []rujukaninternal.OpsiPoliDokter{
 				{
-					Id:          "enc-rujukan-1",
-					NoRawat:     noRawat,
-					KodePoli:    "INT",
-					NamaPoli:    "Poli Dalam",
-					KodeDokter:  "DR02",
-					NamaDokter:  "dr. Budi",
+					InfoPoliDokter: rujukaninternal.InfoPoliDokter{
+						KodePoli:   "INT",
+						NamaPoli:   "Poli Dalam",
+						KodeDokter: "DR02",
+						NamaDokter: "dr. Budi",
+					},
 				},
 			}, nil
 		},
-		simpanRujukanFn: func(ctx context.Context, kodeDokterLogin, noRawat string, req rujukaninternal.SimpanRujukanRequest) (*rujukaninternal.RujukanInternal, error) {
-			return &rujukaninternal.RujukanInternal{
-				NoRawat:    noRawat,
-				KodePoli:   "INT",
-				KodeDokter: "DR02",
+		daftarRujukanFn: func(ctx context.Context, noRawat string) ([]rujukaninternal.RujukanInternal, error) {
+			return []rujukaninternal.RujukanInternal{
+				{
+					NoRawat: noRawat,
+					InfoPoliDokter: rujukaninternal.InfoPoliDokter{
+						KodePoli:   "INT",
+						NamaPoli:   "Poli Dalam",
+						KodeDokter: "DR02",
+						NamaDokter: "dr. Budi",
+					},
+				},
 			}, nil
 		},
-		hapusRujukanFn: func(ctx context.Context, kodeDokterLogin, noRawat, idRujukan string) error {
+		simpanRujukanFn: func(ctx context.Context, kodeDokterLogin, noRawat, targetKodePoli, targetKodeDokter string) (*rujukaninternal.RujukanInternal, error) {
+			return &rujukaninternal.RujukanInternal{
+				NoRawat: noRawat,
+				InfoPoliDokter: rujukaninternal.InfoPoliDokter{
+					KodePoli:   targetKodePoli,
+					KodeDokter: targetKodeDokter,
+				},
+			}, nil
+		},
+		hapusRujukanFn: func(ctx context.Context, kodeDokterLogin, noRawat, targetKodeDokter string) error {
 			return nil
 		},
 	}

@@ -33,9 +33,9 @@ func TestRouteConfig_SetupAndBuildHandler(t *testing.T) {
 		resep.NewHandler(nil, "key"),
 		rujukaninternal.NewHandler(nil, "key"),
 		penilaianmedis.NewHandler(nil, "key"),
-		tindakan.NewHandler(nil),
+		tindakan.NewHandler(nil, "key"),
 		laboratorium.NewHandler(nil, "key"),
-		berkasdigital.NewHandler(nil),
+		berkasdigital.NewHandler(nil, "key"),
 		"test-jwt-secret",
 	)
 

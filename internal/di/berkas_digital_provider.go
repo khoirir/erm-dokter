@@ -10,6 +10,6 @@ import (
 
 func provideBerkasDigital(db *sql.DB, cfg *config.Config, log *logger.Logger) *berkasdigital.Handler {
 	repo := berkasdigital.NewRepository(db)
-	svc := berkasdigital.NewService(repo, cfg.EncryptionKey, cfg.URLBerkasDigital, log)
-	return berkasdigital.NewHandler(svc)
+	svc := berkasdigital.NewService(repo, cfg.URLBerkasDigital, log)
+	return berkasdigital.NewHandler(svc, cfg.EncryptionKey)
 }

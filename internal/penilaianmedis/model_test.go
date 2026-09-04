@@ -132,6 +132,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T
 			TataLaksana:  "ISDN 5mg",
 		},
 	}
+	req.Sanitize()
 	errs = req.Validate()
 	if errs == nil || errs["hubungan"] == "" {
 		t.Errorf("expected error on hubungan for Alloanamnesis, got: %+v", errs)
@@ -139,6 +140,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_RequiredFields(t *testing.T
 
 	// 3. Alloanamnesis with valid hubungan
 	req.Hubungan = "Anak Kandung"
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid request to have no errors, got: %+v", errs)
@@ -156,6 +158,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 			Tensi:        "12080",
 		},
 	}
+	req.Sanitize()
 	errs := req.Validate()
 	if errs == nil || errs["tensi"] == "" {
 		t.Errorf("expected error on invalid tensi format, got: %+v", errs)
@@ -163,6 +166,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 
 	// 2. Sistolik <= Diastolik
 	req.Tensi = "80/120"
+	req.Sanitize()
 	errs = req.Validate()
 	if errs == nil || errs["tensi"] == "" {
 		t.Errorf("expected error when sistolik <= diastolik, got: %+v", errs)
@@ -171,6 +175,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 	// 3. Suhu Tubuh out of range
 	req.Tensi = "120/80"
 	req.SuhuTubuh = "10.0"
+	req.Sanitize()
 	errs = req.Validate()
 	if errs == nil || errs["suhu_tubuh"] == "" {
 		t.Errorf("expected error on out of range suhu_tubuh, got: %+v", errs)
@@ -183,6 +188,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TTV(t *testing.T) {
 	req.SpO2 = "99"
 	req.BeratBadan = "60"
 	req.TinggiBadan = "165"
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid TTV to have no errors, got: %+v", errs)
@@ -200,6 +206,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPenilaian(t *testing
 			TataLaksana:      "Paracetamol",
 		},
 	}
+	req.Sanitize()
 	errs := req.Validate()
 	if errs == nil || errs["tanggal_penilaian"] == "" {
 		t.Errorf("expected error on invalid tanggal_penilaian format, got: %+v", errs)
@@ -208,6 +215,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPenilaian(t *testing
 	// 2. Future date
 	future := "2099-01-01 10:00:00"
 	req.TanggalPenilaian = future
+	req.Sanitize()
 	errs = req.Validate()
 	if errs == nil || errs["tanggal_penilaian"] == "" {
 		t.Errorf("expected error on future tanggal_penilaian, got: %+v", errs)
@@ -215,6 +223,7 @@ func TestSimpanPenilaianMedisRalanRequest_Validation_TanggalPenilaian(t *testing
 
 	// 3. Valid past date
 	req.TanggalPenilaian = "2026-04-22 09:30:00"
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid tanggal_penilaian to have no errors, got: %+v", errs)
@@ -242,6 +251,7 @@ func TestUpdatePenilaianMedisRalanRequest_Validation(t *testing.T) {
 			TataLaksana:      "Amoxicillin 3x500mg",
 		},
 	}
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid update request to have no errors, got: %+v", errs)
@@ -327,6 +337,7 @@ func TestSimpanPenilaianMedisIGDRequest_Validation(t *testing.T) {
 			EKG:              "Sinus Takikardia",
 		},
 	}
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid IGD request to have no errors, got: %+v", errs)
@@ -348,6 +359,7 @@ func TestUpdatePenilaianMedisIGDRequest_Validation(t *testing.T) {
 			TataLaksana:      "Bolus Dextrose 40%",
 		},
 	}
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected valid update IGD request to have no errors, got: %+v", errs)

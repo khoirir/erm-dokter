@@ -53,6 +53,15 @@ func (m *mockConcurrentRJ) GetWaktuRegistrasi(ctx context.Context, noRawat strin
 	return time.Now().Format("2006-01-02"), "07:00:00", true, nil
 }
 
+func (m *mockConcurrentRJ) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: time.Now().Format("2006-01-02"),
+		JamRegistrasi:     "07:00:00",
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
+}
+
 type mockConcurrentObat struct {
 	obat.Service
 }
@@ -117,8 +126,10 @@ func TestSimpanResep_ConcurrentDoctors(t *testing.T) {
 				JamPeresepan:     "08:00:00",
 				ResepDokter: []ResepDokterInput{
 					{
-						KodeObat:    "OBAT001",
-						Jumlah:      10,
+						ItemObatInput: ItemObatInput{
+							KodeObat: "OBAT001",
+							Jumlah:   10,
+						},
 						AturanPakai: "3x1",
 					},
 				},

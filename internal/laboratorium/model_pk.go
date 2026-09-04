@@ -3,7 +3,6 @@ package laboratorium
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"erm-dokter/internal/shared/apperror"
 )
@@ -18,22 +17,7 @@ type ItemHasilLabPK struct {
 }
 
 type PermintaanLabPK struct {
-	Id                string `json:"id"`
-	NoPermintaan      string `json:"no_permintaan"`
-	IdKunjungan       string `json:"id_kunjungan"`
-	NoRawat           string `json:"no_rawat"`
-	TanggalPermintaan string `json:"tanggal_permintaan"`
-	JamPermintaan     string `json:"jam_permintaan"`
-	TanggalSampel     string `json:"tanggal_sampel,omitempty"`
-	JamSampel         string `json:"jam_sampel,omitempty"`
-	TanggalHasil      string `json:"tanggal_hasil,omitempty"`
-	JamHasil          string `json:"jam_hasil,omitempty"`
-	KodeDokterPerujuk string `json:"kode_dokter_perujuk"`
-	NamaDokterPerujuk string `json:"nama_dokter_perujuk"`
-	Status            string `json:"status"`
-	InformasiTambahan string `json:"informasi_tambahan"`
-	DiagnosaKlinis    string `json:"diagnosa_klinis"`
-	StatusProses      string `json:"status_proses"`
+	PermintaanLabHeader
 }
 
 type DetailTemplateLabPKItem struct {
@@ -65,29 +49,12 @@ type ItemPemeriksaanLabPKRequest struct {
 }
 
 type SimpanPermintaanLabPKRequest struct {
-	NoRawat           string                        `json:"no_rawat"`
-	TanggalPermintaan string                        `json:"tanggal_permintaan"`
-	JamPermintaan     string                        `json:"jam_permintaan"`
-	DiagnosaKlinis    string                        `json:"diagnosa_klinis"`
-	InformasiTambahan string                        `json:"informasi_tambahan"`
-	Pemeriksaan       []ItemPemeriksaanLabPKRequest `json:"pemeriksaan"`
+	PermintaanLabHeaderRequest
+	Pemeriksaan []ItemPemeriksaanLabPKRequest `json:"pemeriksaan"`
 }
 
 func (req *SimpanPermintaanLabPKRequest) Sanitize() {
-	req.NoRawat = strings.TrimSpace(req.NoRawat)
-	req.TanggalPermintaan = strings.TrimSpace(req.TanggalPermintaan)
-	req.JamPermintaan = strings.TrimSpace(req.JamPermintaan)
-	req.DiagnosaKlinis = strings.TrimSpace(req.DiagnosaKlinis)
-	req.InformasiTambahan = strings.TrimSpace(req.InformasiTambahan)
-	if req.InformasiTambahan == "" {
-		req.InformasiTambahan = "-"
-	}
-
-	if len(req.JamPermintaan) == 5 {
-		if _, err := time.Parse("15:04", req.JamPermintaan); err == nil {
-			req.JamPermintaan += ":00"
-		}
-	}
+	req.PermintaanLabHeaderRequest.Sanitize()
 
 	for i := range req.Pemeriksaan {
 		req.Pemeriksaan[i].IdTindakan = strings.TrimSpace(req.Pemeriksaan[i].IdTindakan)
@@ -97,44 +64,10 @@ func (req *SimpanPermintaanLabPKRequest) Sanitize() {
 	}
 }
 
-func (req *SimpanPermintaanLabPKRequest) Validate() apperror.ValidationError {
-	req.Sanitize()
+func (req SimpanPermintaanLabPKRequest) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 
-	if req.NoRawat == "" {
-		errs["no_rawat"] = "Nomor rawat wajib diisi"
-	}
-
-	if req.TanggalPermintaan == "" {
-		errs["tanggal_permintaan"] = "Tanggal permintaan wajib diisi"
-	}
-	tgl, errTgl := time.Parse("2006-01-02", req.TanggalPermintaan)
-	if req.TanggalPermintaan != "" && errTgl != nil {
-		errs["tanggal_permintaan"] = "Format tanggal permintaan harus YYYY-MM-DD"
-	}
-
-	if req.JamPermintaan == "" {
-		errs["jam_permintaan"] = "Jam permintaan wajib diisi"
-	}
-	jam, errJam := time.Parse("15:04:05", req.JamPermintaan)
-	if req.JamPermintaan != "" && errJam != nil {
-		errs["jam_permintaan"] = "Format jam permintaan harus HH:mm:ss"
-	}
-
-	if errTgl == nil && errJam == nil {
-		waktuPermintaan := time.Date(
-			tgl.Year(), tgl.Month(), tgl.Day(),
-			jam.Hour(), jam.Minute(), jam.Second(), 0,
-			time.Local,
-		)
-		if waktuPermintaan.After(time.Now().Add(5 * time.Minute)) {
-			errs["tanggal_permintaan"] = "Waktu permintaan laboratorium tidak boleh melebihi waktu saat ini"
-		}
-	}
-
-	if req.DiagnosaKlinis == "" {
-		errs["diagnosa_klinis"] = "Diagnosa / indikasi klinis wajib diisi"
-	}
+	req.PermintaanLabHeaderRequest.Validate(errs)
 
 	if len(req.Pemeriksaan) == 0 {
 		errs["pemeriksaan"] = "Pemeriksaan laboratorium minimal harus memilih 1 tindakan"
@@ -156,15 +89,4 @@ func (req *SimpanPermintaanLabPKRequest) Validate() apperror.ValidationError {
 		return errs
 	}
 	return nil
-}
-
-type KunjunganInfoLabPK struct {
-	NoRawat           string
-	NoRkmMedis        string
-	TanggalRegistrasi string
-	JamRegistrasi     string
-	KodePenjamin      string
-	NamaPenjamin      string
-	StatusBayar       string
-	StatusLanjut      string
 }

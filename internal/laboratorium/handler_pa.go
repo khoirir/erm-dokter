@@ -14,7 +14,7 @@ import (
 	"erm-dokter/internal/shared/apperror"
 )
 
-func (h *Handler) SimpanPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SimpanPermintaanLabPA(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
 	if !statusLanjut.IsValid() {
@@ -29,7 +29,7 @@ func (h *Handler) SimpanPermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req SimpanPermintaanLabPKRequest
+	var req SimpanPermintaanLabPARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
 		return
@@ -46,7 +46,7 @@ func (h *Handler) SimpanPermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.decryptTindakanLabPayload(&req); err != nil {
+	if err := h.decryptTindakanLabPAPayload(&req); err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
@@ -57,20 +57,20 @@ func (h *Handler) SimpanPermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data, err := h.service.SimpanPermintaanLabPK(r.Context(), kodeDokter, statusLanjut, req)
+	data, err := h.service.SimpanPermintaanLabPA(r.Context(), kodeDokter, statusLanjut, req)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
 	if data != nil {
-		h.encryptDetailPermintaanLabPK(data)
+		h.encryptDetailPermintaanLabPA(data)
 	}
 
-	response.Created(w, "Berhasil mengirim permintaan laboratorium PK", data)
+	response.Created(w, "Berhasil mengirim permintaan laboratorium PA", data)
 }
 
-func (h *Handler) DaftarPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DaftarPermintaanLabPA(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
@@ -85,17 +85,17 @@ func (h *Handler) DaftarPermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data, err := h.service.GetDaftarPermintaanLabPK(r.Context(), noRawat, statusLanjut)
+	data, err := h.service.GetDaftarPermintaanLabPA(r.Context(), noRawat, statusLanjut)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	h.encryptPermintaanLabPKList(data)
-	response.Success(w, "Berhasil mengambil daftar permintaan laboratorium PK", data)
+	h.encryptPermintaanLabPAList(data)
+	response.Success(w, "Berhasil mengambil daftar permintaan laboratorium PA", data)
 }
 
-func (h *Handler) DaftarPermintaanLabPKByRM(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DaftarPermintaanLabPAByRM(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
@@ -126,17 +126,17 @@ func (h *Handler) DaftarPermintaanLabPKByRM(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	data, meta, err := h.service.GetRiwayatPermintaanLabPKByRM(r.Context(), noRM, statusLanjut, filter)
+	data, meta, err := h.service.GetRiwayatPermintaanLabPAByRM(r.Context(), noRM, statusLanjut, filter)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	h.encryptPermintaanLabPKList(data)
-	response.SuccessWithMeta(w, "Berhasil mengambil riwayat permintaan laboratorium PK pasien", data, meta)
+	h.encryptPermintaanLabPAList(data)
+	response.SuccessWithMeta(w, "Berhasil mengambil riwayat permintaan laboratorium PA pasien", data, meta)
 }
 
-func (h *Handler) DetailPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DetailPermintaanLabPA(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
@@ -158,20 +158,20 @@ func (h *Handler) DetailPermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data, err := h.service.GetDetailPermintaanLabPK(r.Context(), noRawat, noPermintaan, statusLanjut)
+	data, err := h.service.GetDetailPermintaanLabPA(r.Context(), noRawat, noPermintaan, statusLanjut)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
 	if data != nil {
-		h.encryptDetailPermintaanLabPK(data)
+		h.encryptDetailPermintaanLabPA(data)
 	}
 
-	response.Success(w, "Berhasil mengambil detail permintaan laboratorium PK", data)
+	response.Success(w, "Berhasil mengambil detail permintaan laboratorium PA", data)
 }
 
-func (h *Handler) HapusPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HapusPermintaanLabPA(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
 	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
@@ -199,38 +199,26 @@ func (h *Handler) HapusPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.HapusPermintaanLabPK(r.Context(), noRawat, noPermintaan, statusLanjut, kodeDokter); err != nil {
+	if err := h.service.HapusPermintaanLabPA(r.Context(), noRawat, noPermintaan, statusLanjut, kodeDokter); err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	response.Success(w, "Berhasil membatalkan permintaan laboratorium PK", nil)
+	response.Success(w, "Berhasil membatalkan permintaan laboratorium PA", nil)
 }
 
-func (h *Handler) decryptTindakanLabPayload(req *SimpanPermintaanLabPKRequest) error {
+func (h *Handler) decryptTindakanLabPAPayload(req *SimpanPermintaanLabPARequest) error {
 	for i := range req.Pemeriksaan {
 		kodeTindakan, err := crypto.Decrypt(req.Pemeriksaan[i].IdTindakan, h.encryptionKey)
 		if err != nil {
 			return apperror.NewBusinessError(fmt.Sprintf("Pemeriksaan ke-%d: ID tindakan tidak valid", i+1))
 		}
 		req.Pemeriksaan[i].KodeTindakan = kodeTindakan
-
-		for j, encIdTemplate := range req.Pemeriksaan[i].IdTemplate {
-			idTemplateStr, err := crypto.Decrypt(encIdTemplate, h.encryptionKey)
-			if err != nil {
-				return apperror.NewBusinessError(fmt.Sprintf("Pemeriksaan ke-%d parameter ke-%d: ID template pengujian tidak valid", i+1, j+1))
-			}
-			idTemplateInt, err := strconv.Atoi(idTemplateStr)
-			if err != nil {
-				return apperror.NewBusinessError(fmt.Sprintf("Pemeriksaan ke-%d parameter ke-%d: Format ID template tidak valid", i+1, j+1))
-			}
-			req.Pemeriksaan[i].KodeTemplate = append(req.Pemeriksaan[i].KodeTemplate, idTemplateInt)
-		}
 	}
 	return nil
 }
 
-func (h *Handler) encryptPermintaanLabPK(item *PermintaanLabPK) {
+func (h *Handler) encryptPermintaanLabPA(item *PermintaanLabPA) {
 	if item == nil {
 		return
 	}
@@ -238,23 +226,18 @@ func (h *Handler) encryptPermintaanLabPK(item *PermintaanLabPK) {
 	item.IdKunjungan, _ = crypto.Encrypt(item.NoRawat, h.encryptionKey)
 }
 
-func (h *Handler) encryptPermintaanLabPKList(items []PermintaanLabPK) {
+func (h *Handler) encryptPermintaanLabPAList(items []PermintaanLabPA) {
 	for i := range items {
-		h.encryptPermintaanLabPK(&items[i])
+		h.encryptPermintaanLabPA(&items[i])
 	}
 }
 
-func (h *Handler) encryptDetailPermintaanLabPK(detail *DetailPermintaanLabPK) {
+func (h *Handler) encryptDetailPermintaanLabPA(detail *DetailPermintaanLabPA) {
 	if detail == nil {
 		return
 	}
-	h.encryptPermintaanLabPK(&detail.PermintaanLabPK)
+	h.encryptPermintaanLabPA(&detail.PermintaanLabPA)
 	for i := range detail.Pemeriksaan {
 		detail.Pemeriksaan[i].IdTindakan, _ = crypto.Encrypt(detail.Pemeriksaan[i].KodeTindakan, h.encryptionKey)
-		for j := range detail.Pemeriksaan[i].DetailTemplate {
-			if detail.Pemeriksaan[i].DetailTemplate[j].IdTemplate != "" {
-				detail.Pemeriksaan[i].DetailTemplate[j].IdTemplate, _ = crypto.Encrypt(detail.Pemeriksaan[i].DetailTemplate[j].IdTemplate, h.encryptionKey)
-			}
-		}
 	}
 }

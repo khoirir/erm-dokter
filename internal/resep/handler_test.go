@@ -162,8 +162,10 @@ func TestResepHandler_SimpanResep(t *testing.T) {
 		JamPeresepan:     now.Format("15:04:05"),
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				IdObat:      encObat,
-				Jumlah:      10,
+				ItemObatInput: resep.ItemObatInput{
+					IdObat: encObat,
+					Jumlah: 10,
+				},
 				AturanPakai: "3x1",
 			},
 		},

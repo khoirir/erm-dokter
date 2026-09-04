@@ -2,17 +2,18 @@ package berkasdigital_test
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"erm-dokter/internal/berkasdigital"
-	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/logger"
 )
 
 type mockRepository struct {
 	fetchMasterBerkasFn    func(ctx context.Context) ([]berkasdigital.MasterBerkasDigital, error)
-	fetchBerkasByNoRawatFn func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error)
+	fetchBerkasByNoRawatFn func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error)
 }
 
 func (m *mockRepository) FetchMasterBerkas(ctx context.Context) ([]berkasdigital.MasterBerkasDigital, error) {
@@ -22,14 +23,13 @@ func (m *mockRepository) FetchMasterBerkas(ctx context.Context) ([]berkasdigital
 	return nil, nil
 }
 
-func (m *mockRepository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error) {
+func (m *mockRepository) FetchBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error) {
 	if m.fetchBerkasByNoRawatFn != nil {
 		return m.fetchBerkasByNoRawatFn(ctx, noRawat, kodeList)
 	}
 	return nil, nil
 }
 
-const testKey = "secret-key-32-bytes-testing-12345"
 const testBaseURL = "http://192.168.30.24/webapps/berkasrawat/"
 
 func TestService_GetMasterBerkas(t *testing.T) {
@@ -43,7 +43,7 @@ func TestService_GetMasterBerkas(t *testing.T) {
 		},
 	}
 
-	svc := berkasdigital.NewService(mockRepo, testKey, testBaseURL, log)
+	svc := berkasdigital.NewService(mockRepo, testBaseURL, log)
 	list, err := svc.GetMasterBerkas(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -56,8 +56,8 @@ func TestService_GetMasterBerkas(t *testing.T) {
 func TestService_GetBerkasByNoRawat(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{
-		fetchBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error) {
-			return []berkasdigital.BerkasDigitalDB{
+		fetchBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error) {
+			return []berkasdigital.BerkasDigitalPerawatan{
 				{
 					NoRawat:    "2026/04/22/000001",
 					Kode:       "005",
@@ -68,7 +68,7 @@ func TestService_GetBerkasByNoRawat(t *testing.T) {
 		},
 	}
 
-	svc := berkasdigital.NewService(mockRepo, testKey, testBaseURL, log)
+	svc := berkasdigital.NewService(mockRepo, testBaseURL, log)
 	list, err := svc.GetBerkasByNoRawat(context.Background(), "2026/04/22/000001", []string{"005"})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -78,36 +78,68 @@ func TestService_GetBerkasByNoRawat(t *testing.T) {
 	}
 }
 
-func TestService_BuildBerkasItem(t *testing.T) {
+func TestService_BuildFullURL(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{}
-	svc := berkasdigital.NewService(mockRepo, testKey, testBaseURL, log)
+	svc := berkasdigital.NewService(mockRepo, testBaseURL, log)
 
-	item, err := svc.BuildBerkasItem("015", "PATOLOGI ANATOMI", "pages/upload/fnab.pdf")
+	url1 := svc.BuildFullURL("pages/upload/fnab.pdf")
+	expected1 := "http://192.168.30.24/webapps/berkasrawat/pages/upload/fnab.pdf"
+	if url1 != expected1 {
+		t.Errorf("Expected %s, got %s", expected1, url1)
+	}
+
+	url2 := svc.BuildFullURL("https://storage.rs.com/file.pdf")
+	if url2 != "https://storage.rs.com/file.pdf" {
+		t.Errorf("Expected external URL preserved, got %s", url2)
+	}
+}
+
+func TestService_GetBerkasStream_Success(t *testing.T) {
+	dummyContent := []byte("%PDF-1.4 dummy pdf content")
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(dummyContent)
+	}))
+	defer ts.Close()
+
+	log := logger.New()
+	mockRepo := &mockRepository{}
+	svc := berkasdigital.NewService(mockRepo, ts.URL, log)
+
+	stream, err := svc.GetBerkasStream(context.Background(), ts.URL+"/test.pdf")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if item == nil {
-		t.Fatalf("Expected non-nil item")
-	}
-	if item.Kode != "015" || item.NamaBerkas != "PATOLOGI ANATOMI" {
-		t.Errorf("Unexpected item data: %+v", item)
+	defer stream.Body.Close()
+
+	if stream.ContentType != "application/pdf" {
+		t.Errorf("Expected Content-Type application/pdf, got %s", stream.ContentType)
 	}
 
-	decryptedURL, errDec := crypto.Decrypt(item.IdBerkas, testKey)
-	if errDec != nil || decryptedURL != "http://192.168.30.24/webapps/berkasrawat/pages/upload/fnab.pdf" {
-		t.Errorf("Unexpected decrypted URL: %s, err: %v", decryptedURL, errDec)
+	bodyBytes, errRead := io.ReadAll(stream.Body)
+	if errRead != nil {
+		t.Fatalf("Failed to read stream body: %v", errRead)
+	}
+	if string(bodyBytes) != string(dummyContent) {
+		t.Errorf("Unexpected body content: %s", string(bodyBytes))
 	}
 }
 
-func TestService_StreamBerkasDigital_InvalidToken(t *testing.T) {
+func TestService_GetBerkasStream_NotFound(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
 	log := logger.New()
 	mockRepo := &mockRepository{}
-	svc := berkasdigital.NewService(mockRepo, testKey, testBaseURL, log)
+	svc := berkasdigital.NewService(mockRepo, ts.URL, log)
 
-	rec := httptest.NewRecorder()
-	err := svc.StreamBerkasDigital(context.Background(), "invalid-token", rec)
+	_, err := svc.GetBerkasStream(context.Background(), ts.URL+"/missing.pdf")
 	if err == nil {
-		t.Fatalf("Expected error for invalid token, got nil")
+		t.Fatalf("Expected error for 404 response, got nil")
 	}
 }
+

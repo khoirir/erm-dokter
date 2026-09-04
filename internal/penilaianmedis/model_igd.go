@@ -55,6 +55,8 @@ func (d *DataPenilaianMedisIGD) Sanitize() {
 		d.TanggalPenilaian = time.Now().Format("2006-01-02 15:04:05")
 	} else if len(d.TanggalPenilaian) == 10 {
 		d.TanggalPenilaian = fmt.Sprintf("%s %s", d.TanggalPenilaian, time.Now().Format("15:04:05"))
+	} else if len(d.TanggalPenilaian) == 16 && strings.Count(d.TanggalPenilaian, ":") == 1 {
+		d.TanggalPenilaian += ":00"
 	}
 
 	d.Anamnesis = Anamnesis(strings.TrimSpace(string(d.Anamnesis)))
@@ -129,8 +131,6 @@ func (d *DataPenilaianMedisIGD) Sanitize() {
 }
 
 func (d *DataPenilaianMedisIGD) Validate(errs apperror.ValidationError) {
-	d.Sanitize()
-
 	if d.KeluhanUtama == "" {
 		errs["keluhan_utama"] = "Keluhan utama wajib diisi"
 	} else if len(d.KeluhanUtama) > 2000 {
@@ -252,15 +252,10 @@ func (d *DataPenilaianMedisIGD) Validate(errs apperror.ValidationError) {
 }
 
 type PenilaianMedisIGD struct {
-	IdKunjungan       string `json:"id_kunjungan"`
-	IdPasien          string `json:"id_pasien"`
-	NoRawat           string `json:"no_rawat"`
-	NoRM              string `json:"no_rkm_medis"`
-	KodePoli          string `json:"kode_poli"`
-	NamaPoli          string `json:"nama_poli"`
-	TanggalRegistrasi string `json:"tanggal_registrasi"`
-	KodeDokter        string `json:"kode_dokter"`
-	NamaDokter        string `json:"nama_dokter"`
+	IdKunjungan string `json:"id_kunjungan"`
+	NoRawat     string `json:"no_rawat"`
+	KodeDokter  string `json:"kode_dokter"`
+	NamaDokter  string `json:"nama_dokter"`
 
 	DataPenilaianMedisIGD
 }
@@ -276,7 +271,6 @@ func (req *SimpanPenilaianMedisIGDRequest) Sanitize() {
 }
 
 func (req *SimpanPenilaianMedisIGDRequest) Validate() apperror.ValidationError {
-	req.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	if req.NoRawat == "" {
@@ -299,7 +293,6 @@ func (req *UpdatePenilaianMedisIGDRequest) Sanitize() {
 }
 
 func (req *UpdatePenilaianMedisIGDRequest) Validate() apperror.ValidationError {
-	req.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	req.DataPenilaianMedisIGD.Validate(errs)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"testing"
 
-	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
@@ -15,7 +14,7 @@ import (
 
 type mockRepository struct {
 	daftarTindakanLabFn        func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, int, error)
-	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error)
+	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error)
 	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
@@ -27,7 +26,7 @@ func (m *mockRepository) DaftarTindakanLab(ctx context.Context, kategori shared.
 	return nil, 0, nil
 }
 
-func (m *mockRepository) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error) {
+func (m *mockRepository) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error) {
 	if m.getDetailTindakanLabFn != nil {
 		return m.getDetailTindakanLabFn(ctx, kategori, kodeTindakan)
 	}
@@ -48,8 +47,6 @@ func (m *mockRepository) CekKeberadaanTemplateLab(ctx context.Context, listKodeT
 	return make(map[string]map[int]bool), nil
 }
 
-const testJWTSecret = "secret-key-32-bytes-testing-12345"
-
 func TestService_GetDaftarTindakanLab_Success(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{
@@ -67,7 +64,7 @@ func TestService_GetDaftarTindakanLab_Success(t *testing.T) {
 		},
 	}
 
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
+	svc := tindakan.NewService(mockRepo, log)
 	list, meta, err := svc.GetDaftarTindakanLab(context.Background(), shared.KategoriLabPK, tindakan.FilterDaftarTindakanLab{
 		Page:  1,
 		Limit: 20,
@@ -81,13 +78,8 @@ func TestService_GetDaftarTindakanLab_Success(t *testing.T) {
 		t.Fatalf("Expected 1 item, got %d", len(list))
 	}
 
-	if list[0].Id == "" {
-		t.Errorf("Expected encrypted Id, got empty string")
-	}
-
-	decryptedId, errDec := crypto.Decrypt(list[0].Id, testJWTSecret)
-	if errDec != nil || decryptedId != "PK001" {
-		t.Errorf("Failed to decrypt Id or mismatch value: %s, err: %v", decryptedId, errDec)
+	if list[0].KodeTindakan != "PK001" {
+		t.Errorf("Expected KodeTindakan PK001, got %s", list[0].KodeTindakan)
 	}
 
 	if meta.TotalRecords != 1 {
@@ -103,7 +95,7 @@ func TestService_GetDaftarTindakanLab_RepoError(t *testing.T) {
 		},
 	}
 
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
+	svc := tindakan.NewService(mockRepo, log)
 	_, _, err := svc.GetDaftarTindakanLab(context.Background(), shared.KategoriLabPK, tindakan.FilterDaftarTindakanLab{})
 
 	if err == nil {
@@ -114,7 +106,7 @@ func TestService_GetDaftarTindakanLab_RepoError(t *testing.T) {
 func TestService_GetDetailTindakanLab_Success(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{
-		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error) {
+		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error) {
 			if kodeTindakan != "PK001" {
 				t.Errorf("Expected kodeTindakan PK001, got %s", kodeTindakan)
 			}
@@ -122,10 +114,9 @@ func TestService_GetDetailTindakanLab_Success(t *testing.T) {
 					KodeTindakan: "PK001",
 					NamaTindakan: "DARAH LENGKAP",
 					Biaya:        75000,
-				}, []tindakan.TemplateLabDB{
+				}, []tindakan.TemplateLab{
 					{
-						IdTemplate:      101,
-						KodeTindakan:    "PK001",
+						IdTemplate:      "101",
 						NamaPemeriksaan: "Hemoglobin",
 						Satuan:          "g/dL",
 						NilaiRujukanLD:  "13.5 - 17.5",
@@ -134,8 +125,7 @@ func TestService_GetDetailTindakanLab_Success(t *testing.T) {
 						NilaiRujukanPA:  "11.0 - 15.0",
 					},
 					{
-						IdTemplate:      102,
-						KodeTindakan:    "PK001",
+						IdTemplate:      "102",
 						NamaPemeriksaan: "Leukosit",
 						Satuan:          "/uL",
 						NilaiRujukanLD:  "4.000 - 10.000",
@@ -147,10 +137,8 @@ func TestService_GetDetailTindakanLab_Success(t *testing.T) {
 		},
 	}
 
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
-	encryptedId, _ := crypto.Encrypt("PK001", testJWTSecret)
-
-	detail, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, encryptedId)
+	svc := tindakan.NewService(mockRepo, log)
+	detail, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, "PK001")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -163,41 +151,21 @@ func TestService_GetDetailTindakanLab_Success(t *testing.T) {
 		t.Fatalf("Expected 2 templates, got %d", len(detail.Templates))
 	}
 
-	decTemplateId, errDec := crypto.Decrypt(detail.Templates[0].IdTemplate, testJWTSecret)
-	if errDec != nil || decTemplateId != "101" {
-		t.Errorf("Expected decrypted template ID 101, got %s", decTemplateId)
-	}
-}
-
-func TestService_GetDetailTindakanLab_InvalidEncryptedId(t *testing.T) {
-	log := logger.New()
-	mockRepo := &mockRepository{}
-
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
-	_, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, "invalid-token")
-
-	if err == nil {
-		t.Fatalf("Expected error for invalid token, got nil")
-	}
-
-	var businessErr *apperror.BusinessError
-	if !errors.As(err, &businessErr) {
-		t.Errorf("Expected BusinessError, got %T: %v", err, err)
+	if detail.Templates[0].IdTemplate != "101" {
+		t.Errorf("Expected template ID 101, got %s", detail.Templates[0].IdTemplate)
 	}
 }
 
 func TestService_GetDetailTindakanLab_NotFound(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{
-		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error) {
+		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error) {
 			return nil, nil, sql.ErrNoRows
 		},
 	}
 
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
-	encryptedId, _ := crypto.Encrypt("PK999", testJWTSecret)
-
-	_, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, encryptedId)
+	svc := tindakan.NewService(mockRepo, log)
+	_, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, "PK999")
 	if err == nil {
 		t.Fatalf("Expected error for not found, got nil")
 	}
@@ -211,16 +179,51 @@ func TestService_GetDetailTindakanLab_NotFound(t *testing.T) {
 func TestService_GetDetailTindakanLab_RepoError(t *testing.T) {
 	log := logger.New()
 	mockRepo := &mockRepository{
-		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLabDB, error) {
+		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error) {
 			return nil, nil, errors.New("db error")
 		},
 	}
 
-	svc := tindakan.NewService(mockRepo, testJWTSecret, log)
-	encryptedId, _ := crypto.Encrypt("PK001", testJWTSecret)
-
-	_, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, encryptedId)
+	svc := tindakan.NewService(mockRepo, log)
+	_, err := svc.GetDetailTindakanLab(context.Background(), shared.KategoriLabPK, "PK001")
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
 }
+
+func TestService_CekKeberadaanTindakanLab(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		cekKeberadaanTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
+			return map[string]bool{"PK001": true}, nil
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	res, err := svc.CekKeberadaanTindakanLab(context.Background(), shared.KategoriLabPK, []string{"PK001"})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !res["PK001"] {
+		t.Errorf("Expected PK001 to be true")
+	}
+}
+
+func TestService_CekKeberadaanTemplateLab(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		cekKeberadaanTemplateLabFn: func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error) {
+			return map[string]map[int]bool{"PK001": {101: true}}, nil
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	res, err := svc.CekKeberadaanTemplateLab(context.Background(), []string{"PK001"}, map[string][]int{"PK001": {101}})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !res["PK001"][101] {
+		t.Errorf("Expected PK001 template 101 to be true")
+	}
+}
+

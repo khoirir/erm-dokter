@@ -24,6 +24,8 @@ func (h *Handler) DetailPenilaianMedisRalan(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	detail.IdKunjungan = idKunjungan
+
 	response.Success(w, "Berhasil mengambil detail penilaian awal medis rawat jalan", detail)
 }
 
@@ -39,6 +41,12 @@ func (h *Handler) RiwayatPenilaianMedisRalan(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	for i := range riwayat {
+		if enc, err := crypto.Encrypt(riwayat[i].NoRawat, h.encryptionKey); err == nil {
+			riwayat[i].IdKunjungan = enc
+		}
 	}
 
 	response.Success(w, "Berhasil mengambil riwayat penilaian awal medis rawat jalan pasien", riwayat)
@@ -63,6 +71,12 @@ func (h *Handler) SimpanPenilaianMedisRalan(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
@@ -74,6 +88,8 @@ func (h *Handler) SimpanPenilaianMedisRalan(w http.ResponseWriter, r *http.Reque
 		apperror.HandleError(w, err)
 		return
 	}
+
+	hasil.IdKunjungan = idKunjungan
 
 	response.Created(w, "Berhasil menyimpan penilaian awal medis rawat jalan", hasil)
 }
@@ -92,6 +108,12 @@ func (h *Handler) UpdatePenilaianMedisRalan(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
@@ -103,6 +125,8 @@ func (h *Handler) UpdatePenilaianMedisRalan(w http.ResponseWriter, r *http.Reque
 		apperror.HandleError(w, err)
 		return
 	}
+
+	hasil.IdKunjungan = idKunjungan
 
 	response.Success(w, "Berhasil memperbarui penilaian awal medis rawat jalan", hasil)
 }
@@ -128,3 +152,4 @@ func (h *Handler) HapusPenilaianMedisRalan(w http.ResponseWriter, r *http.Reques
 
 	response.Success(w, "Berhasil menghapus penilaian awal medis rawat jalan", nil)
 }
+

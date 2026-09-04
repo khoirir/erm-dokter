@@ -88,6 +88,7 @@ func (h *Handler) DaftarResep(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -130,6 +131,7 @@ func (h *Handler) DaftarResepByRM(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -215,6 +217,7 @@ func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize()
 	if errs := req.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -280,6 +283,7 @@ func (h *Handler) UpdateResep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize()
 	if errs := req.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return

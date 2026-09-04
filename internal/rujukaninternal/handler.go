@@ -43,6 +43,12 @@ func (h *Handler) DaftarOpsiPoliDokter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i := range opsi {
+		if encrypted, err := crypto.Encrypt(opsi[i].CompositeKey(), h.encryptionKey); err == nil {
+			opsi[i].Id = encrypted
+		}
+	}
+
 	response.Success(w, "Berhasil mengambil opsi dokter dan poliklinik rujukan", opsi)
 }
 
@@ -58,6 +64,13 @@ func (h *Handler) DaftarRujukanInternal(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	for i := range daftar {
+		if encrypted, err := crypto.Encrypt(daftar[i].CompositeKey(), h.encryptionKey); err == nil {
+			daftar[i].Id = encrypted
+		}
+		daftar[i].IdKunjungan = idKunjungan
 	}
 
 	response.Success(w, "Berhasil mengambil daftar rujukan internal", daftar)
@@ -77,16 +90,41 @@ func (h *Handler) SimpanRujukanInternal(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	decryptedTujuan, err := crypto.Decrypt(req.IdTujuan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID tujuan rujukan tidak valid"))
+		return
+	}
+
+	target, err := ParseIdOpsiPoliDokter(decryptedTujuan)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError(err.Error()))
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	hasil, err := h.service.SimpanRujukanInternal(r.Context(), kodeDokter, noRawat, req)
+	hasil, err := h.service.SimpanRujukanInternal(r.Context(), kodeDokter, noRawat, target.KodePoli, target.KodeDokter)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	if hasil != nil {
+		if encrypted, err := crypto.Encrypt(hasil.CompositeKey(), h.encryptionKey); err == nil {
+			hasil.Id = encrypted
+		}
+		hasil.IdKunjungan = idKunjungan
 	}
 
 	response.Created(w, "Berhasil menyimpan rujukan internal", hasil)
@@ -102,13 +140,30 @@ func (h *Handler) HapusRujukanInternal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	decryptedId, err := crypto.Decrypt(idRujukan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID rujukan tidak valid"))
+		return
+	}
+
+	parsedId, err := ParseIdRujukanInternal(decryptedId)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError(err.Error()))
+		return
+	}
+
+	if parsedId.NoRawat != noRawat {
+		apperror.HandleError(w, apperror.NewForbiddenError("Data rujukan internal tidak sesuai dengan kunjungan pasien"))
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	if err := h.service.HapusRujukanInternal(r.Context(), kodeDokter, noRawat, idRujukan); err != nil {
+	if err := h.service.HapusRujukanInternal(r.Context(), kodeDokter, noRawat, parsedId.KodeDokter); err != nil {
 		apperror.HandleError(w, err)
 		return
 	}

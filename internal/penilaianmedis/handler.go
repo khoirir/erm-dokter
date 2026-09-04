@@ -23,17 +23,14 @@ func (h *Handler) RegisterRoutes(
 	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
 	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
 ) {
-	// Referensi Global
 	mux.HandleFunc("GET /api/v1/penilaian-medis/referensi", authMiddleware(timeoutMiddleware(h.Referensi)))
 
-	// Rawat Jalan
 	mux.HandleFunc("GET /api/v1/penilaian-medis/ralan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailPenilaianMedisRalan)))
 	mux.HandleFunc("GET /api/v1/penilaian-medis/ralan/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.RiwayatPenilaianMedisRalan)))
 	mux.HandleFunc("POST /api/v1/penilaian-medis/ralan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanPenilaianMedisRalan)))
 	mux.HandleFunc("PUT /api/v1/penilaian-medis/ralan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.UpdatePenilaianMedisRalan)))
 	mux.HandleFunc("DELETE /api/v1/penilaian-medis/ralan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.HapusPenilaianMedisRalan)))
 
-	// Gawat Darurat (IGD)
 	mux.HandleFunc("GET /api/v1/penilaian-medis/igd/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailPenilaianMedisIGD)))
 	mux.HandleFunc("GET /api/v1/penilaian-medis/igd/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.RiwayatPenilaianMedisIGD)))
 	mux.HandleFunc("POST /api/v1/penilaian-medis/igd/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanPenilaianMedisIGD)))

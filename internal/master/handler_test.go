@@ -40,13 +40,13 @@ func (m *mockMasterService) DaftarPoliklinik(ctx context.Context) ([]master.Poli
 func TestMasterHandler(t *testing.T) {
 	mockSvc := &mockMasterService{
 		daftarPenjaminFn: func(ctx context.Context) ([]master.Penjamin, error) {
-			return []master.Penjamin{{Kode: "BPJ", Nama: "BPJS Kesehatan"}}, nil
+			return []master.Penjamin{{ItemMaster: master.ItemMaster{Kode: "BPJ", Nama: "BPJS Kesehatan"}}}, nil
 		},
 		daftarDepoFn: func(ctx context.Context) ([]master.Depo, error) {
-			return []master.Depo{{Kode: "DPRJ", Nama: "Depo Rawat Jalan"}}, nil
+			return []master.Depo{{ItemMaster: master.ItemMaster{Kode: "DPRJ", Nama: "Depo Rawat Jalan"}}}, nil
 		},
 		daftarPoliklinikFn: func(ctx context.Context) ([]master.Poliklinik, error) {
-			return []master.Poliklinik{{Kode: "INT", Nama: "Poli Penyakit Dalam"}}, nil
+			return []master.Poliklinik{{ItemMaster: master.ItemMaster{Kode: "INT", Nama: "Poli Penyakit Dalam"}}}, nil
 		},
 	}
 

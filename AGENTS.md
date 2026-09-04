@@ -66,6 +66,11 @@ flowchart TD
   - Wajib memvalidasi waktu masa depan (*future time*): `waktu.After(time.Now())`.
   - Wajib memvalidasi kelengkapan string dan elemen sub-array.
   - **Method `Validate()` DILARANG memutasi atau mengubah nilai field struct**.
+- **Komposisi Struct & Eliminasi Duplikasi (Composition over Repetition)**:
+  - Jika terdapat sekumpulan atribut yang sama antar-struct (misal header order, data klinis, atau blok TTV), **DILARANG KERAS menyalin-tempel deklarasi field yang sama di banyak struct**.
+  - Wajib menggunakan teknik **Go Struct Embedding** (*anonymous field*) dengan mendefinisikan struct inti di `model_common.go` (contoh acuan baku: `internal/penilaianmedis`).
+  - Go secara otomatis meratakan field (*flattening*) pada serialisasi JSON, sehingga struktur request/response publik tetap rata (*flat*) dan tidak mengubah kontrak API.
+  - Delegasikan logika sanitasi dan validasi field bersama ke method milik embedded struct untuk mencegah redundansi kode.
 
 #### 2. Layer Handler (`handler_*.go`):
 - Pintu gerbang HTTP request dan serialisasi response:

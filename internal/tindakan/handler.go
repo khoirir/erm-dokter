@@ -5,18 +5,21 @@ import (
 	"strconv"
 	"strings"
 
+	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
 
 type Handler struct {
-	service Service
+	service       Service
+	encryptionKey string
 }
 
-func NewHandler(service Service) *Handler {
+func NewHandler(service Service, encryptionKey string) *Handler {
 	return &Handler{
-		service: service,
+		service:       service,
+		encryptionKey: encryptionKey,
 	}
 }
 
@@ -43,6 +46,7 @@ func (h *Handler) GetDaftarTindakanLab(w http.ResponseWriter, r *http.Request) {
 		Limit:   limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -52,6 +56,12 @@ func (h *Handler) GetDaftarTindakanLab(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	for i := range data {
+		if encId, errEnc := crypto.Encrypt(data[i].KodeTindakan, h.encryptionKey); errEnc == nil {
+			data[i].Id = encId
+		}
 	}
 
 	response.SuccessWithMeta(w, "Berhasil mengambil daftar tindakan laboratorium", data, meta)
@@ -71,10 +81,23 @@ func (h *Handler) GetDetailTindakanLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.service.GetDetailTindakanLab(r.Context(), kat, idTindakan)
+	kodeTindakan, err := crypto.Decrypt(idTindakan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID tindakan lab tidak valid"))
+		return
+	}
+
+	data, err := h.service.GetDetailTindakanLab(r.Context(), kat, kodeTindakan)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	data.Id = idTindakan
+	for i := range data.Templates {
+		if encTemplateId, errEnc := crypto.Encrypt(data.Templates[i].IdTemplate, h.encryptionKey); errEnc == nil {
+			data.Templates[i].IdTemplate = encTemplateId
+		}
 	}
 
 	response.Success(w, "Berhasil mengambil detail tindakan laboratorium", data)

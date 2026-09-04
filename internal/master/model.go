@@ -1,17 +1,19 @@
 package master
 
-type Penjamin struct {
+type ItemMaster struct {
 	Kode string `json:"kode"`
 	Nama string `json:"nama"`
+}
+
+type Penjamin struct {
+	ItemMaster
 }
 
 type Depo struct {
-	Kode string `json:"kode"`
-	Nama string `json:"nama"`
+	ItemMaster
 }
 
 type Poliklinik struct {
-	Kode string `json:"kode"`
-	Nama string `json:"nama"`
+	ItemMaster
 }
 

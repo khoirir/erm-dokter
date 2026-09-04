@@ -90,12 +90,14 @@ func TestPemeriksaanHandler_DaftarPemeriksaan(t *testing.T) {
 		daftarPemeriksaanFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter pemeriksaan.FilterDaftarPemeriksaan) ([]pemeriksaan.Pemeriksaan, shared.PaginationMeta, error) {
 			return []pemeriksaan.Pemeriksaan{
 				{
-					NoRawat:            noRawat,
-					TanggalPemeriksaan: "2026-09-03",
-					JamPemeriksaan:     "09:00:00",
-					SuhuTubuh:          "36.5",
-					Tensi:              "120/80",
-					Kesadaran:          "Compos Mentis",
+					NoRawat: noRawat,
+					DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+						TanggalPemeriksaan: "2026-09-03",
+						JamPemeriksaan:     "09:00:00",
+						SuhuTubuh:          "36.5",
+						Tensi:              "120/80",
+						Kesadaran:          "Compos Mentis",
+					},
 				},
 			}, shared.NewPaginationMeta(1, 1, 20), nil
 		},
@@ -134,10 +136,12 @@ func TestPemeriksaanHandler_SimpanPemeriksaan(t *testing.T) {
 	mockSvc := &mockPemeriksaanService{
 		simpanPemeriksaanFn: func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req pemeriksaan.SimpanPemeriksaanRequest) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            req.NoRawat,
-				TanggalPemeriksaan: req.TanggalPemeriksaan,
-				JamPemeriksaan:     req.JamPemeriksaan,
-				Keluhan:            req.Keluhan,
+				NoRawat: req.NoRawat,
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: req.TanggalPemeriksaan,
+					JamPemeriksaan:     req.JamPemeriksaan,
+					Keluhan:            req.Keluhan,
+				},
 			}, nil
 		},
 	}

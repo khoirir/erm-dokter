@@ -10,6 +10,6 @@ import (
 
 func provideTindakan(db *sql.DB, cfg *config.Config, log *logger.Logger) *tindakan.Handler {
 	repo := tindakan.NewRepository(db)
-	svc := tindakan.NewService(repo, cfg.EncryptionKey, log)
-	return tindakan.NewHandler(svc)
+	svc := tindakan.NewService(repo, log)
+	return tindakan.NewHandler(svc, cfg.EncryptionKey)
 }

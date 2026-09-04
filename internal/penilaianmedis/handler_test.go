@@ -180,6 +180,8 @@ func TestPenilaianMedisHandler(t *testing.T) {
 				TanggalPenilaian: now.Format("2006-01-02 15:04:05"),
 				Anamnesis:        penilaianmedis.Autoanamnesis,
 				KeluhanUtama:     "Demam",
+				Diagnosis:        "Febris",
+				TataLaksana:      "Paracetamol",
 			},
 		})
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/penilaian-medis/ralan/"+encKunjungan, bytes.NewReader(body))

@@ -115,6 +115,24 @@ func TestSimpanPemeriksaan_SuccessRalan(t *testing.T) {
 			}
 			return nil
 		},
+		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
+			return &pemeriksaan.Pemeriksaan{
+				NoRawat: id.NoRawat,
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: id.TanggalPemeriksaan,
+					JamPemeriksaan:     id.JamPemeriksaan,
+					Kesadaran:          pemeriksaan.KesadaranComposMentis,
+					Keluhan:            "Demam",
+					Pemeriksaan:        "Normal",
+					Penilaian:          "Febris",
+					RencanaTindakLanjut: "Istirahat",
+					Instruksi:          "Minum obat",
+					Evaluasi:           "Stabil",
+				},
+				KodeDokterPetugas: "DK001",
+				StatusLanjut:      statusLanjut,
+			}, nil
+		},
 	}
 	rjRepo := &mockRawatJalanService{}
 	log := logger.New()
@@ -250,6 +268,7 @@ func TestSimpanPemeriksaan_SuhuTubuhValidation(t *testing.T) {
 	// 4. Valid dengan koma (otomatis diubah ke titik oleh Sanitize)
 	reqValidComma := baseReq
 	reqValidComma.SuhuTubuh = "36,8"
+	reqValidComma.Sanitize()
 	if errs := reqValidComma.Validate(); errs != nil {
 		t.Fatalf("expected nil error for valid suhu tubuh with comma, got %v", errs)
 	}
@@ -316,6 +335,7 @@ func TestSimpanPemeriksaan_TTVValidation(t *testing.T) {
 	// 7. Berat badan valid dengan koma (Sanitize)
 	reqBBValid := baseReq
 	reqBBValid.BeratBadan = "65,5"
+	reqBBValid.Sanitize()
 	if errs := reqBBValid.Validate(); errs != nil {
 		t.Fatalf("expected nil error for valid berat badan, got %v", errs)
 	}
@@ -479,11 +499,13 @@ func TestHapusPemeriksaan_Success(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
 			}, nil
 		},
 		hapusPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) error {
@@ -515,11 +537,13 @@ func TestHapusPemeriksaan_ForbiddenDifferentDoctor(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK999", // Dokter lain
-				NamaDokterPetugas:  "dr. Lain",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK999", // Dokter lain
+				NamaDokterPetugas: "dr. Lain",
 			}, nil
 		},
 	}
@@ -554,11 +578,13 @@ func TestHapusPemeriksaan_MelebihiBatasWaktu(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: oldTime.Format("2006-01-02"),
-				JamPemeriksaan:     oldTime.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: oldTime.Format("2006-01-02"),
+					JamPemeriksaan:     oldTime.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
 			}, nil
 		},
 	}
@@ -615,13 +641,15 @@ func TestUpdatePemeriksaan_SuccessRalan(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
-				Keluhan:            "Keluhan awal",
-				StatusLanjut:       shared.StatusLanjutRawatJalan,
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+					Keluhan:            "Keluhan awal",
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
+				StatusLanjut:      shared.StatusLanjutRawatJalan,
 			}, nil
 		},
 		updatePemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut, req pemeriksaan.UpdatePemeriksaanRequest) error {
@@ -687,13 +715,15 @@ func TestUpdatePemeriksaan_SuccessRanap(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
-				Keluhan:            "Keluhan ranap awal",
-				StatusLanjut:       shared.StatusLanjutRawatInap,
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+					Keluhan:            "Keluhan ranap awal",
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
+				StatusLanjut:      shared.StatusLanjutRawatInap,
 			}, nil
 		},
 		updatePemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut, req pemeriksaan.UpdatePemeriksaanRequest) error {
@@ -751,11 +781,13 @@ func TestUpdatePemeriksaan_ForbiddenDifferentDoctor(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK999",
-				NamaDokterPetugas:  "dr. Lain",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK999",
+				NamaDokterPetugas: "dr. Lain",
 			}, nil
 		},
 	}
@@ -803,11 +835,13 @@ func TestUpdatePemeriksaan_ForbiddenMelebihiBatasWaktu(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: oldTime.Format("2006-01-02"),
-				JamPemeriksaan:     oldTime.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: oldTime.Format("2006-01-02"),
+					JamPemeriksaan:     oldTime.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
 			}, nil
 		},
 	}
@@ -927,11 +961,13 @@ func TestUpdatePemeriksaan_WaktuSebelumRegistrasi(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
 			}, nil
 		},
 	}
@@ -983,11 +1019,13 @@ func TestUpdatePemeriksaan_DuplicateEntry(t *testing.T) {
 	repo := &mockRepository{
 		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
 			return &pemeriksaan.Pemeriksaan{
-				NoRawat:            "2026/04/22/036934",
-				TanggalPemeriksaan: now.Format("2006-01-02"),
-				JamPemeriksaan:     now.Format("15:04:05"),
-				KodeDokterPetugas:  "DK001",
-				NamaDokterPetugas:  "dr. Handi",
+				NoRawat: "2026/04/22/036934",
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: now.Format("2006-01-02"),
+					JamPemeriksaan:     now.Format("15:04:05"),
+				},
+				KodeDokterPetugas: "DK001",
+				NamaDokterPetugas: "dr. Handi",
 			}, nil
 		},
 		updatePemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut, req pemeriksaan.UpdatePemeriksaanRequest) error {
@@ -1030,6 +1068,69 @@ func TestUpdatePemeriksaan_DuplicateEntry(t *testing.T) {
 
 	if _, exists := valErr["jam_pemeriksaan"]; !exists {
 		t.Error("expected error for 'jam_pemeriksaan' on duplicate entry")
+	}
+}
+
+func TestDetailPemeriksaan_Success(t *testing.T) {
+	id := pemeriksaan.IdPemeriksaan{
+		NoRawat:            "2026/04/22/036934",
+		TanggalPemeriksaan: "2026-04-23",
+		JamPemeriksaan:     "12:10:00",
+	}
+
+	repo := &mockRepository{
+		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
+			return &pemeriksaan.Pemeriksaan{
+				NoRawat: id.NoRawat,
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: id.TanggalPemeriksaan,
+					JamPemeriksaan:     id.JamPemeriksaan,
+					Kesadaran:          pemeriksaan.KesadaranComposMentis,
+				},
+				StatusLanjut: statusLanjut,
+			}, nil
+		},
+	}
+	rjRepo := &mockRawatJalanService{}
+	log := logger.New()
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
+
+	res, err := svc.DetailPemeriksaan(context.Background(), id, shared.StatusLanjutRawatJalan)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res == nil || res.NoRawat != id.NoRawat {
+		t.Errorf("expected pemeriksaan with NoRawat '%s', got %+v", id.NoRawat, res)
+	}
+}
+
+func TestDetailPemeriksaan_NotFound(t *testing.T) {
+	id := pemeriksaan.IdPemeriksaan{
+		NoRawat:            "2026/04/22/036934",
+		TanggalPemeriksaan: "2026-04-23",
+		JamPemeriksaan:     "12:10:00",
+	}
+
+	repo := &mockRepository{
+		detailPemeriksaanFunc: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
+			return nil, nil
+		},
+	}
+	rjRepo := &mockRawatJalanService{}
+	log := logger.New()
+	svc := pemeriksaan.NewService(repo, rjRepo, 48, log)
+
+	res, err := svc.DetailPemeriksaan(context.Background(), id, shared.StatusLanjutRawatJalan)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if res != nil {
+		t.Errorf("expected nil result, got %+v", res)
+	}
+
+	var notFoundErr *apperror.NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Errorf("expected *apperror.NotFoundError, got %T (%v)", err, err)
 	}
 }
 

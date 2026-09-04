@@ -286,14 +286,17 @@ func (s *service) validasiMetodeRacik(ctx context.Context, req SimpanResepReques
 
 
 func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPeresepan, jamPeresepan string, statusLanjut shared.StatusLanjut) error {
-	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
+	infoReg, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
 	if err != nil {
-		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
 		return err
 	}
-	if !exists {
-		return apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
+
+	if infoReg.StatusBayar == "Sudah Bayar" && infoReg.KodePenjamin == "BPJ" {
+		return apperror.NewBusinessError("Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat membuat atau mengubah resep")
 	}
+
+	tglRegStr := infoReg.TanggalRegistrasi
+	jamRegStr := infoReg.JamRegistrasi
 
 	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
 	if err != nil {

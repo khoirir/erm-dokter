@@ -40,7 +40,7 @@ func (m *mockRepository) DaftarPoliklinik(ctx context.Context) ([]master.Polikli
 func TestMasterService_DaftarPenjamin(t *testing.T) {
 	repo := &mockRepository{
 		penjaminData: []master.Penjamin{
-			{Kode: "BPJ", Nama: "BPJS KESEHATAN"},
+			{ItemMaster: master.ItemMaster{Kode: "BPJ", Nama: "BPJS KESEHATAN"}},
 		},
 	}
 	svc := master.NewService(repo, logger.New())
@@ -63,7 +63,7 @@ func TestMasterService_DaftarPenjamin(t *testing.T) {
 func TestMasterService_DaftarDepo(t *testing.T) {
 	repo := &mockRepository{
 		depoData: []master.Depo{
-			{Kode: "DPRJ", Nama: "Depo Rawat Jalan"},
+			{ItemMaster: master.ItemMaster{Kode: "DPRJ", Nama: "Depo Rawat Jalan"}},
 		},
 	}
 	svc := master.NewService(repo, logger.New())
@@ -86,7 +86,7 @@ func TestMasterService_DaftarDepo(t *testing.T) {
 func TestMasterService_DaftarPoliklinik(t *testing.T) {
 	repo := &mockRepository{
 		poliklinikData: []master.Poliklinik{
-			{Kode: "INT", Nama: "Poli Penyakit Dalam"},
+			{ItemMaster: master.ItemMaster{Kode: "INT", Nama: "Poli Penyakit Dalam"}},
 		},
 	}
 	svc := master.NewService(repo, logger.New())

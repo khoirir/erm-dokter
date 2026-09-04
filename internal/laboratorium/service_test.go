@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"net/http"
 	"testing"
 	"time"
 
@@ -30,13 +29,18 @@ type mockRepository struct {
 	daftarHasilLabMBByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.HasilLaboratorium, int, error)
 	detailHasilLabMBFn     func(ctx context.Context, noRawat string, kodeTindakan string, tanggalPeriksa string, jamPeriksa string) (*laboratorium.HasilLaboratorium, error)
 
-	getKunjunganForPermintaanPKFn func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error)
 	cekStatusKamarInapFn          func(ctx context.Context, noRawat string) (bool, bool, error)
 	simpanPermintaanLabPKFn       func(ctx context.Context, noRawat string, kodeDokter string, status string, req laboratorium.SimpanPermintaanLabPKRequest, kodeTindakanList []string, templateMap map[string][]int) (string, error)
 	daftarPermintaanLabPKFn       func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabPK, error)
 	daftarPermintaanLabPKByRMFn   func(ctx context.Context, noRkmMedis string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabPK, int, error)
 	detailPermintaanLabPKFn       func(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPK, error)
 	hapusPermintaanLabPKFn        func(ctx context.Context, noPermintaan string) error
+
+	simpanPermintaanLabPAFn     func(ctx context.Context, noRawat string, kodeDokter string, status string, req laboratorium.SimpanPermintaanLabPARequest, kodeTindakanList []string) (string, error)
+	daftarPermintaanLabPAFn     func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabPA, error)
+	daftarPermintaanLabPAByRMFn func(ctx context.Context, noRkmMedis string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabPA, int, error)
+	detailPermintaanLabPAFn     func(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPA, error)
+	hapusPermintaanLabPAFn      func(ctx context.Context, noPermintaan string) error
 }
 
 func (m *mockRepository) DaftarHasilLabPK(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.HasilLaboratorium, int, error) {
@@ -102,13 +106,6 @@ func (m *mockRepository) DetailHasilLabMB(ctx context.Context, noRawat string, k
 	return nil, nil
 }
 
-func (m *mockRepository) GetKunjunganForPermintaanPK(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-	if m.getKunjunganForPermintaanPKFn != nil {
-		return m.getKunjunganForPermintaanPKFn(ctx, noRawat)
-	}
-	return nil, nil
-}
-
 func (m *mockRepository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
 	if m.cekStatusKamarInapFn != nil {
 		return m.cekStatusKamarInapFn(ctx, noRawat)
@@ -151,44 +148,71 @@ func (m *mockRepository) HapusPermintaanLabPK(ctx context.Context, noPermintaan 
 	return nil
 }
 
+func (m *mockRepository) SimpanPermintaanLabPA(ctx context.Context, noRawat string, kodeDokter string, status string, req laboratorium.SimpanPermintaanLabPARequest, kodeTindakanList []string) (string, error) {
+	if m.simpanPermintaanLabPAFn != nil {
+		return m.simpanPermintaanLabPAFn(ctx, noRawat, kodeDokter, status, req, kodeTindakanList)
+	}
+	return "", nil
+}
+
+func (m *mockRepository) DaftarPermintaanLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabPA, error) {
+	if m.daftarPermintaanLabPAFn != nil {
+		return m.daftarPermintaanLabPAFn(ctx, noRawat, statusLanjut)
+	}
+	return nil, nil
+}
+
+func (m *mockRepository) DaftarPermintaanLabPAByRM(ctx context.Context, noRkmMedis string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabPA, int, error) {
+	if m.daftarPermintaanLabPAByRMFn != nil {
+		return m.daftarPermintaanLabPAByRMFn(ctx, noRkmMedis, statusLanjut, filter)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockRepository) DetailPermintaanLabPA(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPA, error) {
+	if m.detailPermintaanLabPAFn != nil {
+		return m.detailPermintaanLabPAFn(ctx, noPermintaan)
+	}
+	return nil, nil
+}
+
+func (m *mockRepository) HapusPermintaanLabPA(ctx context.Context, noPermintaan string) error {
+	if m.hapusPermintaanLabPAFn != nil {
+		return m.hapusPermintaanLabPAFn(ctx, noPermintaan)
+	}
+	return nil
+}
+
 type mockBerkasService struct {
-	getBerkasByNoRawatFn func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error)
-	buildBerkasItemFn    func(kode string, namaBerkas string, lokasiFile string) (*berkasdigital.BerkasDigitalItem, error)
+	getBerkasByNoRawatFn func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error)
+	buildFullURLFn       func(lokasiFile string) string
 }
 
 func (m *mockBerkasService) GetMasterBerkas(ctx context.Context) ([]berkasdigital.MasterBerkasDigital, error) {
 	return nil, nil
 }
 
-func (m *mockBerkasService) GetBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error) {
+func (m *mockBerkasService) GetBerkasByNoRawat(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error) {
 	if m.getBerkasByNoRawatFn != nil {
 		return m.getBerkasByNoRawatFn(ctx, noRawat, kodeList)
 	}
 	return nil, nil
 }
 
-func (m *mockBerkasService) StreamBerkasDigital(ctx context.Context, encryptedIdBerkas string, w http.ResponseWriter) error {
-	return nil
-}
-
-func (m *mockBerkasService) BuildBerkasItem(kode string, namaBerkas string, lokasiFile string) (*berkasdigital.BerkasDigitalItem, error) {
-	if m.buildBerkasItemFn != nil {
-		return m.buildBerkasItemFn(kode, namaBerkas, lokasiFile)
-	}
-	return &berkasdigital.BerkasDigitalItem{
-		Kode:       kode,
-		NamaBerkas: namaBerkas,
-		IdBerkas:   "enc-" + kode,
-		UrlBerkas:  "/api/v1/berkas-digital/enc-" + kode,
-	}, nil
+func (m *mockBerkasService) GetBerkasStream(ctx context.Context, targetURL string) (*berkasdigital.BerkasStream, error) {
+	return nil, nil
 }
 
 func (m *mockBerkasService) BuildFullURL(lokasiFile string) string {
-	return lokasiFile
+	if m.buildFullURLFn != nil {
+		return m.buildFullURLFn(lokasiFile)
+	}
+	return testURLBerkas + lokasiFile
 }
 
 type mockRawatJalanService struct {
 	getWaktuRegistrasiFn func(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
+	getInfoRegistrasiFn  func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error)
 }
 
 func (m *mockRawatJalanService) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, shared.PaginationMeta, error) {
@@ -208,6 +232,31 @@ func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat 
 		return m.getWaktuRegistrasiFn(ctx, noRawat)
 	}
 	return "2026-09-03", "08:00:00", true, nil
+}
+
+func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.getInfoRegistrasiFn != nil {
+		return m.getInfoRegistrasiFn(ctx, noRawat)
+	}
+	tgl := "2026-09-03"
+	jam := "08:00:00"
+	if m.getWaktuRegistrasiFn != nil {
+		t, j, exists, err := m.getWaktuRegistrasiFn(ctx, noRawat)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
+		}
+		tgl = t
+		jam = j
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: tgl,
+		JamRegistrasi:     jam,
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
 }
 
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {
@@ -309,8 +358,8 @@ func TestService_GetRiwayatLabKunjungan_PK_Success(t *testing.T) {
 		},
 	}
 	mockBerkas := &mockBerkasService{
-		getBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error) {
-			return []berkasdigital.BerkasDigitalDB{}, nil
+		getBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error) {
+			return []berkasdigital.BerkasDigitalPerawatan{}, nil
 		},
 	}
 	mockRawatJalan := &mockRawatJalanService{}
@@ -377,8 +426,8 @@ func TestService_GetRiwayatLabKunjungan_PA_Success_WithBerkas(t *testing.T) {
 		},
 	}
 	mockBerkas := &mockBerkasService{
-		getBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalDB, error) {
-			return []berkasdigital.BerkasDigitalDB{
+		getBerkasByNoRawatFn: func(ctx context.Context, noRawat string, kodeList []string) ([]berkasdigital.BerkasDigitalPerawatan, error) {
+			return []berkasdigital.BerkasDigitalPerawatan{
 				{
 					Kode:       "015",
 					NamaBerkas: "Hasil PA FNAB",
@@ -472,17 +521,6 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 	t.Run("Sukses Simpan Permintaan Lab PK Ralan dengan Template", func(t *testing.T) {
 		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:           noRawat,
-					NoRkmMedis:        "123456",
-					TanggalRegistrasi: tglKemarinStr,
-					JamRegistrasi:     jamKemarinStr,
-					KodePenjamin:      "UMU",
-					StatusBayar:       "Belum Bayar",
-					StatusLanjut:      "Ralan",
-				}, nil
-			},
 			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, false, nil
 			},
@@ -492,15 +530,17 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 			detailPermintaanLabPKFn: func(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPK, error) {
 				return &laboratorium.DetailPermintaanLabPK{
 					PermintaanLabPK: laboratorium.PermintaanLabPK{
-						NoPermintaan:      noPermintaan,
-						NoRawat:           "2026/09/03/000001",
-						TanggalPermintaan: nowStr,
-						JamPermintaan:     jamNowStr,
-						KodeDokterPerujuk: "DR01",
-						NamaDokterPerujuk: "dr. Sp.PK",
-						Status:            "ralan",
-						InformasiTambahan: "-",
-						DiagnosaKlinis:    "Febris H-3",
+						PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+							NoPermintaan:      noPermintaan,
+							NoRawat:           "2026/09/03/000001",
+							TanggalPermintaan: nowStr,
+							JamPermintaan:     jamNowStr,
+							KodeDokterPerujuk: "DR01",
+							NamaDokterPerujuk: "dr. Sp.PK",
+							Status:            "ralan",
+							InformasiTambahan: "-",
+							DiagnosaKlinis:    "Febris H-3",
+						},
 					},
 					Pemeriksaan: []laboratorium.PemeriksaanLabPKItem{
 						{
@@ -536,10 +576,12 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		res, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatJalan, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{
 					KodeTindakan: "TND001",
@@ -561,12 +603,6 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 	t.Run("Gagal Simpan jika Tindakan Tidak Ditemukan di Master DB", func(t *testing.T) {
 		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:      noRawat,
-					StatusLanjut: "Ralan",
-				}, nil
-			},
 			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, false, nil
 			},
@@ -584,10 +620,12 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		_, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatJalan, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{KodeTindakan: "TND001"},
 			},
@@ -604,12 +642,6 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 	t.Run("Gagal Simpan jika Template Tidak Cocok dengan Tindakan", func(t *testing.T) {
 		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:      noRawat,
-					StatusLanjut: "Ralan",
-				}, nil
-			},
 			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, false, nil
 			},
@@ -630,10 +662,12 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		_, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatJalan, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{
 					KodeTindakan: "TND001",
@@ -652,27 +686,27 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 	})
 
 	t.Run("Gagal Simpan jika Pasien BPJS Sudah Bayar", func(t *testing.T) {
-		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:           noRawat,
+		mockRepo := &mockRepository{}
+		mockRawatJalan := &mockRawatJalanService{
+			getInfoRegistrasiFn: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+				return &rawatjalan.InfoRegistrasiPasien{
 					TanggalRegistrasi: nowStr,
 					JamRegistrasi:     jamKemarinStr,
 					KodePenjamin:      "BPJ",
 					StatusBayar:       "Sudah Bayar",
-					StatusLanjut:      "Ralan",
 				}, nil
 			},
 		}
-		mockRawatJalan := &mockRawatJalanService{}
 		mockTindakan := &mockTindakanService{}
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		_, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatJalan, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{KodeTindakan: "TND001"},
 			},
@@ -686,16 +720,6 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 	t.Run("Gagal Simpan jika Melewati 48 Jam Ralan", func(t *testing.T) {
 		tgl3HariLaluStr := time.Now().Add(-72 * time.Hour).Format("2006-01-02")
 		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:           noRawat,
-					TanggalRegistrasi: tgl3HariLaluStr,
-					JamRegistrasi:     "08:00:00",
-					KodePenjamin:      "UMU",
-					StatusBayar:       "Belum Bayar",
-					StatusLanjut:      "Ralan",
-				}, nil
-			},
 			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, false, nil
 			},
@@ -709,10 +733,12 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		_, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatJalan, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{KodeTindakan: "TND001"},
 			},
@@ -725,16 +751,6 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 	t.Run("Gagal Simpan jika Pasien Ranap Sudah Checkout", func(t *testing.T) {
 		mockRepo := &mockRepository{
-			getKunjunganForPermintaanPKFn: func(ctx context.Context, noRawat string) (*laboratorium.KunjunganInfoLabPK, error) {
-				return &laboratorium.KunjunganInfoLabPK{
-					NoRawat:           noRawat,
-					TanggalRegistrasi: nowStr,
-					JamRegistrasi:     jamKemarinStr,
-					KodePenjamin:      "UMU",
-					StatusBayar:       "Belum Bayar",
-					StatusLanjut:      "Ranap",
-				}, nil
-			},
 			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, true, nil // has record but not active (checked out)
 			},
@@ -748,10 +764,12 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
 		_, err := svc.SimpanPermintaanLabPK(context.Background(), "DR01", shared.StatusLanjutRawatInap, laboratorium.SimpanPermintaanLabPKRequest{
-			NoRawat:           "2026/09/03/000001",
-			TanggalPermintaan: nowStr,
-			JamPermintaan:     jamNowStr,
-			DiagnosaKlinis:    "Febris H-3",
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/03/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Febris H-3",
+			},
 			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPKRequest{
 				{KodeTindakan: "TND001"},
 			},
@@ -768,32 +786,38 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 				if noPermintaan == "PK-SAMPEL" {
 					return &laboratorium.DetailPermintaanLabPK{
 						PermintaanLabPK: laboratorium.PermintaanLabPK{
-							NoPermintaan:      noPermintaan,
-							NoRawat:           "2026/09/03/000001",
-							Status:            "ralan",
-							KodeDokterPerujuk: "DR01",
-							TanggalSampel:     "2026-09-03",
+							PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+								NoPermintaan:      noPermintaan,
+								NoRawat:           "2026/09/03/000001",
+								Status:            "ralan",
+								KodeDokterPerujuk: "DR01",
+								TanggalSampel:     "2026-09-03",
+							},
 						},
 					}, nil
 				}
 				if noPermintaan == "PK-OTHER-DOC" {
 					return &laboratorium.DetailPermintaanLabPK{
 						PermintaanLabPK: laboratorium.PermintaanLabPK{
-							NoPermintaan:      noPermintaan,
-							NoRawat:           "2026/09/03/000001",
-							Status:            "ralan",
-							KodeDokterPerujuk: "DR99",
+							PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+								NoPermintaan:      noPermintaan,
+								NoRawat:           "2026/09/03/000001",
+								Status:            "ralan",
+								KodeDokterPerujuk: "DR99",
+							},
 						},
 					}, nil
 				}
 				return &laboratorium.DetailPermintaanLabPK{
 					PermintaanLabPK: laboratorium.PermintaanLabPK{
-						NoPermintaan:      noPermintaan,
-						NoRawat:           "2026/09/03/000001",
-						Status:            "ralan",
-						KodeDokterPerujuk: "DR01",
-						TanggalSampel:     "0000-00-00",
-						TanggalHasil:      "0000-00-00",
+						PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+							NoPermintaan:      noPermintaan,
+							NoRawat:           "2026/09/03/000001",
+							Status:            "ralan",
+							KodeDokterPerujuk: "DR01",
+							TanggalSampel:     "0000-00-00",
+							TanggalHasil:      "0000-00-00",
+						},
 					},
 				}, nil
 			},
@@ -820,6 +844,235 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 
 		// Gagal sampel sudah diambil
 		errSampel := svc.HapusPermintaanLabPK(context.Background(), "2026/09/03/000001", "PK-SAMPEL", shared.StatusLanjutRawatJalan, "DR01")
+		if errSampel == nil {
+			t.Error("Expected BusinessError when sample is already taken")
+		}
+	})
+}
+
+func TestService_PermintaanLabPA(t *testing.T) {
+	log := logger.New()
+	now := time.Now()
+	nowDate := now.Format("2006-01-02")
+	nowTime := now.Format("15:04:05")
+
+	mockBerkas := &mockBerkasService{}
+	mockRawatJalan := &mockRawatJalanService{
+		getWaktuRegistrasiFn: func(ctx context.Context, noRawat string) (string, string, bool, error) {
+			if noRawat == "2026/09/04/000001" {
+				return nowDate, "07:00:00", true, nil
+			}
+			return "", "", false, nil
+		},
+	}
+	mockTindakan := &mockTindakanService{
+		cekKeberadaanTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
+			res := make(map[string]bool)
+			for _, kd := range listKodeTindakan {
+				if kd == "PA00001" {
+					res[kd] = true
+				}
+			}
+			return res, nil
+		},
+	}
+
+	t.Run("SimpanPermintaanLabPA_Success", func(t *testing.T) {
+		mockRepo := &mockRepository{
+			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
+				return false, false, nil
+			},
+			simpanPermintaanLabPAFn: func(ctx context.Context, noRawat, kodeDokter, status string, req laboratorium.SimpanPermintaanLabPARequest, kodeTindakanList []string) (string, error) {
+				return "PA202609040001", nil
+			},
+			detailPermintaanLabPAFn: func(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPA, error) {
+				return &laboratorium.DetailPermintaanLabPA{
+					PermintaanLabPA: laboratorium.PermintaanLabPA{
+						PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+							NoPermintaan:      noPermintaan,
+							NoRawat:           "2026/09/04/000001",
+							TanggalPermintaan: nowDate,
+							JamPermintaan:     nowTime,
+							Status:            "ralan",
+						},
+					},
+					Pemeriksaan: []laboratorium.PemeriksaanLabPAItem{
+						{KodeTindakan: "PA00001", NamaTindakan: "Pemeriksaan PA Sediaan Kecil"},
+					},
+				}, nil
+			},
+		}
+
+		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
+		req := laboratorium.SimpanPermintaanLabPARequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/04/000001",
+				TanggalPermintaan: nowDate,
+				JamPermintaan:     nowTime,
+				DiagnosaKlinis:    "Tumor Mammae",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPARequest{
+				{KodeTindakan: "PA00001"},
+			},
+		}
+
+		detail, err := svc.SimpanPermintaanLabPA(context.Background(), "DR01", shared.StatusLanjutRawatJalan, req)
+		if err != nil {
+			t.Fatalf("Expected success, got %v", err)
+		}
+		if detail.NoPermintaan != "PA202609040001" {
+			t.Errorf("Expected NoPermintaan PA202609040001, got %s", detail.NoPermintaan)
+		}
+	})
+
+	t.Run("SimpanPermintaanLabPA_BPJSSudahBayar", func(t *testing.T) {
+		mockRepo := &mockRepository{}
+		mockRawatJalanBPJS := &mockRawatJalanService{
+			getInfoRegistrasiFn: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+				return &rawatjalan.InfoRegistrasiPasien{
+					TanggalRegistrasi: nowDate,
+					JamRegistrasi:     nowTime,
+					KodePenjamin:      "BPJ",
+					StatusBayar:       "Sudah Bayar",
+				}, nil
+			},
+		}
+
+		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalanBPJS, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
+		req := laboratorium.SimpanPermintaanLabPARequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/04/000001",
+				TanggalPermintaan: nowDate,
+				JamPermintaan:     nowTime,
+				DiagnosaKlinis:    "Tumor Mammae",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPARequest{
+				{KodeTindakan: "PA00001"},
+			},
+		}
+
+		_, err := svc.SimpanPermintaanLabPA(context.Background(), "DR01", shared.StatusLanjutRawatJalan, req)
+		if err == nil {
+			t.Fatal("Expected error for BPJS already paid, got nil")
+		}
+	})
+
+	t.Run("SimpanPermintaanLabPA_TindakanNotFound", func(t *testing.T) {
+		mockRepo := &mockRepository{
+			cekStatusKamarInapFn: func(ctx context.Context, noRawat string) (bool, bool, error) {
+				return false, false, nil
+			},
+		}
+
+		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
+		req := laboratorium.SimpanPermintaanLabPARequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/04/000001",
+				TanggalPermintaan: nowDate,
+				JamPermintaan:     nowTime,
+				DiagnosaKlinis:    "Tumor Mammae",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabPARequest{
+				{KodeTindakan: "PA-TIDAK-ADA"},
+			},
+		}
+
+		_, err := svc.SimpanPermintaanLabPA(context.Background(), "DR01", shared.StatusLanjutRawatJalan, req)
+		if err == nil {
+			t.Fatal("Expected error for invalid tindakan, got nil")
+		}
+	})
+
+	t.Run("GetDaftarPermintaanLabPA_Success", func(t *testing.T) {
+		mockRepo := &mockRepository{
+			daftarPermintaanLabPAFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabPA, error) {
+				return []laboratorium.PermintaanLabPA{
+					{
+						PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+							NoPermintaan: "PA001",
+							NoRawat:      noRawat,
+							TanggalHasil: "2026-09-04",
+							JamHasil:     "10:00:00",
+						},
+					},
+				}, nil
+			},
+		}
+		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
+		list, err := svc.GetDaftarPermintaanLabPA(context.Background(), "2026/09/04/000001", shared.StatusLanjutRawatJalan)
+		if err != nil {
+			t.Fatalf("Expected success, got %v", err)
+		}
+		if len(list) != 1 || list[0].StatusProses != "Selesai" {
+			t.Errorf("Expected 1 item with StatusProses Selesai, got %+v", list)
+		}
+	})
+
+	t.Run("HapusPermintaanLabPA_SuccessAndGuards", func(t *testing.T) {
+		mockRepo := &mockRepository{
+			detailPermintaanLabPAFn: func(ctx context.Context, noPermintaan string) (*laboratorium.DetailPermintaanLabPA, error) {
+				if noPermintaan == "PA-VALID" {
+					return &laboratorium.DetailPermintaanLabPA{
+						PermintaanLabPA: laboratorium.PermintaanLabPA{
+							PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+								NoPermintaan:      noPermintaan,
+								NoRawat:           "2026/09/04/000001",
+								KodeDokterPerujuk: "DR01",
+								TanggalSampel:     "0000-00-00",
+								TanggalHasil:      "0000-00-00",
+								Status:            "ralan",
+							},
+						},
+					}, nil
+				}
+				if noPermintaan == "PA-OTHER-DOC" {
+					return &laboratorium.DetailPermintaanLabPA{
+						PermintaanLabPA: laboratorium.PermintaanLabPA{
+							PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+								NoPermintaan:      noPermintaan,
+								NoRawat:           "2026/09/04/000001",
+								KodeDokterPerujuk: "DR02",
+								Status:            "ralan",
+							},
+						},
+					}, nil
+				}
+				if noPermintaan == "PA-SAMPEL" {
+					return &laboratorium.DetailPermintaanLabPA{
+						PermintaanLabPA: laboratorium.PermintaanLabPA{
+							PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+								NoPermintaan:      noPermintaan,
+								NoRawat:           "2026/09/04/000001",
+								KodeDokterPerujuk: "DR01",
+								TanggalSampel:     "2026-09-04",
+								Status:            "ralan",
+							},
+						},
+					}, nil
+				}
+				return nil, sql.ErrNoRows
+			},
+			hapusPermintaanLabPAFn: func(ctx context.Context, noPermintaan string) error {
+				return nil
+			},
+		}
+
+		svc := laboratorium.NewService(mockRepo, mockBerkas, mockRawatJalan, mockTindakan, 48, testURLBerkas, nil, nil, nil, log)
+
+		// Sukses
+		err := svc.HapusPermintaanLabPA(context.Background(), "2026/09/04/000001", "PA-VALID", shared.StatusLanjutRawatJalan, "DR01")
+		if err != nil {
+			t.Errorf("Expected success, got %v", err)
+		}
+
+		// Gagal dokter lain
+		errDoc := svc.HapusPermintaanLabPA(context.Background(), "2026/09/04/000001", "PA-OTHER-DOC", shared.StatusLanjutRawatJalan, "DR01")
+		if errDoc == nil {
+			t.Error("Expected ForbiddenError for other doctor")
+		}
+
+		// Gagal sampel sudah diambil
+		errSampel := svc.HapusPermintaanLabPA(context.Background(), "2026/09/04/000001", "PA-SAMPEL", shared.StatusLanjutRawatJalan, "DR01")
 		if errSampel == nil {
 			t.Error("Expected BusinessError when sample is already taken")
 		}

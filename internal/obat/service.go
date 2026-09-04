@@ -5,6 +5,7 @@ import (
 
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/shared"
+	"erm-dokter/internal/shared/apperror"
 )
 
 type Service interface {
@@ -43,6 +44,9 @@ func (s *service) DetailObat(ctx context.Context, kodeObat string) (*Obat, error
 	if err != nil {
 		s.log.Error("Gagal mengambil detail obat %s: %v", kodeObat, err)
 		return nil, err
+	}
+	if detail == nil {
+		return nil, apperror.NewNotFoundError("Data obat tidak ditemukan")
 	}
 
 	return detail, nil

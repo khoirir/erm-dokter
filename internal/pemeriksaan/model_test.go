@@ -96,4 +96,29 @@ func TestSimpanPemeriksaanRequest_ValidationAndSanitization(t *testing.T) {
 			t.Fatal("Expected validation errors for empty fields")
 		}
 	})
+
+	t.Run("Sanitize HH:mm Format to HH:mm:ss", func(t *testing.T) {
+		req := pemeriksaan.SimpanPemeriksaanRequest{
+			NoRawat: "2026/09/03/000001",
+			DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+				TanggalPemeriksaan:  nowDate,
+				JamPemeriksaan:      "08:30",
+				Kesadaran:           pemeriksaan.KesadaranComposMentis,
+				Keluhan:             "Keluhan",
+				Pemeriksaan:         "Pemeriksaan",
+				Penilaian:           "Penilaian",
+				Instruksi:           "Instruksi",
+				RencanaTindakLanjut: "RTL",
+				Evaluasi:            "Evaluasi",
+			},
+		}
+		req.Sanitize()
+		if req.JamPemeriksaan != "08:30:00" {
+			t.Errorf("Expected sanitized JamPemeriksaan '08:30:00', got '%s'", req.JamPemeriksaan)
+		}
+		if errs := req.Validate(); errs != nil {
+			t.Errorf("Expected valid request after sanitization, got errs: %+v", errs)
+		}
+	})
 }
+

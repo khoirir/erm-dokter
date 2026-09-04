@@ -31,15 +31,13 @@ type service struct {
 	repo              Repository
 	rawatJalanService rawatjalan.Service
 	log               *logger.Logger
-	encryptionKey     string
 }
 
-func NewService(repo Repository, rawatJalanService rawatjalan.Service, log *logger.Logger, encryptionKey string) Service {
+func NewService(repo Repository, rawatJalanService rawatjalan.Service, log *logger.Logger) Service {
 	return &service{
 		repo:              repo,
 		rawatJalanService: rawatJalanService,
 		log:               log,
-		encryptionKey:     encryptionKey,
 	}
 }
 
@@ -47,8 +45,8 @@ func (s *service) Referensi(ctx context.Context) ReferensiPenilaianMedis {
 	return GetReferensiPenilaianMedis()
 }
 
-func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tglPeriksa, aksi string) error {
-	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
+func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tanggalPeriksa, aksi string) error {
+	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil waktu registrasi no_rawat %s: %v", noRawat, err)
 		return err
@@ -57,17 +55,17 @@ func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tglP
 		return apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
 	}
 
-	if err := shared.ValidasiBatasWaktuRekamMedis(tglRegStr, jamRegStr, 48, aksi); err != nil {
-		s.log.Warn("Validasi batas waktu 48 jam penilaian medis gagal untuk no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
+	if err := shared.ValidasiBatasWaktuRekamMedis(tanggalRegistrasiStr, jamRegistrasiStr, 48, aksi); err != nil {
+		s.log.Warn("Validasi batas waktu 48 jam penilaian medis gagal untuk no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
 		return err
 	}
 
-	if tglPeriksa != "" {
-		waktuRegistrasi, errReg := shared.ParseWaktu(tglRegStr, jamRegStr)
-		waktuPemeriksaan, errPer := time.ParseInLocation("2006-01-02 15:04:05", tglPeriksa, time.Local)
+	if tanggalPeriksa != "" {
+		waktuRegistrasi, errReg := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
+		waktuPemeriksaan, errPer := time.ParseInLocation("2006-01-02 15:04:05", tanggalPeriksa, time.Local)
 		if errReg == nil && errPer == nil && waktuPemeriksaan.Before(waktuRegistrasi) {
 			errs := apperror.ValidationError{
-				"tanggal_penilaian": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeriksa, tglRegStr, jamRegStr),
+				"tanggal_penilaian": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
 			}
 			s.log.Warn("Validasi waktu penilaian medis gagal untuk no_rawat %s: %+v", noRawat, errs)
 			return errs

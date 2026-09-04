@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/shared"
@@ -71,6 +70,20 @@ func (m *mockRawatJalanService) RiwayatKunjunganPasien(ctx context.Context, noRM
 func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
 	return m.tglReg, m.jamReg, m.exists, m.err
 }
+func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	if !m.exists {
+		return nil, nil
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: m.tglReg,
+		JamRegistrasi:     m.jamReg,
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
+}
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {
 	return nil
 }
@@ -84,16 +97,14 @@ func (m *mockRawatJalanService) DaftarJenisAntrean(ctx context.Context) []rawatj
 	return nil
 }
 
-const testKey = "12345678901234567890123456789012"
-
 func TestDaftarOpsiPoliDokter_Success(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{
 		opsiList: []OpsiPoliDokter{
-			{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"},
+			{InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	result, err := svc.DaftarOpsiPoliDokter(context.Background(), "DR001", "")
 	if err != nil {
@@ -102,16 +113,8 @@ func TestDaftarOpsiPoliDokter_Success(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(result))
 	}
-	if result[0].Id == "" {
-		t.Fatal("expected encrypted Id, got empty")
-	}
-
-	decrypted, err := crypto.Decrypt(result[0].Id, testKey)
-	if err != nil {
-		t.Fatalf("failed to decrypt ID: %v", err)
-	}
-	if decrypted != "INT~DR002" {
-		t.Fatalf("expected decrypted ID 'INT~DR002', got %s", decrypted)
+	if result[0].KodePoli != "INT" || result[0].KodeDokter != "DR002" {
+		t.Fatalf("unexpected item content: %+v", result[0])
 	}
 }
 
@@ -119,10 +122,10 @@ func TestDaftarOpsiPoliDokter_WithKeyword(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{
 		opsiList: []OpsiPoliDokter{
-			{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"},
+			{InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	result, err := svc.DaftarOpsiPoliDokter(context.Background(), "DR001", "Penyakit")
 	if err != nil {
@@ -137,10 +140,10 @@ func TestDaftarRujukanInternal_Success(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{
 		rujukanList: []RujukanInternal{
-			{NoRawat: "2026/04/22/000001", KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"},
+			{NoRawat: "2026/04/22/000001", InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	result, err := svc.DaftarRujukanInternal(context.Background(), "2026/04/22/000001")
 	if err != nil {
@@ -149,20 +152,17 @@ func TestDaftarRujukanInternal_Success(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(result))
 	}
-	if result[0].Id == "" || result[0].IdKunjungan == "" {
-		t.Fatal("expected encrypted Id and IdKunjungan, got empty")
+	if result[0].NoRawat != "2026/04/22/000001" {
+		t.Errorf("expected no_rawat 2026/04/22/000001, got %s", result[0].NoRawat)
 	}
 }
 
 func TestSimpanRujukanInternal_CannotReferToSelf(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
-	targetEncrypted, _ := crypto.Encrypt("INT~DR001", testKey)
-	req := SimpanRujukanRequest{IdTujuan: targetEncrypted}
-
-	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", req)
+	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR001")
 	if err == nil {
 		t.Fatal("expected error when referring to self, got nil")
 	}
@@ -179,12 +179,9 @@ func TestSimpanRujukanInternal_DuplicateReferral(t *testing.T) {
 	}
 	today := time.Now().Format("2006-01-02")
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
-	targetEncrypted, _ := crypto.Encrypt("INT~DR002", testKey)
-	req := SimpanRujukanRequest{IdTujuan: targetEncrypted}
-
-	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", req)
+	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err == nil {
 		t.Fatal("expected error for duplicate referral, got nil")
 	}
@@ -199,12 +196,9 @@ func TestSimpanRujukanInternal_Exceeds48Hours(t *testing.T) {
 	repo := &mockRepository{adaResult: false}
 	pastDate := time.Now().Add(-72 * time.Hour).Format("2006-01-02")
 	rjSvc := &mockRawatJalanService{tglReg: pastDate, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
-	targetEncrypted, _ := crypto.Encrypt("INT~DR002", testKey)
-	req := SimpanRujukanRequest{IdTujuan: targetEncrypted}
-
-	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", req)
+	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err == nil {
 		t.Fatal("expected 48 hours forbidden error, got nil")
 	}
@@ -220,16 +214,13 @@ func TestSimpanRujukanInternal_Success(t *testing.T) {
 	repo := &mockRepository{
 		adaResult: false,
 		rujukanList: []RujukanInternal{
-			{NoRawat: "2026/04/22/000001", KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"},
+			{NoRawat: "2026/04/22/000001", InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
-	targetEncrypted, _ := crypto.Encrypt("INT~DR002", testKey)
-	req := SimpanRujukanRequest{IdTujuan: targetEncrypted}
-
-	result, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", req)
+	result, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -246,11 +237,9 @@ func TestHapusRujukanInternal_Success(t *testing.T) {
 	today := time.Now().Format("2006-01-02")
 	repo := &mockRepository{}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
-	idRujukanEncrypted, _ := crypto.Encrypt("2026/04/22/000001~INT~DR002", testKey)
-
-	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", idRujukanEncrypted)
+	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -259,29 +248,14 @@ func TestHapusRujukanInternal_Success(t *testing.T) {
 	}
 }
 
-func TestHapusRujukanInternal_NoRawatMismatch(t *testing.T) {
-	log := logger.New()
-	repo := &mockRepository{}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
-
-	idRujukanEncrypted, _ := crypto.Encrypt("2026/04/22/000002~INT~DR002", testKey)
-
-	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", idRujukanEncrypted)
-	if err == nil {
-		t.Fatal("expected error on no_rawat mismatch, got nil")
-	}
-}
-
 func TestHapusRujukanInternal_NotFound(t *testing.T) {
 	log := logger.New()
 	today := time.Now().Format("2006-01-02")
 	repo := &mockRepository{hapusErr: sql.ErrNoRows}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
-	idRujukanEncrypted, _ := crypto.Encrypt("2026/04/22/000001~INT~DR002", testKey)
-
-	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", idRujukanEncrypted)
+	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
 	if err == nil {
 		t.Fatal("expected not found error, got nil")
 	}

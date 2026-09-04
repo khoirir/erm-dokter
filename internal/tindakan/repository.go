@@ -11,7 +11,7 @@ import (
 
 type Repository interface {
 	DaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter FilterDaftarTindakanLab) ([]TindakanLab, int, error)
-	GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*TindakanLab, []TemplateLabDB, error)
+	GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*TindakanLab, []TemplateLab, error)
 	CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
@@ -54,10 +54,9 @@ func (r *repository) DaftarTindakanLab(ctx context.Context, kategori shared.Kate
 	}
 
 	if total == 0 {
-		return []TindakanLab{}, 0, nil
+		return make([]TindakanLab, 0), 0, nil
 	}
 
-	filter.Sanitize()
 	dataQuery := fmt.Sprintf(`
 		SELECT 
 			kd_jenis_prw,
@@ -76,7 +75,7 @@ func (r *repository) DaftarTindakanLab(ctx context.Context, kategori shared.Kate
 	}
 	defer rows.Close()
 
-	var list []TindakanLab
+	list := make([]TindakanLab, 0)
 	for rows.Next() {
 		var item TindakanLab
 		err = rows.Scan(&item.KodeTindakan, &item.NamaTindakan, &item.Biaya)
@@ -93,7 +92,7 @@ func (r *repository) DaftarTindakanLab(ctx context.Context, kategori shared.Kate
 	return list, total, nil
 }
 
-func (r *repository) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*TindakanLab, []TemplateLabDB, error) {
+func (r *repository) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*TindakanLab, []TemplateLab, error) {
 	tindakanQuery := `
 		SELECT 
 			kd_jenis_prw,
@@ -115,7 +114,6 @@ func (r *repository) GetDetailTindakanLab(ctx context.Context, kategori shared.K
 	templatesQuery := `
 		SELECT 
 			id_template,
-			kd_jenis_prw,
 			Pemeriksaan AS nama_pemeriksaan,
 			satuan,
 			nilai_rujukan_ld,
@@ -132,12 +130,11 @@ func (r *repository) GetDetailTindakanLab(ctx context.Context, kategori shared.K
 	}
 	defer rows.Close()
 
-	var templates []TemplateLabDB
+	templates := make([]TemplateLab, 0)
 	for rows.Next() {
-		var tmpl TemplateLabDB
+		var tmpl TemplateLab
 		err = rows.Scan(
 			&tmpl.IdTemplate,
-			&tmpl.KodeTindakan,
 			&tmpl.NamaPemeriksaan,
 			&tmpl.Satuan,
 			&tmpl.NilaiRujukanLD,
@@ -153,10 +150,6 @@ func (r *repository) GetDetailTindakanLab(ctx context.Context, kategori shared.K
 
 	if err = rows.Err(); err != nil {
 		return nil, nil, err
-	}
-
-	if templates == nil {
-		templates = []TemplateLabDB{}
 	}
 
 	return &t, templates, nil

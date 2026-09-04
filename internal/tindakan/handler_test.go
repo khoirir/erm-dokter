@@ -7,14 +7,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 	"erm-dokter/internal/tindakan"
 )
 
+const testEncryptionKey = "12345678901234567890123456789012"
+
 type mockService struct {
 	getDaftarTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error)
-	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error)
+	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.DetailTindakanLab, error)
 	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
 }
@@ -26,9 +29,9 @@ func (m *mockService) GetDaftarTindakanLab(ctx context.Context, kategori shared.
 	return nil, shared.PaginationMeta{}, nil
 }
 
-func (m *mockService) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error) {
+func (m *mockService) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.DetailTindakanLab, error) {
 	if m.getDetailTindakanLabFn != nil {
-		return m.getDetailTindakanLabFn(ctx, kategori, encryptedId)
+		return m.getDetailTindakanLabFn(ctx, kategori, kodeTindakan)
 	}
 	return nil, nil
 }
@@ -52,7 +55,6 @@ func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {
 		getDaftarTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error) {
 			return []tindakan.TindakanLab{
 				{
-					Id:           "enc-pk001",
 					KodeTindakan: "PK001",
 					NamaTindakan: "Darah Rutin",
 					Biaya:        50000,
@@ -61,7 +63,7 @@ func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {
 		},
 	}
 
-	handler := tindakan.NewHandler(mockSvc)
+	handler := tindakan.NewHandler(mockSvc, testEncryptionKey)
 	mux := http.NewServeMux()
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
@@ -75,11 +77,11 @@ func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {
 	}
 
 	var resp struct {
-		Code    int                   `json:"code"`
-		Status  string                `json:"status"`
-		Message string                `json:"message"`
+		Code    int                    `json:"code"`
+		Status  string                 `json:"status"`
+		Message string                 `json:"message"`
 		Data    []tindakan.TindakanLab `json:"data"`
-		Meta    shared.PaginationMeta `json:"meta"`
+		Meta    shared.PaginationMeta  `json:"meta"`
 	}
 
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
@@ -89,10 +91,15 @@ func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {
 	if len(resp.Data) != 1 || resp.Data[0].NamaTindakan != "Darah Rutin" {
 		t.Errorf("Unexpected response data: %+v", resp.Data)
 	}
+
+	decryptedId, errDec := crypto.Decrypt(resp.Data[0].Id, testEncryptionKey)
+	if errDec != nil || decryptedId != "PK001" {
+		t.Errorf("Failed to decrypt Id in handler response: %s, err: %v", decryptedId, errDec)
+	}
 }
 
 func TestHandler_GetDaftarTindakanLab_InvalidKategori(t *testing.T) {
-	handler := tindakan.NewHandler(&mockService{})
+	handler := tindakan.NewHandler(&mockService{}, testEncryptionKey)
 	mux := http.NewServeMux()
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
@@ -107,7 +114,7 @@ func TestHandler_GetDaftarTindakanLab_InvalidKategori(t *testing.T) {
 }
 
 func TestHandler_GetDaftarTindakanLab_InvalidKeyword(t *testing.T) {
-	handler := tindakan.NewHandler(&mockService{})
+	handler := tindakan.NewHandler(&mockService{}, testEncryptionKey)
 	mux := http.NewServeMux()
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
@@ -123,17 +130,19 @@ func TestHandler_GetDaftarTindakanLab_InvalidKeyword(t *testing.T) {
 
 func TestHandler_GetDetailTindakanLab_Success(t *testing.T) {
 	mockSvc := &mockService{
-		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error) {
+		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.DetailTindakanLab, error) {
+			if kodeTindakan != "PK001" {
+				t.Errorf("Expected decrypted kodeTindakan PK001, got %s", kodeTindakan)
+			}
 			return &tindakan.DetailTindakanLab{
 				TindakanLab: tindakan.TindakanLab{
-					Id:           "enc-pk001",
 					KodeTindakan: "PK001",
 					NamaTindakan: "Darah Lengkap",
 					Biaya:        75000,
 				},
 				Templates: []tindakan.TemplateLab{
 					{
-						IdTemplate:      "enc-template-1",
+						IdTemplate:      "101",
 						NamaPemeriksaan: "Hemoglobin",
 						Satuan:          "g/dL",
 						NilaiRujukanLD:  "13.5 - 17.5",
@@ -143,12 +152,13 @@ func TestHandler_GetDetailTindakanLab_Success(t *testing.T) {
 		},
 	}
 
-	handler := tindakan.NewHandler(mockSvc)
+	handler := tindakan.NewHandler(mockSvc, testEncryptionKey)
 	mux := http.NewServeMux()
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/enc-pk001", nil)
+	encId, _ := crypto.Encrypt("PK001", testEncryptionKey)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/"+encId, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -157,9 +167,9 @@ func TestHandler_GetDetailTindakanLab_Success(t *testing.T) {
 	}
 
 	var resp struct {
-		Code    int                         `json:"code"`
-		Status  string                      `json:"status"`
-		Message string                      `json:"message"`
+		Code    int                        `json:"code"`
+		Status  string                     `json:"status"`
+		Message string                     `json:"message"`
 		Data    tindakan.DetailTindakanLab `json:"data"`
 	}
 
@@ -170,21 +180,46 @@ func TestHandler_GetDetailTindakanLab_Success(t *testing.T) {
 	if resp.Data.NamaTindakan != "Darah Lengkap" || len(resp.Data.Templates) != 1 {
 		t.Errorf("Unexpected detail response: %+v", resp.Data)
 	}
-}
 
-func TestHandler_GetDetailTindakanLab_NotFound(t *testing.T) {
-	mockSvc := &mockService{
-		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error) {
-			return nil, apperror.NewNotFoundError("Data tindakan laboratorium tidak ditemukan")
-		},
+	if resp.Data.Id != encId {
+		t.Errorf("Expected Id %s, got %s", encId, resp.Data.Id)
 	}
 
-	handler := tindakan.NewHandler(mockSvc)
+	decTemplateId, errDec := crypto.Decrypt(resp.Data.Templates[0].IdTemplate, testEncryptionKey)
+	if errDec != nil || decTemplateId != "101" {
+		t.Errorf("Expected decrypted template ID 101, got %s", decTemplateId)
+	}
+}
+
+func TestHandler_GetDetailTindakanLab_InvalidEncryptedId(t *testing.T) {
+	handler := tindakan.NewHandler(&mockService{}, testEncryptionKey)
 	mux := http.NewServeMux()
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/enc-notfound", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/invalid-token-here", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 for invalid token, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_GetDetailTindakanLab_NotFound(t *testing.T) {
+	mockSvc := &mockService{
+		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.DetailTindakanLab, error) {
+			return nil, apperror.NewNotFoundError("Data tindakan laboratorium tidak ditemukan")
+		},
+	}
+
+	handler := tindakan.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
+	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
+
+	encId, _ := crypto.Encrypt("PK999", testEncryptionKey)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/"+encId, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -192,3 +227,4 @@ func TestHandler_GetDetailTindakanLab_NotFound(t *testing.T) {
 		t.Fatalf("Expected status 404, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
+

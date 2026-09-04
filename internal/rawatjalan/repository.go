@@ -14,6 +14,7 @@ type Repository interface {
 	DetailKunjungan(ctx context.Context, noRawat string, kodeDokter string) (*KunjunganRawatJalan, error)
 	RiwayatKunjunganPasien(ctx context.Context, noRM string) ([]KunjunganRawatJalan, error)
 	GetWaktuRegistrasi(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
+	GetInfoRegistrasi(ctx context.Context, noRawat string) (*InfoRegistrasiPasien, error)
 }
 
 type repository struct {
@@ -326,7 +327,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 			return nil, 0, fmt.Errorf("gagal menghitung total antrean: %w", err)
 		}
 		if totalData == 0 {
-			return []KunjunganRawatJalan{}, 0, nil
+			return make([]KunjunganRawatJalan, 0), 0, nil
 		}
 		where, args := buildBranchConditions("r.kd_dokter", kodeDokter, filter)
 		query := selectKunjunganBukanRujukan + where + innerOrder + " LIMIT ? OFFSET ?"
@@ -343,7 +344,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 			return nil, 0, fmt.Errorf("gagal menghitung total antrean: %w", err)
 		}
 		if totalData == 0 {
-			return []KunjunganRawatJalan{}, 0, nil
+			return make([]KunjunganRawatJalan, 0), 0, nil
 		}
 		where, args := buildBranchConditions("rip.kd_dokter", kodeDokter, filter)
 		query := selectKunjunganRujukan + where + innerOrder + " LIMIT ? OFFSET ?"
@@ -365,7 +366,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 		}
 		totalData := countNonRujukan + countRujukan
 		if totalData == 0 {
-			return []KunjunganRawatJalan{}, 0, nil
+			return make([]KunjunganRawatJalan, 0), 0, nil
 		}
 
 		if countRujukan == 0 {
@@ -415,7 +416,7 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 		start := filter.Offset()
 		end := start + filter.Limit
 		if start >= len(merged) {
-			return []KunjunganRawatJalan{}, totalData, nil
+			return make([]KunjunganRawatJalan, 0), totalData, nil
 		}
 		if end > len(merged) {
 			end = len(merged)
@@ -464,7 +465,7 @@ func (r *repository) RiwayatKunjunganPasien(ctx context.Context, noRekamMedis st
 	}
 	defer rows.Close()
 
-	var listKunjungan []KunjunganRawatJalan
+	listKunjungan := make([]KunjunganRawatJalan, 0)
 	for rows.Next() {
 		kunjungan, err := scanKunjungan(rows)
 		if err != nil {
@@ -489,13 +490,40 @@ const selectWaktuRegistrasi = `
 `
 
 func (r *repository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
-	var tglReg, jamReg string
-	err := r.db.QueryRowContext(ctx, selectWaktuRegistrasi, noRawat).Scan(&tglReg, &jamReg)
+	var tanggalRegistrasi, jamRegistrasi string
+	err := r.db.QueryRowContext(ctx, selectWaktuRegistrasi, noRawat).Scan(&tanggalRegistrasi, &jamRegistrasi)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", false, nil
 	}
 	if err != nil {
 		return "", "", false, fmt.Errorf("gagal query waktu registrasi: %w", err)
 	}
-	return tglReg, jamReg, true, nil
+	return tanggalRegistrasi, jamRegistrasi, true, nil
+}
+
+const selectInfoRegistrasi = `
+	SELECT 
+		DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
+		jam_reg,
+		kd_pj,
+		status_bayar
+	FROM reg_periksa
+	WHERE no_rawat = ?
+`
+
+func (r *repository) GetInfoRegistrasi(ctx context.Context, noRawat string) (*InfoRegistrasiPasien, error) {
+	var info InfoRegistrasiPasien
+	err := r.db.QueryRowContext(ctx, selectInfoRegistrasi, noRawat).Scan(
+		&info.TanggalRegistrasi,
+		&info.JamRegistrasi,
+		&info.KodePenjamin,
+		&info.StatusBayar,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("gagal query info registrasi: %w", err)
+	}
+	return &info, nil
 }

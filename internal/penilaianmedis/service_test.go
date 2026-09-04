@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -118,6 +117,20 @@ func (m *mockRawatJalanService) RiwayatKunjunganPasien(ctx context.Context, noRM
 func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
 	return m.tglReg, m.jamReg, m.exists, m.err
 }
+func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	if !m.exists {
+		return nil, nil
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: m.tglReg,
+		JamRegistrasi:     m.jamReg,
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
+}
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {
 	return nil
 }
@@ -131,15 +144,9 @@ func (m *mockRawatJalanService) DaftarJenisAntrean(ctx context.Context) []rawatj
 	return nil
 }
 
-const testKey = "12345678901234567890123456789012"
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
-
 func TestService_Referensi(t *testing.T) {
 	log := logger.New()
-	svc := NewService(&mockRepository{}, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(&mockRepository{}, &mockRawatJalanService{}, log)
 	ref := svc.Referensi(context.Background())
 
 	if len(ref.Anamnesis) == 0 || len(ref.Keadaan) == 0 || len(ref.Kesadaran) == 0 || len(ref.StatusFisik) == 0 {
@@ -156,7 +163,6 @@ func TestService_DetailPenilaianMedisRalan_Success(t *testing.T) {
 	repo := &mockRepository{
 		detailData: &PenilaianMedisRalan{
 			NoRawat:    "2026/04/22/000001",
-			NoRM:       "123456",
 			KodeDokter: "DR001",
 			NamaDokter: "dr. Handi",
 			DataPenilaianMedisRalan: DataPenilaianMedisRalan{
@@ -164,7 +170,7 @@ func TestService_DetailPenilaianMedisRalan_Success(t *testing.T) {
 			},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	result, err := svc.DetailPenilaianMedisRalan(context.Background(), "2026/04/22/000001")
 	if err != nil {
@@ -173,9 +179,6 @@ func TestService_DetailPenilaianMedisRalan_Success(t *testing.T) {
 	if result.NoRawat != "2026/04/22/000001" {
 		t.Errorf("expected no_rawat 2026/04/22/000001, got %s", result.NoRawat)
 	}
-	if result.IdKunjungan == "" || result.IdPasien == "" {
-		t.Error("expected encrypted id_kunjungan and id_pasien to be populated")
-	}
 }
 
 func TestService_DetailPenilaianMedisRalan_NotFound(t *testing.T) {
@@ -183,7 +186,7 @@ func TestService_DetailPenilaianMedisRalan_NotFound(t *testing.T) {
 	repo := &mockRepository{
 		detailErr: sql.ErrNoRows,
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	_, err := svc.DetailPenilaianMedisRalan(context.Background(), "2026/04/22/999999")
 	if err == nil {
@@ -201,15 +204,13 @@ func TestService_RiwayatPenilaianMedisRalanByNoRM_Success(t *testing.T) {
 		riwayatData: []PenilaianMedisRalan{
 			{
 				NoRawat: "2026/04/22/000001",
-				NoRM:    "123456",
 			},
 			{
 				NoRawat: "2026/04/21/000002",
-				NoRM:    "123456",
 			},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	list, err := svc.RiwayatPenilaianMedisRalanByNoRM(context.Background(), "123456")
 	if err != nil {
@@ -218,18 +219,13 @@ func TestService_RiwayatPenilaianMedisRalanByNoRM_Success(t *testing.T) {
 	if len(list) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(list))
 	}
-	for _, item := range list {
-		if item.IdKunjungan == "" || item.IdPasien == "" {
-			t.Error("expected encrypted ids for each history item")
-		}
-	}
 }
 
 func TestService_SimpanPenilaianMedisRalan_Expired48Hours(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{}
 	rjSvc := &mockRawatJalanService{tglReg: "2020-01-01", jamReg: "10:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
@@ -256,7 +252,7 @@ func TestService_SimpanPenilaianMedisRalan_EarlierThanRegistration(t *testing.T)
 	today := time.Now().Format("2006-01-02")
 	repo := &mockRepository{}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "10:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	// Penilaian medis jam 08:00 (lebih awal dari registrasi jam 10:00)
 	req := SimpanPenilaianMedisRalanRequest{
@@ -293,7 +289,7 @@ func TestService_SimpanPenilaianMedisRalan_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
@@ -321,7 +317,7 @@ func TestService_SimpanPenilaianMedisRalan_Duplicate(t *testing.T) {
 		adaResult: true, // sudah ada
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := SimpanPenilaianMedisRalanRequest{
 		NoRawat: "2026/04/22/000001",
@@ -354,7 +350,7 @@ func TestService_UpdatePenilaianMedisRalan_Forbidden(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := UpdatePenilaianMedisRalanRequest{
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
@@ -387,7 +383,7 @@ func TestService_UpdatePenilaianMedisRalan_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := UpdatePenilaianMedisRalanRequest{
 		DataPenilaianMedisRalan: DataPenilaianMedisRalan{
@@ -418,7 +414,7 @@ func TestService_HapusPenilaianMedisRalan_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	err := svc.HapusPenilaianMedisRalan(context.Background(), "DR001", "2026/04/22/000001")
 	if err != nil {
@@ -440,7 +436,7 @@ func TestService_HapusPenilaianMedisRalan_Forbidden(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	// Dicoba hapus oleh DR002
 	err := svc.HapusPenilaianMedisRalan(context.Background(), "DR002", "2026/04/22/000001")
@@ -462,7 +458,6 @@ func TestService_DetailPenilaianMedisIGD_Success(t *testing.T) {
 	repo := &mockRepository{
 		detailIGDData: &PenilaianMedisIGD{
 			NoRawat:    "2026/04/22/000002",
-			NoRM:       "654321",
 			KodeDokter: "DR001",
 			NamaDokter: "dr. Handi",
 			DataPenilaianMedisIGD: DataPenilaianMedisIGD{
@@ -471,7 +466,7 @@ func TestService_DetailPenilaianMedisIGD_Success(t *testing.T) {
 			},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	result, err := svc.DetailPenilaianMedisIGD(context.Background(), "2026/04/22/000002")
 	if err != nil {
@@ -480,9 +475,6 @@ func TestService_DetailPenilaianMedisIGD_Success(t *testing.T) {
 	if result.NoRawat != "2026/04/22/000002" {
 		t.Errorf("expected no_rawat 2026/04/22/000002, got %s", result.NoRawat)
 	}
-	if result.IdKunjungan == "" || result.IdPasien == "" {
-		t.Error("expected encrypted id_kunjungan and id_pasien to be populated")
-	}
 }
 
 func TestService_DetailPenilaianMedisIGD_NotFound(t *testing.T) {
@@ -490,7 +482,7 @@ func TestService_DetailPenilaianMedisIGD_NotFound(t *testing.T) {
 	repo := &mockRepository{
 		detailIGDErr: sql.ErrNoRows,
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	_, err := svc.DetailPenilaianMedisIGD(context.Background(), "2026/04/22/999999")
 	if err == nil {
@@ -506,10 +498,10 @@ func TestService_RiwayatPenilaianMedisIGDByNoRM_Success(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{
 		riwayatIGDData: []PenilaianMedisIGD{
-			{NoRawat: "2026/04/22/000002", NoRM: "654321"},
+			{NoRawat: "2026/04/22/000002"},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log, testKey)
+	svc := NewService(repo, &mockRawatJalanService{}, log)
 
 	list, err := svc.RiwayatPenilaianMedisIGDByNoRM(context.Background(), "654321")
 	if err != nil {
@@ -517,9 +509,6 @@ func TestService_RiwayatPenilaianMedisIGDByNoRM_Success(t *testing.T) {
 	}
 	if len(list) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(list))
-	}
-	if list[0].IdKunjungan == "" || list[0].IdPasien == "" {
-		t.Error("expected encrypted ids for history item")
 	}
 }
 
@@ -534,7 +523,7 @@ func TestService_SimpanPenilaianMedisIGD_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := SimpanPenilaianMedisIGDRequest{
 		NoRawat: "2026/04/22/000002",
@@ -563,7 +552,7 @@ func TestService_SimpanPenilaianMedisIGD_Duplicate(t *testing.T) {
 		adaIGDResult: true, // sudah ada di IGD
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := SimpanPenilaianMedisIGDRequest{
 		NoRawat: "2026/04/22/000002",
@@ -596,7 +585,7 @@ func TestService_UpdatePenilaianMedisIGD_Forbidden(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := UpdatePenilaianMedisIGDRequest{
 		DataPenilaianMedisIGD: DataPenilaianMedisIGD{
@@ -629,7 +618,7 @@ func TestService_UpdatePenilaianMedisIGD_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	req := UpdatePenilaianMedisIGDRequest{
 		DataPenilaianMedisIGD: DataPenilaianMedisIGD{
@@ -660,7 +649,7 @@ func TestService_HapusPenilaianMedisIGD_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	err := svc.HapusPenilaianMedisIGD(context.Background(), "DR001", "2026/04/22/000002")
 	if err != nil {
@@ -682,7 +671,7 @@ func TestService_HapusPenilaianMedisIGD_Forbidden(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log, testKey)
+	svc := NewService(repo, rjSvc, log)
 
 	// Dicoba hapus oleh DR002
 	err := svc.HapusPenilaianMedisIGD(context.Background(), "DR002", "2026/04/22/000002")

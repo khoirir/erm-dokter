@@ -37,7 +37,7 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 
 	if user == nil {
 		s.log.Warn("Login gagal untuk username: %s", req.Username)
-		return nil, apperror.NewBusinessError("username atau password salah")
+		return nil, apperror.NewUnauthorizedError("Username atau password salah")
 	}
 
 	tkn, err := token.GenerateToken(user.IDUser, user.NamaUser, s.jwtSecret, 24*time.Hour)

@@ -108,6 +108,7 @@ func (m *mockRepository) UpdateResep(ctx context.Context, noResep string, req re
 type mockRawatJalanService struct {
 	rawatjalan.Service
 	getWaktuRegistrasiFunc func(ctx context.Context, noRawat string) (string, string, bool, error)
+	getInfoRegistrasiFunc  func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error)
 }
 
 func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
@@ -115,6 +116,31 @@ func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat 
 		return m.getWaktuRegistrasiFunc(ctx, noRawat)
 	}
 	return time.Now().Format("2006-01-02"), "08:00:00", true, nil
+}
+
+func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.getInfoRegistrasiFunc != nil {
+		return m.getInfoRegistrasiFunc(ctx, noRawat)
+	}
+	tgl := time.Now().Format("2006-01-02")
+	jam := "08:00:00"
+	if m.getWaktuRegistrasiFunc != nil {
+		t, j, exists, err := m.getWaktuRegistrasiFunc(ctx, noRawat)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
+		}
+		tgl = t
+		jam = j
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: tgl,
+		JamRegistrasi:     jam,
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
 }
 
 type mockObatService struct {
@@ -190,10 +216,12 @@ func TestDaftarResep_Success(t *testing.T) {
 			NamaDokter:       "dr. Budi",
 			ResepDokter: []resep.ResepDokter{
 				{
-					KodeObat:    "B001",
-					NamaObat:    "Paracetamol 500mg",
-					Jumlah:      10,
-					Satuan:      "TAB",
+					ItemObatResep: resep.ItemObatResep{
+						KodeObat: "B001",
+						NamaObat: "Paracetamol 500mg",
+						Jumlah:   10,
+						Satuan:   "TAB",
+					},
 					AturanPakai: "3x1",
 				},
 			},
@@ -281,11 +309,13 @@ func TestDaftarResepByRM_Success(t *testing.T) {
 					Keterangan:      "Sesudah makan",
 					DetailRacikan: []resep.ResepDokterRacikanDetail{
 						{
-							KodeObat:  "B002",
-							NamaObat:  "CTM",
+							ItemObatResep: resep.ItemObatResep{
+								KodeObat: "B002",
+								NamaObat: "CTM",
+								Jumlah:   2.5,
+								Satuan:   "TAB",
+							},
 							Kandungan: "4mg",
-							Jumlah:    2.5,
-							Satuan:    "TAB",
 						},
 					},
 				},
@@ -433,8 +463,10 @@ func TestSimpanResep_Success(t *testing.T) {
 		JamPeresepan:     "08:00:00",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				KodeObat:    "OBAT001",
-				Jumlah:      10,
+				ItemObatInput: resep.ItemObatInput{
+					KodeObat: "OBAT001",
+					Jumlah:   10,
+				},
 				AturanPakai: "3x1",
 			},
 		},
@@ -524,6 +556,41 @@ func TestSimpanResep_Lewat48Jam(t *testing.T) {
 	_, err := svc.SimpanResep(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 	if err == nil {
 		t.Fatal("expected error 48 hours exceeded, got nil")
+	}
+}
+
+func TestSimpanResep_PasienBPJSSudahBayar(t *testing.T) {
+	today := time.Now().Format("2006-01-02")
+	mockRJ := &mockRawatJalanService{
+		getInfoRegistrasiFunc: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+			return &rawatjalan.InfoRegistrasiPasien{
+				TanggalRegistrasi: today,
+				JamRegistrasi:     "08:00:00",
+				KodePenjamin:      "BPJ",
+				StatusBayar:       "Sudah Bayar",
+			}, nil
+		},
+	}
+	mockRepo := &mockRepository{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	mockObat := &mockObatService{}
+	log := logger.New()
+	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+
+	req := resep.SimpanResepRequest{
+		NoRawat:          "2026/08/28/000001",
+		TanggalPeresepan: today,
+		JamPeresepan:     "09:00:00",
+	}
+	_, err := svc.SimpanResep(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+	if err == nil {
+		t.Fatal("expected error for paid BPJS patient, got nil")
+	}
+	if err.Error() != "Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat membuat atau mengubah resep" {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 
@@ -624,8 +691,10 @@ func TestSimpanResep_ObatNotFound(t *testing.T) {
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
 			{
-				KodeObat:    "OBAT_TIDAK_ADA",
-				Jumlah:      10,
+				ItemObatInput: resep.ItemObatInput{
+					KodeObat: "OBAT_TIDAK_ADA",
+					Jumlah:   10,
+				},
 				AturanPakai: "3x1",
 			},
 		},
@@ -637,8 +706,10 @@ func TestSimpanResep_ObatNotFound(t *testing.T) {
 				AturanPakai:   "3x1",
 				Detail: []resep.ResepRacikanDetailInput{
 					{
-						KodeObat: "OBAT_TIDAK_ADA_2",
-						Jumlah:   5,
+						ItemObatInput: resep.ItemObatInput{
+							KodeObat: "OBAT_TIDAK_ADA_2",
+							Jumlah:   5,
+						},
 					},
 				},
 			},
@@ -703,8 +774,10 @@ func TestSimpanResep_MetodeRacikNotFound(t *testing.T) {
 				AturanPakai:   "3x1",
 				Detail: []resep.ResepRacikanDetailInput{
 					{
-						KodeObat: "OBAT001",
-						Jumlah:   5,
+						ItemObatInput: resep.ItemObatInput{
+							KodeObat: "OBAT001",
+							Jumlah:   5,
+						},
 					},
 				},
 			},
@@ -1080,7 +1153,7 @@ func TestUpdateResep_Success(t *testing.T) {
 		TanggalPeresepan: today,
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1108,7 +1181,7 @@ func TestUpdateResep_NotFound(t *testing.T) {
 		TanggalPeresepan: "2026-08-28",
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1143,7 +1216,7 @@ func TestUpdateResep_ForbiddenOtherDoctor(t *testing.T) {
 		TanggalPeresepan: "2026-08-28",
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1179,7 +1252,7 @@ func TestUpdateResep_ForbiddenAlreadyValidatedFarmasi(t *testing.T) {
 		TanggalPeresepan: "2026-08-28",
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1215,7 +1288,7 @@ func TestUpdateResep_ForbiddenAlreadyHandedOverFarmasi(t *testing.T) {
 		TanggalPeresepan: "2026-08-28",
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1249,7 +1322,7 @@ func TestUpdateResep_NoRawatMismatch(t *testing.T) {
 		TanggalPeresepan: "2026-08-28",
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1290,7 +1363,7 @@ func TestUpdateResep_ForbiddenOver48HoursRalan(t *testing.T) {
 		TanggalPeresepan: oldDate,
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1329,7 +1402,7 @@ func TestUpdateResep_ForbiddenInactiveRanap(t *testing.T) {
 		TanggalPeresepan: today,
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1376,7 +1449,7 @@ func TestUpdateResep_ObatNotFound(t *testing.T) {
 		TanggalPeresepan: today,
 		JamPeresepan:     "09:00:00",
 		ResepDokter: []resep.ResepDokterInput{
-			{KodeObat: "OBAT01", Jumlah: 10, AturanPakai: "3 x 1"},
+			{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 10}, AturanPakai: "3 x 1"},
 		},
 	}
 
@@ -1433,7 +1506,7 @@ func TestUpdateResep_MetodeRacikNotFound(t *testing.T) {
 				JumlahRacikan: 10,
 				AturanPakai:   "3x1",
 				Detail: []resep.ResepRacikanDetailInput{
-					{KodeObat: "OBAT01", Jumlah: 5},
+					{ItemObatInput: resep.ItemObatInput{KodeObat: "OBAT01", Jumlah: 5}},
 				},
 			},
 		},

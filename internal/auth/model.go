@@ -27,13 +27,12 @@ func (r *LoginRequest) Sanitize() {
 }
 
 func (r *LoginRequest) Validate() apperror.ValidationError {
-	r.Sanitize()
 	errs := make(apperror.ValidationError)
 	if r.Username == "" {
-		errs["username"] = "username wajib diisi"
+		errs["username"] = "Username wajib diisi"
 	}
 	if r.Password == "" {
-		errs["password"] = "password wajib diisi"
+		errs["password"] = "Password wajib diisi"
 	}
 	if len(errs) > 0 {
 		return errs

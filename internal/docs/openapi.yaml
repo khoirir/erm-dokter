@@ -264,6 +264,203 @@ components:
                           items:
                               $ref: "#/components/schemas/PemeriksaanLabPKItem"
 
+        ItemPemeriksaanLabPARequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Token terenkripsi ID tindakan laboratorium PA
+                    example: "w9K2m1..."
+
+        SimpanPermintaanLabPARequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - diagnosa_klinis
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien (wajib sama dengan ID kunjungan)
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    format: date
+                    description: Tanggal permintaan (YYYY-MM-DD)
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    description: Jam permintaan (HH:mm:ss atau HH:mm)
+                    example: "08:30:00"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    description: Diagnosa klinis / indikasi pemeriksaan PA
+                    example: "Susp. Ca Mammae"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    description: Catatan / informasi tambahan klinis (default '-')
+                    example: "-"
+                pengambilan_bahan:
+                    type: string
+                    format: date
+                    description: Tanggal pengambilan bahan/jaringan (YYYY-MM-DD, opsional, default sama dengan tanggal permintaan jika tidak diisi)
+                    example: "2026-09-04"
+                diperoleh_dengan:
+                    type: string
+                    maxLength: 40
+                    description: Cara perolehan jaringan/spesimen (opsional)
+                    example: "Biopsi Eksisi"
+                lokasi_jaringan:
+                    type: string
+                    maxLength: 40
+                    description: Lokasi pengambilan jaringan (opsional)
+                    example: "Mammae Dextra"
+                diawetkan_dengan:
+                    type: string
+                    maxLength: 40
+                    description: Larutan fiksatif pengawet (opsional)
+                    example: "Formalin Buffer 10%"
+                pernah_dilakukan_di:
+                    type: string
+                    maxLength: 100
+                    description: Riwayat pemeriksaan PA sebelumnya di faskes (opsional)
+                    example: "RSUD Lain"
+                tanggal_pa_sebelumnya:
+                    type: string
+                    description: Tanggal PA sebelumnya (YYYY-MM-DD, opsional, default "0000-00-00" jika kosong)
+                    example: "2025-01-10"
+                nomor_pa_sebelumnya:
+                    type: string
+                    maxLength: 20
+                    description: Nomor register PA sebelumnya (opsional)
+                    example: "PA250001"
+                diagnosa_pa_sebelumnya:
+                    type: string
+                    maxLength: 100
+                    description: Diagnosa / hasil PA sebelumnya (opsional)
+                    example: "Fibroadenoma Mammae"
+                pemeriksaan:
+                    type: array
+                    description: Daftar tindakan laboratorium PA yang diminta
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanLabPARequest"
+
+        PemeriksaanLabPAItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Token terenkripsi ID tindakan laboratorium PA
+                    example: "w9K2m1..."
+                kode_tindakan:
+                    type: string
+                    example: "PA00001"
+                nama_tindakan:
+                    type: string
+                    example: "Pemeriksaan PA untuk Sediaan Kecil"
+                biaya:
+                    type: number
+                    format: double
+                    example: 250000
+                status_bayar:
+                    type: string
+                    example: "Belum"
+
+        PermintaanLabPA:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Token terenkripsi ID nomor permintaan laboratorium PA
+                    example: "p1K8x..."
+                no_permintaan:
+                    type: string
+                    example: "PA202609040001"
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi ID kunjungan pasien
+                    example: "w9K2m1..."
+                no_rawat:
+                    type: string
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    format: date
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    example: "08:30:00"
+                tanggal_sampel:
+                    type: string
+                    example: ""
+                jam_sampel:
+                    type: string
+                    example: ""
+                tanggal_hasil:
+                    type: string
+                    example: ""
+                jam_hasil:
+                    type: string
+                    example: ""
+                kode_dokter_perujuk:
+                    type: string
+                    example: "DR01"
+                nama_dokter_perujuk:
+                    type: string
+                    example: "dr. Handi, Sp.B"
+                status:
+                    type: string
+                    example: "ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "-"
+                diagnosa_klinis:
+                    type: string
+                    example: "Susp. Ca Mammae"
+                pengambilan_bahan:
+                    type: string
+                    example: "2026-09-04"
+                diperoleh_dengan:
+                    type: string
+                    example: "Biopsi Eksisi"
+                lokasi_jaringan:
+                    type: string
+                    example: "Mammae Dextra"
+                diawetkan_dengan:
+                    type: string
+                    example: "Formalin Buffer 10%"
+                pernah_dilakukan_di:
+                    type: string
+                    example: "RSUD Lain"
+                tanggal_pa_sebelumnya:
+                    type: string
+                    example: "2025-01-10"
+                nomor_pa_sebelumnya:
+                    type: string
+                    example: "PA250001"
+                diagnosa_pa_sebelumnya:
+                    type: string
+                    example: "Fibroadenoma Mammae"
+                status_proses:
+                    type: string
+                    example: "Menunggu Sampel"
+
+        DetailPermintaanLabPA:
+            allOf:
+                - $ref: "#/components/schemas/PermintaanLabPA"
+                - type: object
+                  properties:
+                      pemeriksaan:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/PemeriksaanLabPAItem"
+
         LoginRequest:
             type: object
             required:
@@ -368,7 +565,7 @@ components:
         Penjamin:
             type: object
             properties:
-                kode_penjamin:
+                kode:
                     type: string
                     example: BPJ
                 nama:
@@ -1049,25 +1246,9 @@ components:
                     type: string
                     description: Encrypted ID Nomor Rawat Kunjungan
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
-                id_pasien:
-                    type: string
-                    description: Encrypted ID Nomor Rekam Medis Pasien
-                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
                 no_rawat:
                     type: string
                     example: "2026/04/22/000001"
-                no_rkm_medis:
-                    type: string
-                    example: "123456"
-                kode_poli:
-                    type: string
-                    example: "INT"
-                nama_poli:
-                    type: string
-                    example: "Penyakit Dalam"
-                tanggal_registrasi:
-                    type: string
-                    example: "2026-04-22"
                 tanggal_penilaian:
                     type: string
                     example: "2026-04-22 09:30:00"
@@ -1437,25 +1618,9 @@ components:
                     type: string
                     description: Encrypted ID Nomor Rawat Kunjungan
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
-                id_pasien:
-                    type: string
-                    description: Encrypted ID Nomor Rekam Medis Pasien
-                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
                 no_rawat:
                     type: string
                     example: "2026/04/22/000002"
-                no_rkm_medis:
-                    type: string
-                    example: "654321"
-                kode_poli:
-                    type: string
-                    example: "IGD"
-                nama_poli:
-                    type: string
-                    example: "Instalasi Gawat Darurat"
-                tanggal_registrasi:
-                    type: string
-                    example: "2026-04-22"
                 tanggal_penilaian:
                     type: string
                     example: "2026-04-22 09:30:00"
@@ -2106,7 +2271,13 @@ paths:
                                           data:
                                               $ref: "#/components/schemas/LoginData"
                 "400":
-                    description: Username/password salah atau validasi gagal
+                    description: Format request JSON tidak valid atau validasi input gagal
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "401":
+                    description: Username atau password salah
                     content:
                         application/json:
                             schema:
@@ -2177,6 +2348,8 @@ paths:
                                               type: array
                                               items:
                                                   $ref: "#/components/schemas/Depo"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
 
     /api/v1/master/poliklinik:
         get:
@@ -4435,6 +4608,219 @@ paths:
                     description: Dilarang membatalkan order dokter lain
                 "404":
                     description: Permintaan tidak ditemukan
+
+    /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}:
+        post:
+            summary: Kirim Order Permintaan Laboratorium PA Baru
+            description: Mengirimkan order permintaan pemeriksaan laboratorium Patologi Anatomi (PA) baru oleh dokter. Mendukung pencatatan klinis jaringan PA (lokasi jaringan, cara perolehan, fiksatif pengawet, dan riwayat PA sebelumnya), transaksi atomik database, penomoran urut otomatis berformat PA<YYYYMMDD><0001>, proteksi batas 48 jam ralan, validasi kamar rawat inap aktif, dan proteksi penjamin BPJS sudah bayar.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token URL kunjungan terenkripsi
+                  schema:
+                    type: string
+                    example: "w9K2m1..."
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status jenis pelayanan (Ralan / Ranap)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabPARequest"
+            responses:
+                "201":
+                    description: Berhasil mengirim permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengirim permintaan laboratorium PA
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPA"
+                "400":
+                    description: Validasi input gagal / waktu tidak valid / batas 48 jam terlewati
+                "404":
+                    description: Kunjungan tidak ditemukan
+        get:
+            summary: Daftar Permintaan Laboratorium PA Kunjungan
+            description: Mengambil seluruh riwayat permintaan laboratorium PA yang dibuat pada satu kunjungan pasien berdasarkan status pelayanan.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token URL kunjungan terenkripsi
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Semua
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPA"
+
+    /api/v1/laboratorium/pa/permintaan/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            summary: Riwayat Permintaan Laboratorium PA Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan laboratorium PA pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token URL pasien terenkripsi
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Semua
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal YYYY-MM-DD,YYYY-MM-DD
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan laboratorium PA pasien
+
+    /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
+        get:
+            summary: Detail Permintaan Laboratorium PA
+            description: Mengambil rincian lengkap permintaan laboratorium PA beserta item tindakan pengujian yang diminta.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Semua
+                - name: id_permintaan
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPA"
+                "404":
+                    description: Permintaan tidak ditemukan
+        delete:
+            summary: Batalkan Permintaan Laboratorium PA
+            description: Menghapus permintaan laboratorium PA sebelum sampel diambil oleh petugas laboratorium dan hanya dapat dibatalkan oleh dokter yang mengirimkan order tersebut.
+            tags:
+                - Laboratorium
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Semua
+                - name: id_permintaan
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan laboratorium PA
+                "400":
+                    description: Permintaan sudah diproses laboratorium
+                "403":
+                    description: Dilarang membatalkan order dokter lain
+                "404":
+                    description: Permintaan tidak ditemukan
+
 
 
 

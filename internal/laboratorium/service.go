@@ -24,6 +24,12 @@ type Service interface {
 	GetRiwayatPermintaanLabPKByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabPK, shared.PaginationMeta, error)
 	GetDetailPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabPK, error)
 	HapusPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+
+	SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error)
+	GetDaftarPermintaanLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabPA, error)
+	GetRiwayatPermintaanLabPAByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabPA, shared.PaginationMeta, error)
+	GetDetailPermintaanLabPA(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabPA, error)
+	HapusPermintaanLabPA(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
 }
 
 type service struct {
@@ -154,27 +160,27 @@ func (s *service) GetDetailHasilLab(ctx context.Context, kategori shared.Kategor
 	return item, nil
 }
 
-func (s *service) fetchBerkasDigitalKunjungan(ctx context.Context, noRawat string, kodeBerkas []string) []BerkasDigital {
+func (s *service) fetchBerkasDigitalKunjungan(ctx context.Context, noRawat string, kodeBerkas []string) []berkasdigital.BerkasDigital {
 	if len(kodeBerkas) == 0 {
-		return []BerkasDigital{}
+		return make([]berkasdigital.BerkasDigital, 0)
 	}
 
-	berkasDBList, err := s.berkasSvc.GetBerkasByNoRawat(ctx, noRawat, kodeBerkas)
-	if err != nil || len(berkasDBList) == 0 {
-		return []BerkasDigital{}
+	berkasList, err := s.berkasSvc.GetBerkasByNoRawat(ctx, noRawat, kodeBerkas)
+	if err != nil || len(berkasList) == 0 {
+		return make([]berkasdigital.BerkasDigital, 0)
 	}
 
-	berkasDigital := make([]BerkasDigital, 0, len(berkasDBList))
-	for _, b := range berkasDBList {
-		item, err := s.berkasSvc.BuildBerkasItem(b.Kode, b.NamaBerkas, b.LokasiFile)
-		if err == nil && item != nil {
-			berkasDigital = append(berkasDigital, BerkasDigital{
-				Kode:       item.Kode,
-				NamaBerkas: item.NamaBerkas,
-				IdBerkas:   item.IdBerkas,
-				UrlBerkas:  item.UrlBerkas,
-			})
+	berkasDigital := make([]berkasdigital.BerkasDigital, 0, len(berkasList))
+	for _, b := range berkasList {
+		if b.LokasiFile == "" {
+			continue
 		}
+		fullURL := s.berkasSvc.BuildFullURL(b.LokasiFile)
+		berkasDigital = append(berkasDigital, berkasdigital.BerkasDigital{
+			Kode:       b.Kode,
+			NamaBerkas: b.NamaBerkas,
+			IdBerkas:   fullURL,
+		})
 	}
 	return berkasDigital
 }

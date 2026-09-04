@@ -69,7 +69,7 @@ func (s *service) DaftarPemeriksaanByRM(ctx context.Context, noRekamMedis string
 	}
 
 	if len(riwayatKunjungan) == 0 {
-		return []Pemeriksaan{}, shared.NewPaginationMeta(0, filter.Page, filter.Limit), nil
+		return make([]Pemeriksaan, 0), shared.NewPaginationMeta(0, filter.Page, filter.Limit), nil
 	}
 
 	listNoRawat := make([]string, len(riwayatKunjungan))
@@ -91,6 +91,9 @@ func (s *service) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statu
 	if err != nil {
 		s.log.Error("Gagal query detail pemeriksaan %+v (%s): %v", id, statusLanjut, err)
 		return nil, err
+	}
+	if pemeriksaan == nil {
+		return nil, apperror.NewNotFoundError("Detail pemeriksaan tidak ditemukan")
 	}
 
 	return pemeriksaan, nil
@@ -132,30 +135,12 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 	}
 
 	detail, err := s.repo.DetailPemeriksaan(ctx, idPemeriksaan, statusLanjut)
-	if err != nil || detail == nil {
-		detail = &Pemeriksaan{
-			NoRawat:             req.NoRawat,
-			TanggalPemeriksaan:  req.TanggalPemeriksaan,
-			JamPemeriksaan:      req.JamPemeriksaan,
-			SuhuTubuh:           req.SuhuTubuh,
-			Tensi:               req.Tensi,
-			Nadi:                req.Nadi,
-			Respirasi:           req.Respirasi,
-			TinggiBadan:         req.TinggiBadan,
-			BeratBadan:          req.BeratBadan,
-			SpO2:                req.SpO2,
-			Gcs:                 req.Gcs,
-			Kesadaran:           req.Kesadaran,
-			Keluhan:             req.Keluhan,
-			Pemeriksaan:         req.Pemeriksaan,
-			Alergi:              req.Alergi,
-			LingkarPerut:        req.LingkarPerut,
-			RencanaTindakLanjut: req.RencanaTindakLanjut,
-			Penilaian:           req.Penilaian,
-			Instruksi:           req.Instruksi,
-			Evaluasi:            req.Evaluasi,
-			KodeDokterPetugas:   kodeDokter,
-		}
+	if err != nil {
+		s.log.Error("Gagal mengambil detail pemeriksaan setelah simpan no_rawat %s (%s): %v", req.NoRawat, statusLanjut, err)
+		return nil, err
+	}
+	if detail == nil {
+		return nil, apperror.NewNotFoundError("Data pemeriksaan yang baru disimpan tidak ditemukan")
 	}
 
 	s.log.Info("Berhasil menyimpan pemeriksaan no_rawat %s (%s) oleh dokter %s", req.NoRawat, statusLanjut, kodeDokter)
@@ -206,32 +191,12 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 	}
 
 	detail, err := s.repo.DetailPemeriksaan(ctx, updatedId, statusLanjut)
-	if err != nil || detail == nil {
-		detail = &Pemeriksaan{
-			NoRawat:             id.NoRawat,
-			TanggalPemeriksaan:  req.TanggalPemeriksaan,
-			JamPemeriksaan:      req.JamPemeriksaan,
-			SuhuTubuh:           req.SuhuTubuh,
-			Tensi:               req.Tensi,
-			Nadi:                req.Nadi,
-			Respirasi:           req.Respirasi,
-			TinggiBadan:         req.TinggiBadan,
-			BeratBadan:          req.BeratBadan,
-			SpO2:                req.SpO2,
-			Gcs:                 req.Gcs,
-			Kesadaran:           req.Kesadaran,
-			Keluhan:             req.Keluhan,
-			Pemeriksaan:         req.Pemeriksaan,
-			Alergi:              req.Alergi,
-			LingkarPerut:        req.LingkarPerut,
-			RencanaTindakLanjut: req.RencanaTindakLanjut,
-			Penilaian:           req.Penilaian,
-			Instruksi:           req.Instruksi,
-			Evaluasi:            req.Evaluasi,
-			KodeDokterPetugas:   pemeriksaan.KodeDokterPetugas,
-			NamaDokterPetugas:   pemeriksaan.NamaDokterPetugas,
-			StatusLanjut:        statusLanjut,
-		}
+	if err != nil {
+		s.log.Error("Gagal mengambil detail pemeriksaan setelah update no_rawat %s (%s): %v", id.NoRawat, statusLanjut, err)
+		return nil, err
+	}
+	if detail == nil {
+		return nil, apperror.NewNotFoundError("Data pemeriksaan yang baru diperbarui tidak ditemukan")
 	}
 
 	s.log.Info("Berhasil memperbarui data pemeriksaan no_rawat %s (%s %s -> %s %s) oleh dokter %s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, req.TanggalPemeriksaan, req.JamPemeriksaan, kodeDokter)
@@ -267,8 +232,8 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	return nil
 }
 
-func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPeriksa, jamPeriksa string) error {
-	tglRegStr, jamRegStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
+func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string) error {
+	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
 		return err
@@ -277,20 +242,20 @@ func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPerik
 		return apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
 	}
 
-	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
+	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
 	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
+		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
 		return err
 	}
 
-	waktuPemeriksaan, err := shared.ParseWaktu(tglPeriksa, jamPeriksa)
+	waktuPemeriksaan, err := shared.ParseWaktu(tanggalPeriksa, jamPeriksa)
 	if err != nil {
 		return apperror.NewBusinessError(err.Error())
 	}
 
 	if waktuPemeriksaan.Before(waktuRegistrasi) {
 		errs := apperror.ValidationError{
-			"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPeriksa, jamPeriksa, tglRegStr, jamRegStr),
+			"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, jamPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
 		}
 		s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", noRawat, errs)
 		return errs
@@ -298,6 +263,3 @@ func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tglPerik
 
 	return nil
 }
-
-
-

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/shared/apperror"
 )
 
@@ -20,13 +19,6 @@ func (s *service) DetailPenilaianMedisIGD(ctx context.Context, noRawat string) (
 		return nil, err
 	}
 
-	if encryptedIdKunjungan, err := crypto.Encrypt(item.NoRawat, s.encryptionKey); err == nil {
-		item.IdKunjungan = encryptedIdKunjungan
-	}
-	if encryptedIdPasien, err := crypto.Encrypt(item.NoRM, s.encryptionKey); err == nil {
-		item.IdPasien = encryptedIdPasien
-	}
-
 	return item, nil
 }
 
@@ -37,24 +29,10 @@ func (s *service) RiwayatPenilaianMedisIGDByNoRM(ctx context.Context, noRM strin
 		return nil, err
 	}
 
-	for i := range list {
-		item := &list[i]
-		if encryptedIdKunjungan, err := crypto.Encrypt(item.NoRawat, s.encryptionKey); err == nil {
-			item.IdKunjungan = encryptedIdKunjungan
-		}
-		if encryptedIdPasien, err := crypto.Encrypt(item.NoRM, s.encryptionKey); err == nil {
-			item.IdPasien = encryptedIdPasien
-		}
-	}
-
 	return list, nil
 }
 
 func (s *service) SimpanPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, noRawat string, req SimpanPenilaianMedisIGDRequest) (*PenilaianMedisIGD, error) {
-	if errs := req.Validate(); errs != nil {
-		return nil, errs
-	}
-
 	if err := s.validasiWaktuPenilaianMedis(ctx, noRawat, req.TanggalPenilaian, "dibuat"); err != nil {
 		return nil, err
 	}
@@ -79,10 +57,6 @@ func (s *service) SimpanPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, 
 }
 
 func (s *service) UpdatePenilaianMedisIGD(ctx context.Context, kodeDokterLogin, noRawat string, req UpdatePenilaianMedisIGDRequest) (*PenilaianMedisIGD, error) {
-	if errs := req.Validate(); errs != nil {
-		return nil, errs
-	}
-
 	existing, err := s.repo.DetailPenilaianMedisIGD(ctx, noRawat)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

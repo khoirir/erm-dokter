@@ -48,6 +48,7 @@ func (h *Handler) DaftarObat(w http.ResponseWriter, r *http.Request) {
 		Limit:     limit,
 	}
 
+	filter.Sanitize()
 	if errs := filter.Validate(); errs != nil {
 		apperror.HandleError(w, errs)
 		return
@@ -72,7 +73,7 @@ func (h *Handler) DaftarObat(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DetailObat(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id_obat")
 	if id == "" {
-		apperror.HandleError(w, apperror.NewBusinessError("ID obat tidak boleh kosong"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID obat wajib diisi"))
 		return
 	}
 

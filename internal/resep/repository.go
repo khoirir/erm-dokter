@@ -86,7 +86,7 @@ func (r *repository) queryResep(ctx context.Context, whereClause string, paramVa
 	}
 
 	if totalData == 0 {
-		return []Resep{}, 0, nil
+		return make([]Resep, 0), 0, nil
 	}
 
 	selectQuery := fmt.Sprintf(`
@@ -331,7 +331,7 @@ func (r *repository) DaftarAturanPakai(ctx context.Context, keyword string) ([]A
 	}
 	defer rows.Close()
 
-	var list []AturanPakai
+	list := make([]AturanPakai, 0)
 	for rows.Next() {
 		var ap AturanPakai
 		if err := rows.Scan(&ap.AturanPakai); err != nil {
@@ -342,10 +342,6 @@ func (r *repository) DaftarAturanPakai(ctx context.Context, keyword string) ([]A
 
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if list == nil {
-		list = []AturanPakai{}
 	}
 
 	return list, nil
@@ -360,7 +356,7 @@ func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, erro
 	}
 	defer rows.Close()
 
-	var list []MetodeRacik
+	list := make([]MetodeRacik, 0)
 	for rows.Next() {
 		var mr MetodeRacik
 		if err := rows.Scan(&mr.Kode, &mr.Nama); err != nil {
@@ -371,10 +367,6 @@ func (r *repository) DaftarMetodeRacik(ctx context.Context) ([]MetodeRacik, erro
 
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	if list == nil {
-		list = []MetodeRacik{}
 	}
 
 	return list, nil

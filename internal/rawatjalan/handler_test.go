@@ -21,6 +21,7 @@ type mockRawatJalanService struct {
 	detailKunjunganFn        func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error)
 	riwayatKunjunganPasienFn func(ctx context.Context, noRM string) ([]rawatjalan.KunjunganRawatJalan, error)
 	getWaktuRegistrasiFn     func(ctx context.Context, noRawat string) (tanggal string, jam string, exists bool, err error)
+	getInfoRegistrasiFn      func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error)
 }
 
 func (m *mockRawatJalanService) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, shared.PaginationMeta, error) {
@@ -49,6 +50,18 @@ func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat 
 		return m.getWaktuRegistrasiFn(ctx, noRawat)
 	}
 	return "2026-09-03", "08:00:00", true, nil
+}
+
+func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+	if m.getInfoRegistrasiFn != nil {
+		return m.getInfoRegistrasiFn(ctx, noRawat)
+	}
+	return &rawatjalan.InfoRegistrasiPasien{
+		TanggalRegistrasi: "2026-09-03",
+		JamRegistrasi:     "08:00:00",
+		KodePenjamin:      "UMU",
+		StatusBayar:       "Belum Bayar",
+	}, nil
 }
 
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {

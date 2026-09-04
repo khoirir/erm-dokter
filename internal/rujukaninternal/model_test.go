@@ -67,6 +67,7 @@ func TestSimpanRujukanRequest_Validation(t *testing.T) {
 	}
 
 	req.IdTujuan = " valid_encrypted_id "
+	req.Sanitize()
 	errs = req.Validate()
 	if errs != nil {
 		t.Fatalf("expected no validation error, got %+v", errs)

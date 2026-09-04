@@ -24,6 +24,8 @@ func (h *Handler) DetailPenilaianMedisIGD(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	detail.IdKunjungan = idKunjungan
+
 	response.Success(w, "Berhasil mengambil detail penilaian awal medis IGD", detail)
 }
 
@@ -39,6 +41,12 @@ func (h *Handler) RiwayatPenilaianMedisIGD(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	for i := range riwayat {
+		if enc, err := crypto.Encrypt(riwayat[i].NoRawat, h.encryptionKey); err == nil {
+			riwayat[i].IdKunjungan = enc
+		}
 	}
 
 	response.Success(w, "Berhasil mengambil riwayat penilaian awal medis IGD pasien", riwayat)
@@ -63,6 +71,12 @@ func (h *Handler) SimpanPenilaianMedisIGD(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
@@ -74,6 +88,8 @@ func (h *Handler) SimpanPenilaianMedisIGD(w http.ResponseWriter, r *http.Request
 		apperror.HandleError(w, err)
 		return
 	}
+
+	hasil.IdKunjungan = idKunjungan
 
 	response.Created(w, "Berhasil menyimpan penilaian awal medis IGD", hasil)
 }
@@ -92,6 +108,12 @@ func (h *Handler) UpdatePenilaianMedisIGD(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
 	kodeDokter, err := middleware.GetKodeDokter(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
@@ -103,6 +125,8 @@ func (h *Handler) UpdatePenilaianMedisIGD(w http.ResponseWriter, r *http.Request
 		apperror.HandleError(w, err)
 		return
 	}
+
+	hasil.IdKunjungan = idKunjungan
 
 	response.Success(w, "Berhasil memperbarui penilaian awal medis IGD", hasil)
 }
@@ -128,3 +152,4 @@ func (h *Handler) HapusPenilaianMedisIGD(w http.ResponseWriter, r *http.Request)
 
 	response.Success(w, "Berhasil menghapus penilaian awal medis IGD", nil)
 }
+

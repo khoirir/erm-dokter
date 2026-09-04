@@ -28,14 +28,18 @@ type Resep struct {
 }
 
 
+type ItemObatResep struct {
+	IdObat   string  `json:"id_obat"`
+	KodeObat string  `json:"kode_obat"`
+	NamaObat string  `json:"nama_obat"`
+	Jumlah   float64 `json:"jumlah"`
+	Satuan   string  `json:"satuan"`
+}
+
 type ResepDokter struct {
-	NoResep     string  `json:"-"`
-	IdObat      string  `json:"id_obat"`
-	KodeObat    string  `json:"kode_obat"`
-	NamaObat    string  `json:"nama_obat"`
-	Jumlah      float64 `json:"jumlah"`
-	Satuan      string  `json:"satuan"`
-	AturanPakai string  `json:"aturan_pakai"`
+	NoResep string `json:"-"`
+	ItemObatResep
+	AturanPakai string `json:"aturan_pakai"`
 }
 
 type ResepDokterRacikan struct {
@@ -51,14 +55,10 @@ type ResepDokterRacikan struct {
 }
 
 type ResepDokterRacikanDetail struct {
-	NoResep   string  `json:"-"`
-	NoRacik   string  `json:"-"`
-	IdObat    string  `json:"id_obat"`
-	KodeObat  string  `json:"kode_obat"`
-	NamaObat  string  `json:"nama_obat"`
-	Kandungan string  `json:"kandungan"`
-	Jumlah    float64 `json:"jumlah"`
-	Satuan    string  `json:"satuan"`
+	NoResep   string `json:"-"`
+	NoRacik   string `json:"-"`
+	ItemObatResep
+	Kandungan string `json:"kandungan"`
 }
 
 type FilterDaftarResep struct {
@@ -82,8 +82,7 @@ func (f FilterDaftarResep) Offset() int {
 	return (f.Page - 1) * f.Limit
 }
 
-func (f *FilterDaftarResep) Validate() apperror.ValidationError {
-	f.Sanitize()
+func (f FilterDaftarResep) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 	if f.Tanggal != "" {
 		shared.ValidasiRentangTanggal(f.Tanggal, errs)
@@ -103,6 +102,25 @@ type MetodeRacik struct {
 	Nama string `json:"nama"`
 }
 
+type ItemObatInput struct {
+	IdObat   string  `json:"id_obat"`
+	KodeObat string  `json:"-"`
+	Jumlah   float64 `json:"jumlah"`
+}
+
+func (i *ItemObatInput) Sanitize() {
+	i.IdObat = strings.TrimSpace(i.IdObat)
+}
+
+func (i ItemObatInput) Validate(prefix, label string, errs apperror.ValidationError) {
+	if i.IdObat == "" {
+		errs[prefix+".id_obat"] = fmt.Sprintf("%s: ID obat wajib diisi", label)
+	}
+	if i.Jumlah <= 0 {
+		errs[prefix+".jumlah"] = fmt.Sprintf("%s: Jumlah obat harus lebih dari 0", label)
+	}
+}
+
 type SimpanResepRequest struct {
 	NoRawat          string              `json:"no_rawat"`
 	TanggalPeresepan string              `json:"tanggal_peresepan"`
@@ -112,10 +130,8 @@ type SimpanResepRequest struct {
 }
 
 type ResepDokterInput struct {
-	IdObat      string  `json:"id_obat"`
-	KodeObat    string  `json:"-"`
-	Jumlah      float64 `json:"jumlah"`
-	AturanPakai string  `json:"aturan_pakai"`
+	ItemObatInput
+	AturanPakai string `json:"aturan_pakai"`
 }
 
 type ResepRacikanInput struct {
@@ -128,10 +144,8 @@ type ResepRacikanInput struct {
 }
 
 type ResepRacikanDetailInput struct {
-	IdObat    string  `json:"id_obat"`
-	KodeObat  string  `json:"-"`
-	Kandungan string  `json:"kandungan"`
-	Jumlah    float64 `json:"jumlah"`
+	ItemObatInput
+	Kandungan string `json:"kandungan"`
 }
 
 func (r *SimpanResepRequest) Sanitize() {
@@ -146,7 +160,7 @@ func (r *SimpanResepRequest) Sanitize() {
 	}
 
 	for i := range r.ResepDokter {
-		r.ResepDokter[i].IdObat = strings.TrimSpace(r.ResepDokter[i].IdObat)
+		r.ResepDokter[i].ItemObatInput.Sanitize()
 		r.ResepDokter[i].AturanPakai = strings.TrimSpace(r.ResepDokter[i].AturanPakai)
 	}
 
@@ -157,14 +171,13 @@ func (r *SimpanResepRequest) Sanitize() {
 		r.ResepRacikan[i].Keterangan = strings.TrimSpace(r.ResepRacikan[i].Keterangan)
 
 		for j := range r.ResepRacikan[i].Detail {
-			r.ResepRacikan[i].Detail[j].IdObat = strings.TrimSpace(r.ResepRacikan[i].Detail[j].IdObat)
+			r.ResepRacikan[i].Detail[j].ItemObatInput.Sanitize()
 			r.ResepRacikan[i].Detail[j].Kandungan = strings.TrimSpace(r.ResepRacikan[i].Detail[j].Kandungan)
 		}
 	}
 }
 
 func (r *SimpanResepRequest) Validate() apperror.ValidationError {
-	r.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	if r.NoRawat == "" {
@@ -198,14 +211,10 @@ func (r *SimpanResepRequest) Validate() apperror.ValidationError {
 
 	for i, rd := range r.ResepDokter {
 		prefix := fmt.Sprintf("resep_dokter[%d]", i)
-		if rd.IdObat == "" {
-			errs[prefix+".id_obat"] = fmt.Sprintf("Obat ke-%d: ID obat wajib diisi", i+1)
-		}
-		if rd.Jumlah <= 0 {
-			errs[prefix+".jumlah"] = fmt.Sprintf("Obat ke-%d: Jumlah obat harus lebih dari 0", i+1)
-		}
+		label := fmt.Sprintf("Obat ke-%d", i+1)
+		rd.ItemObatInput.Validate(prefix, label, errs)
 		if rd.AturanPakai == "" {
-			errs[prefix+".aturan_pakai"] = fmt.Sprintf("Obat ke-%d: Aturan pakai wajib diisi", i+1)
+			errs[prefix+".aturan_pakai"] = fmt.Sprintf("%s: Aturan pakai wajib diisi", label)
 		}
 	}
 
@@ -230,12 +239,8 @@ func (r *SimpanResepRequest) Validate() apperror.ValidationError {
 
 		for j, d := range rr.Detail {
 			detailPrefix := fmt.Sprintf("%s.detail[%d]", prefix, j)
-			if d.IdObat == "" {
-				errs[detailPrefix+".id_obat"] = fmt.Sprintf("Racikan ke-%d bahan ke-%d: ID obat wajib diisi", i+1, j+1)
-			}
-			if d.Jumlah <= 0 {
-				errs[detailPrefix+".jumlah"] = fmt.Sprintf("Racikan ke-%d bahan ke-%d: Jumlah obat harus lebih dari 0", i+1, j+1)
-			}
+			detailLabel := fmt.Sprintf("Racikan ke-%d bahan ke-%d", i+1, j+1)
+			d.ItemObatInput.Validate(detailPrefix, detailLabel, errs)
 		}
 
 	}
@@ -245,3 +250,4 @@ func (r *SimpanResepRequest) Validate() apperror.ValidationError {
 	}
 	return nil
 }
+

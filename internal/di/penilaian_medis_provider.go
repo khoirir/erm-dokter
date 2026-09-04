@@ -13,6 +13,6 @@ func providePenilaianMedis(db *sql.DB, cfg *config.Config, log *logger.Logger) *
 	repo := penilaianmedis.NewRepository(db)
 	rawatJalanRepo := rawatjalan.NewRepository(db)
 	rawatJalanSvc := rawatjalan.NewService(rawatJalanRepo, log)
-	svc := penilaianmedis.NewService(repo, rawatJalanSvc, log, cfg.EncryptionKey)
+	svc := penilaianmedis.NewService(repo, rawatJalanSvc, log)
 	return penilaianmedis.NewHandler(svc, cfg.EncryptionKey)
 }

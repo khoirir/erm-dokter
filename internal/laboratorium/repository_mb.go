@@ -61,7 +61,7 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 	}
 
 	if total == 0 {
-		return []HasilLaboratorium{}, 0, nil
+		return make([]HasilLaboratorium, 0), 0, nil
 	}
 
 	filter.Sanitize()
@@ -98,7 +98,7 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 	}
 	defer rows.Close()
 
-	var list []HasilLaboratorium
+	list := make([]HasilLaboratorium, 0)
 	for rows.Next() {
 		var item HasilLaboratorium
 		err = rows.Scan(
@@ -120,7 +120,7 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 			return nil, 0, err
 		}
 
-		item.DetailPK = []ItemHasilLabPK{}
+		item.DetailPK = make([]ItemHasilLabPK, 0)
 		list = append(list, item)
 	}
 
@@ -179,6 +179,6 @@ func (r *repository) DetailHasilLabMB(ctx context.Context, noRawat string, kodeT
 		return nil, err
 	}
 
-	item.DetailPK = []ItemHasilLabPK{}
+	item.DetailPK = make([]ItemHasilLabPK, 0)
 	return &item, nil
 }

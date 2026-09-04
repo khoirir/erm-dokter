@@ -88,15 +88,14 @@ func (f FilterDaftarObat) Offset() int {
 }
 
 func (f *FilterDaftarObat) Validate() apperror.ValidationError {
-	f.Sanitize()
 	errs := make(apperror.ValidationError)
 
 	if !shared.SortOrder(f.SortOrder).IsValid() {
-		errs["sort_order"] = "Jenis pengurutan tidak valid"
+		errs["sort_order"] = "Arah pengurutan tidak valid (pilihan: ASC, DESC)"
 	}
 
 	if !OrderBy(f.OrderBy).IsValid() {
-		errs["order_by"] = "Jenis pengurutan tidak valid"
+		errs["order_by"] = "Kolom pengurutan tidak valid"
 	}
 
 	keyword := strings.TrimSpace(f.Keyword)
