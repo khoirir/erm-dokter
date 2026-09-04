@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
@@ -30,13 +31,20 @@ type Service interface {
 type service struct {
 	repo              Repository
 	rawatJalanService rawatjalan.Service
+	rawatInapService  rawatinap.Service
+	maxEditJam        int
 	log               *logger.Logger
 }
 
-func NewService(repo Repository, rawatJalanService rawatjalan.Service, log *logger.Logger) Service {
+func NewService(repo Repository, rawatJalanService rawatjalan.Service, rawatInapService rawatinap.Service, maxEditJam int, log *logger.Logger) Service {
+	if maxEditJam <= 0 {
+		maxEditJam = 48
+	}
 	return &service{
 		repo:              repo,
 		rawatJalanService: rawatJalanService,
+		rawatInapService:  rawatInapService,
+		maxEditJam:        maxEditJam,
 		log:               log,
 	}
 }
@@ -45,7 +53,7 @@ func (s *service) Referensi(ctx context.Context) ReferensiPenilaianMedis {
 	return GetReferensiPenilaianMedis()
 }
 
-func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tanggalPeriksa, aksi string) error {
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tglPenilaian string, action string) error {
 	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil waktu registrasi no_rawat %s: %v", noRawat, err)
@@ -55,21 +63,45 @@ func (s *service) validasiWaktuPenilaianMedis(ctx context.Context, noRawat, tang
 		return apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
 	}
 
-	if err := shared.ValidasiBatasWaktuRekamMedis(tanggalRegistrasiStr, jamRegistrasiStr, 48, aksi); err != nil {
-		s.log.Warn("Validasi batas waktu 48 jam penilaian medis gagal untuk no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
+	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
+	if err != nil {
+		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
 		return err
 	}
 
-	if tanggalPeriksa != "" {
-		waktuRegistrasi, errReg := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
-		waktuPemeriksaan, errPer := time.ParseInLocation("2006-01-02 15:04:05", tanggalPeriksa, time.Local)
-		if errReg == nil && errPer == nil && waktuPemeriksaan.Before(waktuRegistrasi) {
+	if tglPenilaian != "" {
+		waktuPenilaian, errPer := time.ParseInLocation("2006-01-02 15:04:05", tglPenilaian, time.Local)
+		if errPer == nil && waktuPenilaian.Before(waktuRegistrasi) {
 			errs := apperror.ValidationError{
-				"tanggal_penilaian": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
+				"tanggal_penilaian": fmt.Sprintf("Waktu penilaian medis (%s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPenilaian, tanggalRegistrasiStr, jamRegistrasiStr),
 			}
 			s.log.Warn("Validasi waktu penilaian medis gagal untuk no_rawat %s: %+v", noRawat, errs)
 			return errs
 		}
+	}
+
+	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, waktuRegistrasi, tanggalRegistrasiStr, jamRegistrasiStr)
+}
+
+func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, waktuRegistrasi time.Time, tglRegStr, jamRegStr string) error {
+	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal cek status kamar inap untuk no_rawat %s: %v", noRawat, err)
+		return err
+	}
+
+	if hasRecordKamar {
+		if !isAktifRanap {
+			return apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
+		}
+		return nil
+	}
+
+	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
+	if time.Now().After(batasWaktu) {
+		errMsg := fmt.Sprintf("Batas waktu penilaian medis untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
+		s.log.Warn("Penilaian medis ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
+		return apperror.NewForbiddenError(errMsg)
 	}
 
 	return nil

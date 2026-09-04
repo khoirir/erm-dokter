@@ -249,41 +249,41 @@ func toZeroDateIfEmpty(val string) string {
 }
 
 func (r *repository) generateNoPermintaanPA(ctx context.Context, tx *sql.Tx, tanggalPermintaan string) (string, error) {
-	prefixDate := time.Now().Format("20060102")
 	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(tanggalPermintaan))
+	prefixDate := time.Now().Format("20060102")
 	if err == nil {
 		prefixDate = parsedDate.Format("20060102")
 	}
-
-	minOrder := fmt.Sprintf("PA%s0000", prefixDate)
-	maxOrder := fmt.Sprintf("PA%s9999", prefixDate)
+	prefix := "PA" + prefixDate
+	minOrder := prefix + "0000"
+	maxOrder := prefix + "9999"
 
 	query := `SELECT noorder FROM permintaan_labpa WHERE noorder BETWEEN ? AND ? ORDER BY noorder DESC LIMIT 1 FOR UPDATE`
 	var lastToday string
 	err = tx.QueryRowContext(ctx, query, minOrder, maxOrder).Scan(&lastToday)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Sprintf("PA%s0001", prefixDate), nil
+		return prefix + "0001", nil
 	}
 	if err != nil {
 		return "", err
 	}
 
-	expectedPrefix := fmt.Sprintf("PA%s", prefixDate)
-	if len(lastToday) != 14 || !strings.HasPrefix(lastToday, expectedPrefix) {
-		return fmt.Sprintf("PA%s0001", prefixDate), nil
+	if len(lastToday) != 14 || !strings.HasPrefix(lastToday, prefix) {
+		return "PA" + time.Now().Format("20060102150405"), nil
 	}
 
-	tail := lastToday[10:]
+	tail := lastToday[len(lastToday)-4:]
 	next, err := strconv.Atoi(tail)
 	if err != nil || next >= 9999 {
-		return fmt.Sprintf("PA%s%04d", prefixDate, 9999), nil
+		return "PA" + time.Now().Format("20060102150405"), nil
 	}
 
-	return fmt.Sprintf("PA%s%04d", prefixDate, next+1), nil
+	return fmt.Sprintf("%s%04d", prefix, next+1), nil
 }
 
-func (r *repository) SimpanPermintaanLabPA(ctx context.Context, noRawat string, kodeDokter string, status string, req SimpanPermintaanLabPARequest, kodeTindakanList []string) (string, error) {
+func (r *repository) SimpanPermintaanLabPA(ctx context.Context, noRawat string, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest, kodeTindakanList []string) (string, error) {
 	var lastErr error
+	status := strings.ToLower(string(statusLanjut))
 
 	for attempt := 1; attempt <= 3; attempt++ {
 		tx, err := r.db.BeginTx(ctx, nil)
@@ -654,6 +654,60 @@ func (r *repository) DetailPermintaanLabPA(ctx context.Context, noPermintaan str
 	}
 
 	return &detail, nil
+}
+
+func (r *repository) UpdatePermintaanLabPA(ctx context.Context, noPermintaan string, req SimpanPermintaanLabPARequest, kodeTindakanList []string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	tglPengambilanBahan := strings.TrimSpace(req.PengambilanBahan)
+	if tglPengambilanBahan == "" {
+		tglPengambilanBahan = strings.TrimSpace(req.TanggalPermintaan)
+	}
+
+	updateHeaderQuery := `
+		UPDATE permintaan_labpa
+		SET tgl_permintaan = ?, jam_permintaan = ?, informasi_tambahan = ?, diagnosa_klinis = ?,
+		    pengambilan_bahan = ?, diperoleh_dengan = ?, lokasi_jaringan = ?, diawetkan_dengan = ?,
+		    pernah_dilakukan_di = ?, tanggal_pa_sebelumnya = ?, nomor_pa_sebelumnya = ?, diagnosa_pa_sebelumnya = ?
+		WHERE noorder = ?
+	`
+	_, err = tx.ExecContext(ctx, updateHeaderQuery,
+		req.TanggalPermintaan, req.JamPermintaan, req.InformasiTambahan, req.DiagnosaKlinis,
+		toNullString(tglPengambilanBahan),
+		toNullString(req.DiperolehDengan),
+		toNullString(req.LokasiJaringan),
+		toNullString(req.DiawetkanDengan),
+		toNullString(req.PernahDilakukanDi),
+		toZeroDateIfEmpty(req.TanggalPASebelumnya),
+		toNullString(req.NomorPASebelumnya),
+		toNullString(req.DiagnosaPASebelumnya),
+		noPermintaan,
+	)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM permintaan_pemeriksaan_labpa WHERE noorder = ?`, noPermintaan); err != nil {
+		return err
+	}
+
+	stmtTindakan, err := tx.PrepareContext(ctx, `INSERT INTO permintaan_pemeriksaan_labpa (noorder, kd_jenis_prw, stts_bayar) VALUES (?, ?, 'Belum')`)
+	if err != nil {
+		return err
+	}
+	defer stmtTindakan.Close()
+
+	for _, kodeTindakan := range kodeTindakanList {
+		if _, err := stmtTindakan.ExecContext(ctx, noPermintaan, kodeTindakan); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *repository) HapusPermintaanLabPA(ctx context.Context, noPermintaan string) error {

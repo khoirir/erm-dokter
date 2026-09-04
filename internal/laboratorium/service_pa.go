@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
@@ -19,58 +18,86 @@ func (s *service) SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin str
 
 	noRawat := req.NoRawat
 
-	infoReg, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "membuat"); err != nil {
+		return nil, err
+	}
+
+	kodeTindakanList, err := s.validasiTindakanLabPA(ctx, noRawat, req)
 	if err != nil {
 		return nil, err
 	}
 
-	if infoReg.StatusBayar == "Sudah Bayar" && infoReg.KodePenjamin == "BPJ" {
-		return nil, apperror.NewBusinessError("Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat mengirim permintaan laboratorium baru")
-	}
-
-	tglRegStr := infoReg.TanggalRegistrasi
-	jamRegStr := infoReg.JamRegistrasi
-	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
+	noPermintaan, err := s.repo.SimpanPermintaanLabPA(ctx, noRawat, kodeDokterLogin, statusLanjut, req, kodeTindakanList)
 	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
+		s.log.Error("Gagal menyimpan permintaan laboratorium PA %s: %v", noRawat, err)
 		return nil, err
 	}
 
-	waktuPermintaan, err := shared.ParseWaktu(req.TanggalPermintaan, req.JamPermintaan)
-	if err != nil {
-		return nil, apperror.NewBusinessError(err.Error())
+	s.log.Info("Berhasil membuat permintaan laboratorium PA %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
+	return s.GetDetailPermintaanLabPA(ctx, noRawat, noPermintaan, statusLanjut)
+}
+
+func (s *service) UpdatePermintaanLabPA(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error) {
+	if !statusLanjut.IsValid() {
+		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
-	if waktuPermintaan.Before(waktuRegistrasi) {
-		return nil, apperror.NewBusinessError(fmt.Sprintf("Waktu permintaan laboratorium (%s %s) tidak boleh mendahului waktu registrasi pasien (%s %s)", req.TanggalPermintaan, req.JamPermintaan, tglRegStr, jamRegStr))
-	}
-
-	isKamarAktif, hasRecordKamar, err := s.repo.CekStatusKamarInap(ctx, noRawat)
+	detail, err := s.repo.DetailPermintaanLabPA(ctx, noPermintaan)
 	if err != nil {
-		s.log.Error("Gagal memeriksa status kamar inap pasien %s: %v", noRawat, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
+		}
+		s.log.Error("Gagal mengambil data permintaan lab PA untuk diubah %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
-	var statusDB string
-	if statusLanjut == shared.StatusLanjutRawatInap {
-		if !hasRecordKamar {
-			return nil, apperror.NewBusinessError("Pasien tidak memiliki data kamar inap untuk order Ranap")
-		}
-		if !isKamarAktif {
-			return nil, apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
-		}
-		statusDB = "ranap"
-	} else {
-		if isKamarAktif {
-			return nil, apperror.NewBusinessError("Pasien saat ini berstatus rawat inap aktif, permintaan laboratorium harus berstatus rawat inap")
-		}
-		batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
-		if time.Now().After(batasWaktu) {
-			return nil, apperror.NewBusinessError("Permintaan laboratorium rawat jalan telah melewati batas waktu 48 jam sejak waktu registrasi")
-		}
-		statusDB = "ralan"
+	if detail.NoRawat != noRawat {
+		return nil, apperror.NewBusinessError("Permintaan laboratorium tidak sesuai dengan kunjungan pasien")
 	}
 
+	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
+		return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
+	}
+
+	if detail.KodeDokterPerujuk != kodeDokterLogin {
+		s.log.Warn("Percobaan mengubah permintaan lab PA %s oleh dokter %s ditolak: dibuat oleh %s (%s)", noPermintaan, kodeDokterLogin, detail.KodeDokterPerujuk, detail.NamaDokterPerujuk)
+		return nil, apperror.NewForbiddenError("Hanya dokter pemohon yang berhak mengubah permintaan laboratorium ini")
+	}
+
+	isSampelDiambil := detail.TanggalSampel != "0000-00-00" && strings.TrimSpace(detail.TanggalSampel) != ""
+	isHasilKeluar := detail.TanggalHasil != "0000-00-00" && strings.TrimSpace(detail.TanggalHasil) != ""
+
+	if isSampelDiambil || isHasilKeluar {
+		return nil, apperror.NewBusinessError("Permintaan laboratorium sudah diproses (sudah diambil sampel atau hasil sudah keluar) dan tidak dapat diubah")
+	}
+
+	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "mengubah"); err != nil {
+		return nil, err
+	}
+
+	kodeTindakanList, err := s.validasiTindakanLabPA(ctx, noRawat, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.UpdatePermintaanLabPA(ctx, noPermintaan, req, kodeTindakanList); err != nil {
+		s.log.Error("Gagal memperbarui permintaan lab PA %s: %v", noPermintaan, err)
+		return nil, err
+	}
+
+	s.log.Info("Berhasil memperbarui permintaan lab PA %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
+
+	updatedDetail, err := s.repo.DetailPermintaanLabPA(ctx, noPermintaan)
+	if err != nil {
+		s.log.Error("Gagal mengambil detail setelah update permintaan lab PA %s: %v", noPermintaan, err)
+		return nil, err
+	}
+
+	updatedDetail.PermintaanLabPA = s.formatPermintaanLabPA(updatedDetail.PermintaanLabPA)
+	return updatedDetail, nil
+}
+
+func (s *service) validasiTindakanLabPA(ctx context.Context, noRawat string, req SimpanPermintaanLabPARequest) ([]string, error) {
 	var kodeTindakanList []string
 	seenTindakan := make(map[string]bool)
 
@@ -98,14 +125,7 @@ func (s *service) SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin str
 		return nil, valErrs
 	}
 
-	noPermintaan, err := s.repo.SimpanPermintaanLabPA(ctx, noRawat, kodeDokterLogin, statusDB, req, kodeTindakanList)
-	if err != nil {
-		s.log.Error("Gagal menyimpan permintaan laboratorium PA %s: %v", noRawat, err)
-		return nil, err
-	}
-
-	s.log.Info("Berhasil membuat permintaan laboratorium PA %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
-	return s.GetDetailPermintaanLabPA(ctx, noRawat, noPermintaan, statusLanjut)
+	return kodeTindakanList, nil
 }
 
 func (s *service) GetDaftarPermintaanLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabPA, error) {
@@ -188,6 +208,19 @@ func (s *service) HapusPermintaanLabPA(ctx context.Context, noRawat string, noPe
 
 	if isSampelDiambil || isHasilKeluar {
 		return apperror.NewBusinessError("Permintaan laboratorium sudah diproses (sudah diambil sampel atau hasil sudah keluar) dan tidak dapat dibatalkan")
+	}
+
+	orderStatus := statusLanjut
+	if orderStatus == "" || orderStatus == "Semua" {
+		if strings.EqualFold(detail.Status, string(shared.StatusLanjutRawatInap)) {
+			orderStatus = shared.StatusLanjutRawatInap
+		} else {
+			orderStatus = shared.StatusLanjutRawatJalan
+		}
+	}
+
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, "", "", orderStatus, "menghapus"); err != nil {
+		return err
 	}
 
 	if err := s.repo.HapusPermintaanLabPA(ctx, noPermintaan); err != nil {

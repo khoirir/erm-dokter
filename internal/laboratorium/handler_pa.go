@@ -171,6 +171,69 @@ func (h *Handler) DetailPermintaanLabPA(w http.ResponseWriter, r *http.Request) 
 	response.Success(w, "Berhasil mengambil detail permintaan laboratorium PA", data)
 }
 
+func (h *Handler) UpdatePermintaanLabPA(w http.ResponseWriter, r *http.Request) {
+	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
+	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
+	if !statusLanjut.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
+		return
+	}
+
+	idKunjungan := strings.TrimSpace(r.PathValue("id_kunjungan"))
+	noRawatURL, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
+		return
+	}
+
+	idPermintaan := strings.TrimSpace(r.PathValue("id_permintaan"))
+	noPermintaanURL, err := crypto.Decrypt(idPermintaan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID permintaan laboratorium tidak valid"))
+		return
+	}
+
+	var req SimpanPermintaanLabPARequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		return
+	}
+
+	if req.NoRawat != noRawatURL {
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		return
+	}
+
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	if err := h.decryptTindakanLabPAPayload(&req); err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	data, err := h.service.UpdatePermintaanLabPA(r.Context(), kodeDokter, noRawatURL, noPermintaanURL, statusLanjut, req)
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	if data != nil {
+		h.encryptDetailPermintaanLabPA(data)
+	}
+
+	response.Success(w, "Berhasil memperbarui permintaan laboratorium PA", data)
+}
+
 func (h *Handler) HapusPermintaanLabPA(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)

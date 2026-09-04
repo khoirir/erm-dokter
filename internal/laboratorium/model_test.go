@@ -490,3 +490,168 @@ func TestSimpanPermintaanLabPARequest_Validate(t *testing.T) {
 	})
 }
 
+func TestSimpanPermintaanLabMBRequest_ValidationAndSanitization(t *testing.T) {
+	now := time.Now().Add(-1 * time.Minute)
+	nowStr := now.Format("2006-01-02")
+	jamNowStr := now.Format("15:04:05")
+
+	t.Run("Valid request with full fields", func(t *testing.T) {
+		req := laboratorium.SimpanPermintaanLabMBRequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/04/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Kultur Sputum",
+				InformasiTambahan: "Curiga TB",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabMBRequest{
+				{
+					IdTindakan: "enc-tindakan-mb-1",
+					IdTemplate: []string{"enc-tmpl-1", "enc-tmpl-2"},
+				},
+			},
+		}
+
+		req.Sanitize()
+		errs := req.Validate()
+		if errs != nil {
+			t.Fatalf("Expected nil errors, got %v", errs)
+		}
+		if req.InformasiTambahan != "Curiga TB" {
+			t.Errorf("Expected 'Curiga TB', got %s", req.InformasiTambahan)
+		}
+	})
+
+	t.Run("Valid request with HH:MM format and empty informasi_tambahan defaults to hyphen", func(t *testing.T) {
+		req := laboratorium.SimpanPermintaanLabMBRequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				NoRawat:           "2026/09/04/000001",
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     now.Format("15:04"),
+				DiagnosaKlinis:    "Kultur Darah",
+				InformasiTambahan: "   ",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabMBRequest{
+				{
+					IdTindakan: "  enc-tindakan-mb-1  ",
+				},
+			},
+		}
+
+		req.Sanitize()
+		errs := req.Validate()
+		if errs != nil {
+			t.Fatalf("Expected nil errors, got %v", errs)
+		}
+		if req.InformasiTambahan != "-" {
+			t.Errorf("Expected '-', got %s", req.InformasiTambahan)
+		}
+		if len(req.JamPermintaan) != 8 {
+			t.Errorf("Expected jam format with seconds (8 chars), got %s", req.JamPermintaan)
+		}
+		if req.Pemeriksaan[0].IdTindakan != "enc-tindakan-mb-1" {
+			t.Errorf("Expected trimmed id_tindakan, got %s", req.Pemeriksaan[0].IdTindakan)
+		}
+	})
+
+	t.Run("Invalid empty required fields", func(t *testing.T) {
+		req := laboratorium.SimpanPermintaanLabMBRequest{}
+		req.Sanitize()
+		errs := req.Validate()
+		if errs == nil {
+			t.Fatal("Expected validation errors, got nil")
+		}
+		if _, ok := errs["no_rawat"]; !ok {
+			t.Error("Expected error on no_rawat")
+		}
+		if _, ok := errs["tanggal_permintaan"]; !ok {
+			t.Error("Expected error on tanggal_permintaan")
+		}
+		if _, ok := errs["jam_permintaan"]; !ok {
+			t.Error("Expected error on jam_permintaan")
+		}
+		if _, ok := errs["diagnosa_klinis"]; !ok {
+			t.Error("Expected error on diagnosa_klinis")
+		}
+		if _, ok := errs["pemeriksaan"]; !ok {
+			t.Error("Expected error on pemeriksaan")
+		}
+	})
+
+	t.Run("Invalid date and time formats", func(t *testing.T) {
+		req := laboratorium.SimpanPermintaanLabMBRequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				TanggalPermintaan: "04-09-2026",
+				JamPermintaan:     "jam-10",
+				DiagnosaKlinis:    "Sepsis",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabMBRequest{
+				{
+					IdTindakan: "",
+				},
+			},
+		}
+
+		errs := req.Validate()
+		if errs == nil {
+			t.Fatal("Expected validation errors, got nil")
+		}
+		if _, ok := errs["tanggal_permintaan"]; !ok {
+			t.Error("Expected error on format tanggal_permintaan")
+		}
+		if _, ok := errs["jam_permintaan"]; !ok {
+			t.Error("Expected error on format jam_permintaan")
+		}
+		if _, ok := errs["pemeriksaan[0].id_tindakan"]; !ok {
+			t.Error("Expected error on empty id_tindakan")
+		}
+	})
+
+	t.Run("Invalid future time", func(t *testing.T) {
+		besok := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+		req := laboratorium.SimpanPermintaanLabMBRequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				TanggalPermintaan: besok,
+				JamPermintaan:     "10:00:00",
+				DiagnosaKlinis:    "Sepsis",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabMBRequest{
+				{IdTindakan: "enc-tindakan-mb-1"},
+			},
+		}
+
+		errs := req.Validate()
+		if errs == nil {
+			t.Fatal("Expected validation errors for future time, got nil")
+		}
+		if _, ok := errs["tanggal_permintaan"]; !ok {
+			t.Error("Expected error on future tanggal_permintaan")
+		}
+	})
+
+	t.Run("Invalid empty id_template in slice", func(t *testing.T) {
+		req := laboratorium.SimpanPermintaanLabMBRequest{
+			PermintaanLabHeaderRequest: laboratorium.PermintaanLabHeaderRequest{
+				TanggalPermintaan: nowStr,
+				JamPermintaan:     jamNowStr,
+				DiagnosaKlinis:    "Sepsis",
+			},
+			Pemeriksaan: []laboratorium.ItemPemeriksaanLabMBRequest{
+				{
+					IdTindakan: "enc-tindakan-mb-1",
+					IdTemplate: []string{""},
+				},
+			},
+		}
+
+		errs := req.Validate()
+		if errs == nil {
+			t.Fatal("Expected validation errors for empty template id, got nil")
+		}
+		if _, ok := errs["pemeriksaan[0].id_template[0]"]; !ok {
+			t.Error("Expected error on empty id_template[0]")
+		}
+	})
+}
+
+

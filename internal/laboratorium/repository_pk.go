@@ -246,37 +246,36 @@ func (r *repository) fetchDetailPK(ctx context.Context, noRawat, kodeTindakan, t
 
 
 func (r *repository) generateNoPermintaanPK(ctx context.Context, tx *sql.Tx, tanggalPermintaan string) (string, error) {
-	prefixDate := time.Now().Format("20060102")
 	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(tanggalPermintaan))
+	prefixDate := time.Now().Format("20060102")
 	if err == nil {
 		prefixDate = parsedDate.Format("20060102")
 	}
-
-	minOrder := fmt.Sprintf("PK%s0000", prefixDate)
-	maxOrder := fmt.Sprintf("PK%s9999", prefixDate)
+	prefix := "PK" + prefixDate
+	minOrder := prefix + "0000"
+	maxOrder := prefix + "9999"
 
 	query := `SELECT noorder FROM permintaan_lab WHERE noorder BETWEEN ? AND ? ORDER BY noorder DESC LIMIT 1 FOR UPDATE`
 	var lastToday string
 	err = tx.QueryRowContext(ctx, query, minOrder, maxOrder).Scan(&lastToday)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Sprintf("PK%s0001", prefixDate), nil
+		return prefix + "0001", nil
 	}
 	if err != nil {
 		return "", err
 	}
 
-	expectedPrefix := fmt.Sprintf("PK%s", prefixDate)
-	if len(lastToday) != 14 || !strings.HasPrefix(lastToday, expectedPrefix) {
-		return fmt.Sprintf("PK%s0001", prefixDate), nil
+	if len(lastToday) != 14 || !strings.HasPrefix(lastToday, prefix) {
+		return "PK" + time.Now().Format("20060102150405"), nil
 	}
 
-	tail := lastToday[10:]
+	tail := lastToday[len(lastToday)-4:]
 	next, err := strconv.Atoi(tail)
 	if err != nil || next >= 9999 {
-		return fmt.Sprintf("PK%s%04d", prefixDate, 9999), nil
+		return "PK" + time.Now().Format("20060102150405"), nil
 	}
 
-	return fmt.Sprintf("PK%s%04d", prefixDate, next+1), nil
+	return fmt.Sprintf("%s%04d", prefix, next+1), nil
 }
 
 func isDuplicateKey(err error) bool {
@@ -287,36 +286,9 @@ func isDuplicateKey(err error) bool {
 	return strings.Contains(errStr, "1062") || strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "primary")
 }
 
-func (r *repository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
-	query := `
-		SELECT stts_pulang, tgl_keluar, jam_keluar 
-		FROM kamar_inap 
-		WHERE no_rawat = ? 
-		ORDER BY tgl_masuk DESC, jam_masuk DESC 
-		LIMIT 1
-	`
-	var sttsPulang, tglKeluar, jamKeluar string
-	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&sttsPulang, &tglKeluar, &jamKeluar)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, false, nil
-		}
-		return false, false, err
-	}
-
-	isBelumPulangStts := sttsPulang == "-" || strings.TrimSpace(sttsPulang) == ""
-	isBelumKeluarTgl := tglKeluar == "0000-00-00" || strings.TrimSpace(tglKeluar) == ""
-	isBelumKeluarJam := jamKeluar == "00:00:00" || strings.TrimSpace(jamKeluar) == ""
-
-	if isBelumPulangStts && isBelumKeluarTgl && isBelumKeluarJam {
-		return true, true, nil
-	}
-
-	return false, true, nil
-}
-
-func (r *repository) SimpanPermintaanLabPK(ctx context.Context, noRawat string, kodeDokter string, status string, req SimpanPermintaanLabPKRequest, kodeTindakanList []string, templateMap map[string][]int) (string, error) {
+func (r *repository) SimpanPermintaanLabPK(ctx context.Context, noRawat string, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest, kodeTindakanList []string, templateMap map[string][]int) (string, error) {
 	var lastErr error
+	status := strings.ToLower(string(statusLanjut))
 
 	for attempt := 1; attempt <= 3; attempt++ {
 		tx, err := r.db.BeginTx(ctx, nil)
@@ -676,6 +648,59 @@ func (r *repository) DetailPermintaanLabPK(ctx context.Context, noPermintaan str
 		PermintaanLabPK: header,
 		Pemeriksaan:     pemeriksaanList,
 	}, nil
+}
+
+func (r *repository) UpdatePermintaanLabPK(ctx context.Context, noPermintaan string, req SimpanPermintaanLabPKRequest, kodeTindakanList []string, templateMap map[string][]int) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	updateHeaderQuery := `
+		UPDATE permintaan_lab 
+		SET tgl_permintaan = ?, jam_permintaan = ?, informasi_tambahan = ?, diagnosa_klinis = ?
+		WHERE noorder = ?
+	`
+	if _, err := tx.ExecContext(ctx, updateHeaderQuery, req.TanggalPermintaan, req.JamPermintaan, req.InformasiTambahan, req.DiagnosaKlinis, noPermintaan); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM permintaan_detail_permintaan_lab WHERE noorder = ?`, noPermintaan); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM permintaan_pemeriksaan_lab WHERE noorder = ?`, noPermintaan); err != nil {
+		return err
+	}
+
+	stmtTindakan, err := tx.PrepareContext(ctx, `INSERT INTO permintaan_pemeriksaan_lab (noorder, kd_jenis_prw, stts_bayar) VALUES (?, ?, 'Belum')`)
+	if err != nil {
+		return err
+	}
+	defer stmtTindakan.Close()
+
+	stmtDetail, err := tx.PrepareContext(ctx, `INSERT INTO permintaan_detail_permintaan_lab (noorder, kd_jenis_prw, id_template, stts_bayar) VALUES (?, ?, ?, 'Belum')`)
+	if err != nil {
+		return err
+	}
+	defer stmtDetail.Close()
+
+	for _, kodeTindakan := range kodeTindakanList {
+		if _, err := stmtTindakan.ExecContext(ctx, noPermintaan, kodeTindakan); err != nil {
+			return err
+		}
+
+		if templates, ok := templateMap[kodeTindakan]; ok && len(templates) > 0 {
+			for _, idTemplate := range templates {
+				if _, err := stmtDetail.ExecContext(ctx, noPermintaan, kodeTindakan, idTemplate); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *repository) HapusPermintaanLabPK(ctx context.Context, noPermintaan string) error {

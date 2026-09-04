@@ -17,6 +17,7 @@ func provideLaboratorium(db *sql.DB, cfg *config.Config, log *logger.Logger) *la
 	berkasSvc := berkasdigital.NewService(berkasRepo, cfg.URLBerkasDigital, log)
 	rawatJalanRepo := rawatjalan.NewRepository(db)
 	rawatJalanSvc := rawatjalan.NewService(rawatJalanRepo, log)
+	rawatInapSvc := provideRawatInap(db, log)
 	tindakanRepo := tindakan.NewRepository(db)
 	tindakanSvc := tindakan.NewService(tindakanRepo, log)
 
@@ -24,6 +25,7 @@ func provideLaboratorium(db *sql.DB, cfg *config.Config, log *logger.Logger) *la
 		repo,
 		berkasSvc,
 		rawatJalanSvc,
+		rawatInapSvc,
 		tindakanSvc,
 		cfg.MaxEditRekamMedisJam,
 		cfg.URLBerkasDigital,

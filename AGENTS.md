@@ -4,10 +4,13 @@
 > **KONTRAK WAJIB AI AGENT & PENGEMBANG**:
 > Dokumen ini adalah spesifikasi arsitektur dan aturan utama yang **WAJIB DIBACA, DIPAHAMI, DAN DIIKUTI SECARA MUTLAK TANPA KECUALI** oleh setiap AI Agent dan pengembang sebelum menganalisis, merancang, menulis kode baru, maupun merefaktor di repositori **`erm-dokter`**.
 > 
-> Modul acuan baku (*Gold Standard*) repositori ini adalah:
-> 1. **`internal/resep`** (Standar referensi untuk transaksi CRUD kompleks, validasi master data, dan relasi multi-tabel).
-> 2. **`internal/pemeriksaan`** (Standar referensi untuk validasi format non-DB, validasi rentang nilai klinis, dan batasan rekam medis).
-> 3. **`internal/penilaianmedis`** (Standar referensi untuk modularitas berkas per unit layanan: `ralan`, `igd`, `ranap`).
+> **Aturan Utama**:
+> 1. **KONSISTENSI KODING ANTAR-FITUR**: Sebelum membuat fitur baru atau merefaktor, **WAJIB mempelajari fitur-fitur yang sudah ada** untuk memahami struktur arsitektur, pola helper validasi, dan cara kodingnya. Dilarang membuat pola baru yang berbeda sendiri (*no ad-hoc patterns*).
+> 2. **Modul acuan baku (*Gold Standard*) repositori ini**:
+>    - **`internal/resep`** (Standar referensi untuk transaksi CRUD kompleks, validasi master data, dan relasi multi-tabel).
+>    - **`internal/pemeriksaan`** (Standar referensi untuk validasi format non-DB, validasi rentang nilai klinis, dan batasan rekam medis).
+>    - **`internal/penilaianmedis`** (Standar referensi untuk modularitas berkas per unit layanan: `ralan`, `igd`, `ranap`).
+
 
 ---
 
@@ -26,6 +29,7 @@ internal/
 ├── auth/           # Login dokter, token JWT, profile
 ├── master/         # Master data (Penjamin, Depo Farmasi, Poliklinik)
 ├── rawatjalan/     # Antrean pasien dokter, detail & riwayat kunjungan
+├── rawatinap/      # Asesmen & status kamar inap pasien rawat inap
 ├── pemeriksaan/    # SOAP & TTV (Ralan & Ranap), riwayat, CRUD, validasi 48 jam
 ├── obat/           # Pencarian & detail master obat per depo, cek keberadaan obat
 ├── resep/          # Resep obat dokter (non-racikan, racikan), master aturan & metode
@@ -99,7 +103,22 @@ flowchart TD
 
 ---
 
-### B. Batasan Komunikasi Antar-Modul (Cross-Package Communication)
+### B. Konsistensi Antar-Fitur & Studi Komparatif Modul yang Ada (Cross-Feature Consistency)
+
+> [!IMPORTANT]
+> **ATURAN MUTLAK KONSISTENSI KODE & STUDI KOMPARATIF**:
+> 1. **Wajib Mempelajari Fitur yang Sudah Ada Terlebih Dahulu**:
+>    - Sebelum merancang, menulis kode baru, atau merefaktor suatu fitur, AI Agent dan pengembang **WAJIB menelaah struktur berkas, pola arsitektur, dan cara koding dari fitur-fitur yang sudah ada** (terutama modul *Gold Standard*: `internal/resep`, `internal/pemeriksaan`, dan `internal/penilaianmedis`).
+> 2. **Koding dan Struktur Wajib Konsisten Antar-Fitur**:
+>    - **Struktur Lapisan & Alur**: Seluruh fitur wajib mengikuti konvensi penataan layer yang sama (Model, Repository, Service, Handler, Routes, DI).
+>    - **Logika Validasi Bersama**: Logika validasi data klinis dan status kunjungan (seperti validasi waktu 48 jam rawat jalan, pengecekan status ranap checkout vs kamar aktif, proteksi klaim BPJS lunas bayar, dan proteksi kepemilikan dokter pembuat) **WAJIB menggunakan pola, susunan fungsi helper, parameter, tipe error (`apperror`), dan pesan error yang identik dan konsisten** antar-modul.
+>    - **Kelengkapan Operasi CRUD**: Fitur transaksi yang memiliki sifat serupa wajib memiliki kelengkapan operasi yang setara (misal: jika resep obat memiliki kemampuan Create, Read, Update, dan Delete dengan proteksi proses, maka permintaan laboratorium juga wajib menyediakan CRUD lengkap dengan proteksi proses yang setara).
+> 3. **Larangan Pola Ad-Hoc / Menyimpang**:
+>    - Dilarang keras mengarang atau menciptakan pendekatan koding baru yang menyimpang dari modul acuan baku yang sudah terbukti stabil di repositori ini.
+
+---
+
+### C. Batasan Komunikasi Antar-Modul (Cross-Package Communication)
 
 1. Komunikasi atau pemanggilan fungsi lintas modul domain (**cross-package**) **WAJIB melalui Layer Service** (`PackageA.Service` &rarr; `PackageB.Service`).
 2. **DILARANG KERAS menginjeksi atau memanggil Repository package lain secara langsung** ke dalam Service modul yang berbeda. Repository adalah kepemilikan internal (*privat*) masing-masing modul.
@@ -109,7 +128,7 @@ flowchart TD
 
 ---
 
-### C. Konvensi Pemisahan Berkas Modular (File Organization)
+### D. Konvensi Pemisahan Berkas Modular (File Organization)
 
 Ketika suatu domain memiliki sub-kategori atau unit layanan jamak (misalnya `penilaianmedis` dengan `ralan`, `igd`, `ranap` atau `laboratorium` dengan `pk`, `pa`, `mb`), seluruh lapisan **WAJIB dipecah per unit layanan secara simetris**:
 
@@ -122,7 +141,7 @@ Ketika suatu domain memiliki sub-kategori atau unit layanan jamak (misalnya `pen
 
 ---
 
-### D. Format Response, Pesan Error & Penamaan Variabel
+### E. Format Response, Pesan Error & Penamaan Variabel
 
 1. **Format Response Standar (`internal/pkg/response`)**:
    - Sukses: `response.Success(w, message, data)`
@@ -141,6 +160,19 @@ Ketika suatu domain memiliki sub-kategori atau unit layanan jamak (misalnya `pen
 5. **Standar Pengujian (Testing by Unit Test)**:
    - Wajib menggunakan Unit Test Go murni (`go test ./...`) untuk memverifikasi logika bisnis, validasi request, enkripsi URL, dan penanganan error.
    - Dilarang melakukan pengujian manual via `curl` ad-hoc terhadap server running tanpa menyertakan unit test otomatis.
+
+---
+
+### F. Larangan Mutlak Akses Langsung ke Database Server (Zero Direct Database Probing)
+
+> [!CAUTION]
+> **DILARANG KERAS DAN TIDAK BOLEH PERNAH**:
+> AI Agent maupun pengembang **DILARANG KERAS membuat skrip ad-hoc, CLI, koneksi langsung, maupun mengeksekusi query langsung ke database server nyata/running** (seperti `SHOW TABLES`, `SELECT`, `DESCRIBE`, atau *connection ping* via skrip Go/Python/terminal) untuk memeriksa skema maupun mengecek data.
+>
+> 1. **Sumber Kebenaran Skema Database**:
+>    - Jika ada ketidakpastian atau kebutuhan konfirmasi mengenai nama tabel, nama kolom, relasi tabel, atau perilaku spesifik database SIMRS Khanza, **AI Agent WAJIB bertanya langsung kepada USER**, BUKAN memeriksa atau menembak langsung ke database server.
+> 2. **Pengujian Aman Berbasis Mock**:
+>    - Seluruh pengujian kode wajib mengandalkan **Unit Test Go murni (`go test ./...`) dengan mock repository / service**, tanpa menyentuh database server nyata.
 
 ---
 

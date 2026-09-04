@@ -3,11 +3,13 @@ package resep_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
 	"erm-dokter/internal/shared"
@@ -19,7 +21,6 @@ type mockRepository struct {
 	daftarResepByRMFunc    func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter resep.FilterDaftarResep) ([]resep.Resep, int, error)
 	detailResepFunc        func(ctx context.Context, noResep string) (*resep.Resep, error)
 	simpanResepFunc        func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req resep.SimpanResepRequest) (*resep.Resep, error)
-	cekStatusKamarInapFunc func(ctx context.Context, noRawat string) (bool, bool, error)
 	daftarAturanPakaiFunc        func(ctx context.Context, keyword string) ([]resep.AturanPakai, error)
 	daftarMetodeRacikFunc        func(ctx context.Context) ([]resep.MetodeRacik, error)
 	cekKeberadaanMetodeRacikFunc func(ctx context.Context, listKodeRacik []string) (map[string]bool, error)
@@ -54,13 +55,6 @@ func (m *mockRepository) SimpanResep(ctx context.Context, kodeDokter string, sta
 		return m.simpanResepFunc(ctx, kodeDokter, statusLanjut, req)
 	}
 	return nil, nil
-}
-
-func (m *mockRepository) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
-	if m.cekStatusKamarInapFunc != nil {
-		return m.cekStatusKamarInapFunc(ctx, noRawat)
-	}
-	return false, false, nil
 }
 
 func (m *mockRepository) DaftarAturanPakai(ctx context.Context, keyword string) ([]resep.AturanPakai, error) {
@@ -159,6 +153,18 @@ func (m *mockObatService) CekKeberadaanObat(ctx context.Context, listKodeObat []
 	return res, nil
 }
 
+type mockRawatInapService struct {
+	rawatinap.Service
+	cekStatusKamarInapFunc func(ctx context.Context, noRawat string) (bool, bool, error)
+}
+
+func (m *mockRawatInapService) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
+	if m.cekStatusKamarInapFunc != nil {
+		return m.cekStatusKamarInapFunc(ctx, noRawat)
+	}
+	return false, false, nil
+}
+
 func TestFilterDaftarResep_Validate(t *testing.T) {
 	t.Run("Valid tanggal range", func(t *testing.T) {
 		f := resep.FilterDaftarResep{
@@ -237,8 +243,9 @@ func TestDaftarResep_Success(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	t.Run("Status Ralan", func(t *testing.T) {
@@ -277,8 +284,9 @@ func TestDaftarResep_RepoError(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	_, _, err := svc.DaftarResep(ctx, "2026/04/23/000001", shared.StatusLanjutRawatJalan, resep.FilterDaftarResep{})
@@ -331,8 +339,9 @@ func TestDaftarResepByRM_Success(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	t.Run("Status Ranap", func(t *testing.T) {
@@ -377,8 +386,9 @@ func TestDaftarResepByRM_RepoError(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	_, _, err := svc.DaftarResepByRM(ctx, "123456", shared.StatusLanjutRawatJalan, resep.FilterDaftarResep{})
@@ -399,8 +409,9 @@ func TestDetailResep_Success(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	res, err := svc.DetailResep(context.Background(), "202608280001")
 	if err != nil {
@@ -420,8 +431,9 @@ func TestDetailResep_NotFound(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	_, err := svc.DetailResep(context.Background(), "202608280001")
 	if err == nil {
@@ -442,6 +454,8 @@ func TestSimpanResep_Success(t *testing.T) {
 				Status:           string(statusLanjut),
 			}, nil
 		},
+	}
+	mockRI := &mockRawatInapService{
 		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 			return false, false, nil // purely ralan
 		},
@@ -455,7 +469,7 @@ func TestSimpanResep_Success(t *testing.T) {
 
 	log := logger.New()
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -490,8 +504,9 @@ func TestSimpanResep_RegistrationNotFound(t *testing.T) {
 	}
 
 	log := logger.New()
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -515,8 +530,9 @@ func TestSimpanResep_WaktuSebelumRegistrasi(t *testing.T) {
 	}
 
 	log := logger.New()
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -544,8 +560,9 @@ func TestSimpanResep_Lewat48Jam(t *testing.T) {
 	}
 
 	log := logger.New()
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -571,14 +588,15 @@ func TestSimpanResep_PasienBPJSSudahBayar(t *testing.T) {
 			}, nil
 		},
 	}
-	mockRepo := &mockRepository{
+	mockRepo := &mockRepository{}
+	mockRI := &mockRawatInapService{
 		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 			return false, false, nil
 		},
 	}
 	mockObat := &mockObatService{}
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -603,14 +621,42 @@ func TestSimpanResep_StatusKamarInap(t *testing.T) {
 	}
 	log := logger.New()
 
-	t.Run("Pasien aktif ranap tapi resep ralan", func(t *testing.T) {
+	t.Run("Pasien aktif ranap tetap bisa buat resep ralan", func(t *testing.T) {
 		mockRepo := &mockRepository{
+			simpanResepFunc: func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req resep.SimpanResepRequest) (*resep.Resep, error) {
+				return &resep.Resep{NoResep: "202608280099"}, nil
+			},
+		}
+		mockRI := &mockRawatInapService{
 			cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return true, true, nil // aktif ranap
 			},
 		}
 		mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+		svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
+		req := resep.SimpanResepRequest{
+			NoRawat:          "2026/08/28/000001",
+			TanggalPeresepan: today,
+			JamPeresepan:     "09:00:00",
+		}
+		res, err := svc.SimpanResep(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
+		if err != nil {
+			t.Fatalf("expected success for ralan prescription when patient is active in ranap, got: %v", err)
+		}
+		if res.NoResep != "202608280099" {
+			t.Errorf("expected no_resep 202608280099, got %s", res.NoResep)
+		}
+	})
+
+	t.Run("Pasien checkout ranap tidak bisa buat resep ralan", func(t *testing.T) {
+		mockRepo := &mockRepository{}
+		mockRI := &mockRawatInapService{
+			cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+				return false, true, nil // sudah checkout
+			},
+		}
+		mockObat := &mockObatService{}
+		svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 		req := resep.SimpanResepRequest{
 			NoRawat:          "2026/08/28/000001",
 			TanggalPeresepan: today,
@@ -618,18 +664,22 @@ func TestSimpanResep_StatusKamarInap(t *testing.T) {
 		}
 		_, err := svc.SimpanResep(context.Background(), "DK001", shared.StatusLanjutRawatJalan, req)
 		if err == nil {
-			t.Fatal("expected error patient active ranap, got nil")
+			t.Fatal("expected error patient checked out ranap for ralan prescription, got nil")
+		}
+		if !strings.Contains(err.Error(), "sudah keluar / checkout") {
+			t.Errorf("expected error to mention checkout, got: %v", err)
 		}
 	})
 
 	t.Run("Pasien checkout ranap tidak bisa buat resep ranap", func(t *testing.T) {
-		mockRepo := &mockRepository{
+		mockRepo := &mockRepository{}
+		mockRI := &mockRawatInapService{
 			cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, true, nil // sudah checkout
 			},
 		}
 		mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+		svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 		req := resep.SimpanResepRequest{
 			NoRawat:          "2026/08/28/000001",
 			TanggalPeresepan: today,
@@ -642,13 +692,14 @@ func TestSimpanResep_StatusKamarInap(t *testing.T) {
 	})
 
 	t.Run("Pasien tidak pernah ranap mencoba resep ranap", func(t *testing.T) {
-		mockRepo := &mockRepository{
+		mockRepo := &mockRepository{}
+		mockRI := &mockRawatInapService{
 			cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 				return false, false, nil // tidak pernah ranap
 			},
 		}
 		mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+		svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 		req := resep.SimpanResepRequest{
 			NoRawat:          "2026/08/28/000001",
 			TanggalPeresepan: today,
@@ -668,7 +719,8 @@ func TestSimpanResep_ObatNotFound(t *testing.T) {
 			return today, "08:00:00", true, nil
 		},
 	}
-	mockRepo := &mockRepository{
+	mockRepo := &mockRepository{}
+	mockRI := &mockRawatInapService{
 		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 			return false, false, nil
 		},
@@ -682,7 +734,7 @@ func TestSimpanResep_ObatNotFound(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 
 	req := resep.SimpanResepRequest{
@@ -742,13 +794,15 @@ func TestSimpanResep_MetodeRacikNotFound(t *testing.T) {
 		},
 	}
 	mockRepo := &mockRepository{
-		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
-			return false, false, nil
-		},
 		cekKeberadaanMetodeRacikFunc: func(ctx context.Context, listKodeRacik []string) (map[string]bool, error) {
 			return map[string]bool{
 				"PULV": true,
 			}, nil
+		},
+	}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
 		},
 	}
 	mockObat := &mockObatService{
@@ -760,7 +814,7 @@ func TestSimpanResep_MetodeRacikNotFound(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -817,8 +871,9 @@ func TestDaftarAturanPakai_Success(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	t.Run("Tanpa keyword", func(t *testing.T) {
@@ -854,8 +909,9 @@ func TestDaftarAturanPakai_RepoError(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	_, err := svc.DaftarAturanPakai(ctx, "")
@@ -878,8 +934,9 @@ func TestDaftarMetodeRacik_Success(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	data, err := svc.DaftarMetodeRacik(ctx)
@@ -903,8 +960,9 @@ func TestDaftarMetodeRacik_RepoError(t *testing.T) {
 
 	log := logger.New()
 	mockRJ := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
 	mockObat := &mockObatService{}
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 	ctx := context.Background()
 
 	_, err := svc.DaftarMetodeRacik(ctx)
@@ -940,7 +998,7 @@ func TestHapusResep_Success(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err != nil {
@@ -956,7 +1014,7 @@ func TestHapusResep_NotFound(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -981,7 +1039,7 @@ func TestHapusResep_NoRawatMismatch(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -1007,7 +1065,7 @@ func TestHapusResep_ForbiddenOtherDoctor(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -1034,7 +1092,7 @@ func TestHapusResep_ForbiddenAlreadyValidatedFarmasi(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -1061,7 +1119,7 @@ func TestHapusResep_ForbiddenAlreadyHandedOverFarmasi(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -1093,7 +1151,7 @@ func TestHapusResep_ForbiddenOver48HoursRalan(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
 	if err == nil {
@@ -1103,6 +1161,75 @@ func TestHapusResep_ForbiddenOver48HoursRalan(t *testing.T) {
 	var forbiddenErr *apperror.ForbiddenError
 	if !errors.As(err, &forbiddenErr) {
 		t.Fatalf("expected ForbiddenError, got %T: %v", err, err)
+	}
+}
+
+func TestHapusResep_ForbiddenInactiveRanap(t *testing.T) {
+	mockRepo := &mockRepository{
+		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
+			return &resep.Resep{
+				NoResep:    "202608280001",
+				NoRawat:    "2026/08/28/000001",
+				KodeDokter: "DK001",
+				Status:     "ranap",
+			}, nil
+		},
+	}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			// Pasien ranap sudah checkout
+			return false, true, nil
+		},
+	}
+
+	log := logger.New()
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, mockRI, &mockObatService{}, 48, log)
+
+	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatInap)
+	if err == nil {
+		t.Fatal("expected error when deleting prescription for checked-out Ranap patient, got nil")
+	}
+
+	var bizErr *apperror.BusinessError
+	if !errors.As(err, &bizErr) {
+		t.Fatalf("expected BusinessError, got %T: %v", err, err)
+	}
+}
+
+func TestHapusResep_ForbiddenBPJSSudahBayar(t *testing.T) {
+	today := time.Now().Format("2006-01-02")
+	mockRepo := &mockRepository{
+		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
+			return &resep.Resep{
+				NoResep:    "202608280001",
+				NoRawat:    "2026/08/28/000001",
+				KodeDokter: "DK001",
+				Status:     "ralan",
+			}, nil
+		},
+	}
+	mockRJ := &mockRawatJalanService{
+		getInfoRegistrasiFunc: func(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
+			return &rawatjalan.InfoRegistrasiPasien{
+				TanggalRegistrasi: today,
+				JamRegistrasi:     "08:00:00",
+				KodePenjamin:      "BPJ",
+				StatusBayar:       "Sudah Bayar",
+			}, nil
+		},
+	}
+
+	log := logger.New()
+	svc := resep.NewService(mockRepo, mockRJ, &mockRawatInapService{}, &mockObatService{}, 48, log)
+
+	err := svc.HapusResep(context.Background(), "DK001", "2026/08/28/000001", "202608280001", shared.StatusLanjutRawatJalan)
+	if err == nil {
+		t.Fatal("expected error when deleting prescription for paid BPJS patient, got nil")
+	}
+
+	var bizErr *apperror.BusinessError
+	if !errors.As(err, &bizErr) {
+		t.Fatalf("expected BusinessError, got %T: %v", err, err)
 	}
 }
 
@@ -1146,7 +1273,8 @@ func TestUpdateResep_Success(t *testing.T) {
 
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	mockRI := &mockRawatInapService{}
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1174,7 +1302,7 @@ func TestUpdateResep_NotFound(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1209,7 +1337,7 @@ func TestUpdateResep_ForbiddenOtherDoctor(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1245,7 +1373,7 @@ func TestUpdateResep_ForbiddenAlreadyValidatedFarmasi(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1281,7 +1409,7 @@ func TestUpdateResep_ForbiddenAlreadyHandedOverFarmasi(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1315,7 +1443,7 @@ func TestUpdateResep_NoRawatMismatch(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1356,7 +1484,7 @@ func TestUpdateResep_ForbiddenOver48HoursRalan(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, mockRJ, &mockRawatInapService{}, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1388,6 +1516,8 @@ func TestUpdateResep_ForbiddenInactiveRanap(t *testing.T) {
 				KodeDokter: "DK001",
 			}, nil
 		},
+	}
+	mockRI := &mockRawatInapService{
 		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
 			// Pasien sudah pernah ranap tapi saat ini sudah checkout (tidak aktif)
 			return false, true, nil
@@ -1395,7 +1525,7 @@ func TestUpdateResep_ForbiddenInactiveRanap(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, &mockObatService{}, 48, log)
+	svc := resep.NewService(mockRepo, &mockRawatJalanService{}, mockRI, &mockObatService{}, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1442,7 +1572,8 @@ func TestUpdateResep_ObatNotFound(t *testing.T) {
 	}
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	mockRI := &mockRawatInapService{}
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",
@@ -1493,7 +1624,8 @@ func TestUpdateResep_MetodeRacikNotFound(t *testing.T) {
 
 
 	log := logger.New()
-	svc := resep.NewService(mockRepo, mockRJ, mockObat, 48, log)
+	mockRI := &mockRawatInapService{}
+	svc := resep.NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	req := resep.SimpanResepRequest{
 		NoRawat:          "2026/08/28/000001",

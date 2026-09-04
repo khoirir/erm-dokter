@@ -33,13 +33,22 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPK)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPKByRM)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPK)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPK)))
 	mux.HandleFunc("DELETE /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPK)))
 
 	mux.HandleFunc("POST /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPA)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPA)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPAByRM)))
 	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPA)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPA)))
 	mux.HandleFunc("DELETE /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPA)))
+
+	mux.HandleFunc("POST /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabMB)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMB)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMBByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabMB)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabMB)))
+	mux.HandleFunc("DELETE /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabMB)))
 }
 
 func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {

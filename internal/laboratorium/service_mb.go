@@ -11,7 +11,7 @@ import (
 	"erm-dokter/internal/shared/apperror"
 )
 
-func (s *service) SimpanPermintaanLabPK(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error) {
+func (s *service) SimpanPermintaanLabMB(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabMBRequest) (*DetailPermintaanLabMB, error) {
 	if !statusLanjut.IsValid() {
 		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
@@ -22,32 +22,32 @@ func (s *service) SimpanPermintaanLabPK(ctx context.Context, kodeDokterLogin str
 		return nil, err
 	}
 
-	kodeTindakanList, templateMap, err := s.validasiTindakanDanTemplateLabPK(ctx, noRawat, req)
+	kodeTindakanList, templateMap, err := s.validasiTindakanDanTemplateLabMB(ctx, noRawat, req)
 	if err != nil {
 		return nil, err
 	}
 
-	noPermintaan, err := s.repo.SimpanPermintaanLabPK(ctx, noRawat, kodeDokterLogin, statusLanjut, req, kodeTindakanList, templateMap)
+	noPermintaan, err := s.repo.SimpanPermintaanLabMB(ctx, noRawat, kodeDokterLogin, statusLanjut, req, kodeTindakanList, templateMap)
 	if err != nil {
-		s.log.Error("Gagal menyimpan permintaan laboratorium PK %s: %v", noRawat, err)
+		s.log.Error("Gagal menyimpan permintaan laboratorium MB %s: %v", noRawat, err)
 		return nil, err
 	}
 
-	s.log.Info("Berhasil membuat permintaan laboratorium PK %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
-	return s.GetDetailPermintaanLabPK(ctx, noRawat, noPermintaan, statusLanjut)
+	s.log.Info("Berhasil membuat permintaan laboratorium MB %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
+	return s.GetDetailPermintaanLabMB(ctx, noRawat, noPermintaan, statusLanjut)
 }
 
-func (s *service) UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error) {
+func (s *service) UpdatePermintaanLabMB(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabMBRequest) (*DetailPermintaanLabMB, error) {
 	if !statusLanjut.IsValid() {
 		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 
-	detail, err := s.repo.DetailPermintaanLabPK(ctx, noPermintaan)
+	detail, err := s.repo.DetailPermintaanLabMB(ctx, noPermintaan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 		}
-		s.log.Error("Gagal mengambil data permintaan lab PK untuk diubah %s: %v", noPermintaan, err)
+		s.log.Error("Gagal mengambil data permintaan lab MB untuk diubah %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
@@ -60,7 +60,7 @@ func (s *service) UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, no
 	}
 
 	if detail.KodeDokterPerujuk != kodeDokterLogin {
-		s.log.Warn("Percobaan mengubah permintaan lab PK %s oleh dokter %s ditolak: dibuat oleh %s (%s)", noPermintaan, kodeDokterLogin, detail.KodeDokterPerujuk, detail.NamaDokterPerujuk)
+		s.log.Warn("Percobaan mengubah permintaan lab MB %s oleh dokter %s ditolak: dibuat oleh %s (%s)", noPermintaan, kodeDokterLogin, detail.KodeDokterPerujuk, detail.NamaDokterPerujuk)
 		return nil, apperror.NewForbiddenError("Hanya dokter pemohon yang berhak mengubah permintaan laboratorium ini")
 	}
 
@@ -75,29 +75,29 @@ func (s *service) UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, no
 		return nil, err
 	}
 
-	kodeTindakanList, templateMap, err := s.validasiTindakanDanTemplateLabPK(ctx, noRawat, req)
+	kodeTindakanList, templateMap, err := s.validasiTindakanDanTemplateLabMB(ctx, noRawat, req)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.UpdatePermintaanLabPK(ctx, noPermintaan, req, kodeTindakanList, templateMap); err != nil {
-		s.log.Error("Gagal memperbarui permintaan lab PK %s: %v", noPermintaan, err)
+	if err := s.repo.UpdatePermintaanLabMB(ctx, noPermintaan, req, kodeTindakanList, templateMap); err != nil {
+		s.log.Error("Gagal memperbarui permintaan lab MB %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
-	s.log.Info("Berhasil memperbarui permintaan lab PK %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
+	s.log.Info("Berhasil memperbarui permintaan lab MB %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
 
-	updatedDetail, err := s.repo.DetailPermintaanLabPK(ctx, noPermintaan)
+	updatedDetail, err := s.repo.DetailPermintaanLabMB(ctx, noPermintaan)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail setelah update permintaan lab PK %s: %v", noPermintaan, err)
+		s.log.Error("Gagal mengambil detail setelah update permintaan lab MB %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
-	updatedDetail.PermintaanLabPK = s.formatPermintaanLabPK(updatedDetail.PermintaanLabPK)
+	updatedDetail.PermintaanLabMB = s.formatPermintaanLabMB(updatedDetail.PermintaanLabMB)
 	return updatedDetail, nil
 }
 
-func (s *service) validasiTindakanDanTemplateLabPK(ctx context.Context, noRawat string, req SimpanPermintaanLabPKRequest) ([]string, map[string][]int, error) {
+func (s *service) validasiTindakanDanTemplateLabMB(ctx context.Context, noRawat string, req SimpanPermintaanLabMBRequest) ([]string, map[string][]int, error) {
 	var kodeTindakanList []string
 	templateMap := make(map[string][]int)
 	seenTindakan := make(map[string]bool)
@@ -112,9 +112,9 @@ func (s *service) validasiTindakanDanTemplateLabPK(ctx context.Context, noRawat 
 		}
 	}
 
-	foundTindakan, err := s.tindakanService.CekKeberadaanTindakanLab(ctx, shared.KategoriLabPK, kodeTindakanList)
+	foundTindakan, err := s.tindakanService.CekKeberadaanTindakanLab(ctx, shared.KategoriLabMB, kodeTindakanList)
 	if err != nil {
-		s.log.Error("Gagal memeriksa keberadaan tindakan lab: %v", err)
+		s.log.Error("Gagal memeriksa keberadaan tindakan lab MB: %v", err)
 		return nil, nil, err
 	}
 
@@ -125,13 +125,13 @@ func (s *service) validasiTindakanDanTemplateLabPK(ctx context.Context, noRawat 
 		}
 	}
 	if len(valErrs) > 0 {
-		s.log.Warn("Validasi keberadaan tindakan lab gagal untuk no_rawat %s: %+v", noRawat, valErrs)
+		s.log.Warn("Validasi keberadaan tindakan lab MB gagal untuk no_rawat %s: %+v", noRawat, valErrs)
 		return nil, nil, valErrs
 	}
 
 	foundTemplates, err := s.tindakanService.CekKeberadaanTemplateLab(ctx, kodeTindakanList, templateMap)
 	if err != nil {
-		s.log.Error("Gagal memeriksa keberadaan template lab: %v", err)
+		s.log.Error("Gagal memeriksa keberadaan template lab MB: %v", err)
 		return nil, nil, err
 	}
 
@@ -145,51 +145,51 @@ func (s *service) validasiTindakanDanTemplateLabPK(ctx context.Context, noRawat 
 		}
 	}
 	if len(valErrs) > 0 {
-		s.log.Warn("Validasi template lab gagal untuk no_rawat %s: %+v", noRawat, valErrs)
+		s.log.Warn("Validasi template lab MB gagal untuk no_rawat %s: %+v", noRawat, valErrs)
 		return nil, nil, valErrs
 	}
 
 	return kodeTindakanList, templateMap, nil
 }
 
-func (s *service) GetDaftarPermintaanLabPK(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabPK, error) {
-	items, err := s.repo.DaftarPermintaanLabPK(ctx, noRawat, statusLanjut)
+func (s *service) GetDaftarPermintaanLabMB(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabMB, error) {
+	items, err := s.repo.DaftarPermintaanLabMB(ctx, noRawat, statusLanjut)
 	if err != nil {
-		s.log.Error("Gagal mengambil riwayat permintaan lab PK %s: %v", noRawat, err)
+		s.log.Error("Gagal mengambil riwayat permintaan lab MB %s: %v", noRawat, err)
 		return nil, err
 	}
 
-	result := make([]PermintaanLabPK, 0, len(items))
+	result := make([]PermintaanLabMB, 0, len(items))
 	for _, item := range items {
-		result = append(result, s.formatPermintaanLabPK(item))
+		result = append(result, s.formatPermintaanLabMB(item))
 	}
 
 	return result, nil
 }
 
-func (s *service) GetRiwayatPermintaanLabPKByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabPK, shared.PaginationMeta, error) {
-	items, total, err := s.repo.DaftarPermintaanLabPKByRM(ctx, noRM, statusLanjut, filter)
+func (s *service) GetRiwayatPermintaanLabMBByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabMB, shared.PaginationMeta, error) {
+	items, total, err := s.repo.DaftarPermintaanLabMBByRM(ctx, noRM, statusLanjut, filter)
 	if err != nil {
-		s.log.Error("Gagal mengambil riwayat permintaan lab PK by RM %s: %v", noRM, err)
+		s.log.Error("Gagal mengambil riwayat permintaan lab MB by RM %s: %v", noRM, err)
 		return nil, shared.PaginationMeta{}, err
 	}
 
-	result := make([]PermintaanLabPK, 0, len(items))
+	result := make([]PermintaanLabMB, 0, len(items))
 	for _, item := range items {
-		result = append(result, s.formatPermintaanLabPK(item))
+		result = append(result, s.formatPermintaanLabMB(item))
 	}
 
 	meta := shared.NewPaginationMeta(total, filter.Page, filter.Limit)
 	return result, meta, nil
 }
 
-func (s *service) GetDetailPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabPK, error) {
-	detail, err := s.repo.DetailPermintaanLabPK(ctx, noPermintaan)
+func (s *service) GetDetailPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabMB, error) {
+	detail, err := s.repo.DetailPermintaanLabMB(ctx, noPermintaan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 		}
-		s.log.Error("Gagal mengambil detail permintaan lab PK %s: %v", noPermintaan, err)
+		s.log.Error("Gagal mengambil detail permintaan lab MB %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
@@ -201,17 +201,17 @@ func (s *service) GetDetailPermintaanLabPK(ctx context.Context, noRawat string, 
 		return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 	}
 
-	detail.PermintaanLabPK = s.formatPermintaanLabPK(detail.PermintaanLabPK)
+	detail.PermintaanLabMB = s.formatPermintaanLabMB(detail.PermintaanLabMB)
 	return detail, nil
 }
 
-func (s *service) HapusPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
-	detail, err := s.repo.DetailPermintaanLabPK(ctx, noPermintaan)
+func (s *service) HapusPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
+	detail, err := s.repo.DetailPermintaanLabMB(ctx, noPermintaan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 		}
-		s.log.Error("Gagal mengambil data permintaan lab PK untuk dihapus %s: %v", noPermintaan, err)
+		s.log.Error("Gagal mengambil data permintaan lab MB untuk dihapus %s: %v", noPermintaan, err)
 		return err
 	}
 
@@ -247,16 +247,16 @@ func (s *service) HapusPermintaanLabPK(ctx context.Context, noRawat string, noPe
 		return err
 	}
 
-	if err := s.repo.HapusPermintaanLabPK(ctx, noPermintaan); err != nil {
-		s.log.Error("Gagal menghapus permintaan lab PK di repository %s: %v", noPermintaan, err)
+	if err := s.repo.HapusPermintaanLabMB(ctx, noPermintaan); err != nil {
+		s.log.Error("Gagal menghapus permintaan lab MB di repository %s: %v", noPermintaan, err)
 		return err
 	}
 
-	s.log.Info("Berhasil menghapus permintaan lab PK %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
+	s.log.Info("Berhasil menghapus permintaan lab MB %s untuk no_rawat %s oleh dokter %s", noPermintaan, noRawat, kodeDokterLogin)
 	return nil
 }
 
-func (s *service) formatPermintaanLabPK(item PermintaanLabPK) PermintaanLabPK {
+func (s *service) formatPermintaanLabMB(item PermintaanLabMB) PermintaanLabMB {
 	item.FormatZeroDates()
 	return item
 }

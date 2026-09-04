@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
@@ -27,17 +29,19 @@ type Service interface {
 type service struct {
 	repo              Repository
 	rawatJalanService rawatjalan.Service
+	rawatInapService  rawatinap.Service
 	maxEditJam        int
 	log               *logger.Logger
 }
 
-func NewService(repo Repository, rawatJalanService rawatjalan.Service, maxEditJam int, log *logger.Logger) Service {
+func NewService(repo Repository, rawatJalanService rawatjalan.Service, rawatInapService rawatinap.Service, maxEditJam int, log *logger.Logger) Service {
 	if maxEditJam <= 0 {
 		maxEditJam = 48
 	}
 	return &service{
 		repo:              repo,
 		rawatJalanService: rawatJalanService,
+		rawatInapService:  rawatInapService,
 		maxEditJam:        maxEditJam,
 		log:               log,
 	}
@@ -111,7 +115,7 @@ func (s *service) DaftarKesadaran(ctx context.Context) []OpsiReferensi {
 }
 
 func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error) {
-	if err := s.validasiWaktuRegistrasi(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "membuat"); err != nil {
 		return nil, err
 	}
 
@@ -162,12 +166,7 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
 	}
 
-	if err := shared.ValidasiBatasWaktuRekamMedis(pemeriksaan.TanggalPemeriksaan, pemeriksaan.JamPemeriksaan, s.maxEditJam, "diubah"); err != nil {
-		s.log.Warn("Percobaan mengubah pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: %v", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, err)
-		return nil, err
-	}
-
-	if err := s.validasiWaktuRegistrasi(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "mengubah"); err != nil {
 		return nil, err
 	}
 
@@ -218,8 +217,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
 	}
 
-	if err := shared.ValidasiBatasWaktuRekamMedis(pemeriksaan.TanggalPemeriksaan, pemeriksaan.JamPemeriksaan, s.maxEditJam, "dihapus"); err != nil {
-		s.log.Warn("Percobaan menghapus pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: %v", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, err)
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut, "menghapus"); err != nil {
 		return err
 	}
 
@@ -232,7 +230,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	return nil
 }
 
-func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string) error {
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string, statusLanjut shared.StatusLanjut, action string) error {
 	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
@@ -248,17 +246,47 @@ func (s *service) validasiWaktuRegistrasi(ctx context.Context, noRawat, tanggalP
 		return err
 	}
 
-	waktuPemeriksaan, err := shared.ParseWaktu(tanggalPeriksa, jamPeriksa)
-	if err != nil {
-		return apperror.NewBusinessError(err.Error())
+	if tanggalPeriksa != "" && jamPeriksa != "" {
+		waktuPemeriksaan, err := shared.ParseWaktu(tanggalPeriksa, jamPeriksa)
+		if err != nil {
+			return apperror.NewBusinessError(err.Error())
+		}
+
+		if waktuPemeriksaan.Before(waktuRegistrasi) {
+			errs := apperror.ValidationError{
+				"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, jamPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
+			}
+			s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", noRawat, errs)
+			return errs
+		}
 	}
 
-	if waktuPemeriksaan.Before(waktuRegistrasi) {
-		errs := apperror.ValidationError{
-			"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, jamPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
+	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi, tanggalRegistrasiStr, jamRegistrasiStr)
+}
+
+func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time, tglRegStr, jamRegStr string) error {
+	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal cek status kamar inap untuk no_rawat %s: %v", noRawat, err)
+		return err
+	}
+
+	if hasRecordKamar {
+		if !isAktifRanap {
+			return apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
 		}
-		s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", noRawat, errs)
-		return errs
+		return nil
+	}
+
+	if strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap)) {
+		return apperror.NewBusinessError("Pasien belum/tidak terdaftar di kamar inap. Pemeriksaan harus menggunakan status 'Ralan'.")
+	}
+
+	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
+	if time.Now().After(batasWaktu) {
+		errMsg := fmt.Sprintf("Batas waktu pemeriksaan medis untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
+		s.log.Warn("Pemeriksaan ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
+		return apperror.NewForbiddenError(errMsg)
 	}
 
 	return nil

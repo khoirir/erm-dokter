@@ -14,9 +14,10 @@ func provideResep(db *sql.DB, cfg *config.Config, log *logger.Logger) *resep.Han
 	repo := resep.NewRepository(db)
 	rawatJalanRepo := rawatjalan.NewRepository(db)
 	rawatJalanSvc := rawatjalan.NewService(rawatJalanRepo, log)
+	rawatInapSvc := provideRawatInap(db, log)
 	obatRepo := obat.NewRepository(db)
 	obatSvc := obat.NewService(obatRepo, log)
-	svc := resep.NewService(repo, rawatJalanSvc, obatSvc, cfg.MaxEditRekamMedisJam, log)
+	svc := resep.NewService(repo, rawatJalanSvc, rawatInapSvc, obatSvc, cfg.MaxEditRekamMedisJam, log)
 	return resep.NewHandler(svc, cfg.EncryptionKey)
 }
 

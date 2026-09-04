@@ -11,6 +11,7 @@ import (
 
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pkg/logger"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/shared"
 )
@@ -18,10 +19,6 @@ import (
 type mockConcurrentRepo struct {
 	Repository
 	simpanResepFunc func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error)
-}
-
-func (m *mockConcurrentRepo) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
-	return false, false, nil
 }
 
 func (m *mockConcurrentRepo) CekKeberadaanMetodeRacik(ctx context.Context, listKodeRacik []string) (map[string]bool, error) {
@@ -60,6 +57,14 @@ func (m *mockConcurrentRJ) GetInfoRegistrasi(ctx context.Context, noRawat string
 		KodePenjamin:      "UMU",
 		StatusBayar:       "Belum Bayar",
 	}, nil
+}
+
+type mockConcurrentRI struct {
+	rawatinap.Service
+}
+
+func (m *mockConcurrentRI) CekStatusKamarInap(ctx context.Context, noRawat string) (bool, bool, error) {
+	return false, false, nil
 }
 
 type mockConcurrentObat struct {
@@ -103,11 +108,11 @@ func TestSimpanResep_ConcurrentDoctors(t *testing.T) {
 	}
 
 	mockRJ := &mockConcurrentRJ{}
+	mockRI := &mockConcurrentRI{}
 	mockObat := &mockConcurrentObat{}
 
-
 	log := logger.New()
-	svc := NewService(mockRepo, mockRJ, mockObat, 48, log)
+	svc := NewService(mockRepo, mockRJ, mockRI, mockObat, 48, log)
 
 	var wg sync.WaitGroup
 	startGate := make(chan struct{}) // Semua goroutine mulai di milidetik yang persis sama

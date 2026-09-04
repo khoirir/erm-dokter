@@ -28,12 +28,21 @@ type mockService struct {
 	getRiwayatPermintaanLabPKByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabPK, shared.PaginationMeta, error)
 	getDetailPermintaanLabPKFn       func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*laboratorium.DetailPermintaanLabPK, error)
 	hapusPermintaanLabPKFn           func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+	updatePermintaanLabPKFn          func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPKRequest) (*laboratorium.DetailPermintaanLabPK, error)
 
 	simpanPermintaanLabPAFn          func(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPARequest) (*laboratorium.DetailPermintaanLabPA, error)
 	getDaftarPermintaanLabPAFn       func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabPA, error)
 	getRiwayatPermintaanLabPAByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabPA, shared.PaginationMeta, error)
 	getDetailPermintaanLabPAFn       func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*laboratorium.DetailPermintaanLabPA, error)
 	hapusPermintaanLabPAFn           func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+	updatePermintaanLabPAFn          func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPARequest) (*laboratorium.DetailPermintaanLabPA, error)
+
+	simpanPermintaanLabMBFn          func(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error)
+	getDaftarPermintaanLabMBFn       func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabMB, error)
+	getRiwayatPermintaanLabMBByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabMB, shared.PaginationMeta, error)
+	getDetailPermintaanLabMBFn       func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*laboratorium.DetailPermintaanLabMB, error)
+	hapusPermintaanLabMBFn           func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+	updatePermintaanLabMBFn          func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error)
 }
 
 func (m *mockService) GetRiwayatLabKunjungan(ctx context.Context, kategori shared.KategoriLab, noRawat string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) (*laboratorium.HasilLaboratoriumKunjungan, shared.PaginationMeta, error) {
@@ -125,6 +134,62 @@ func (m *mockService) HapusPermintaanLabPA(ctx context.Context, noRawat string, 
 		return m.hapusPermintaanLabPAFn(ctx, noRawat, noPermintaan, statusLanjut, kodeDokterLogin)
 	}
 	return nil
+}
+
+func (m *mockService) SimpanPermintaanLabMB(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error) {
+	if m.simpanPermintaanLabMBFn != nil {
+		return m.simpanPermintaanLabMBFn(ctx, kodeDokterLogin, statusLanjut, req)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetDaftarPermintaanLabMB(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabMB, error) {
+	if m.getDaftarPermintaanLabMBFn != nil {
+		return m.getDaftarPermintaanLabMBFn(ctx, noRawat, statusLanjut)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetRiwayatPermintaanLabMBByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabMB, shared.PaginationMeta, error) {
+	if m.getRiwayatPermintaanLabMBByRMFn != nil {
+		return m.getRiwayatPermintaanLabMBByRMFn(ctx, noRM, statusLanjut, filter)
+	}
+	return nil, shared.PaginationMeta{}, nil
+}
+
+func (m *mockService) GetDetailPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*laboratorium.DetailPermintaanLabMB, error) {
+	if m.getDetailPermintaanLabMBFn != nil {
+		return m.getDetailPermintaanLabMBFn(ctx, noRawat, noPermintaan, statusLanjut)
+	}
+	return nil, nil
+}
+
+func (m *mockService) HapusPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
+	if m.hapusPermintaanLabMBFn != nil {
+		return m.hapusPermintaanLabMBFn(ctx, noRawat, noPermintaan, statusLanjut, kodeDokterLogin)
+	}
+	return nil
+}
+
+func (m *mockService) UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPKRequest) (*laboratorium.DetailPermintaanLabPK, error) {
+	if m.updatePermintaanLabPKFn != nil {
+		return m.updatePermintaanLabPKFn(ctx, kodeDokterLogin, noRawat, noPermintaan, statusLanjut, req)
+	}
+	return nil, nil
+}
+
+func (m *mockService) UpdatePermintaanLabPA(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPARequest) (*laboratorium.DetailPermintaanLabPA, error) {
+	if m.updatePermintaanLabPAFn != nil {
+		return m.updatePermintaanLabPAFn(ctx, kodeDokterLogin, noRawat, noPermintaan, statusLanjut, req)
+	}
+	return nil, nil
+}
+
+func (m *mockService) UpdatePermintaanLabMB(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error) {
+	if m.updatePermintaanLabMBFn != nil {
+		return m.updatePermintaanLabMBFn(ctx, kodeDokterLogin, noRawat, noPermintaan, statusLanjut, req)
+	}
+	return nil, nil
 }
 
 func authMiddlewareForTest(next http.HandlerFunc) http.HandlerFunc {
@@ -679,6 +744,388 @@ func TestHandler_HapusPermintaanLabPA_Success(t *testing.T) {
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_SimpanPermintaanLabMB_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encTindakan, _ := crypto.Encrypt("MB0001", testEncryptionKey)
+	encTemplate, _ := crypto.Encrypt("101", testEncryptionKey)
+
+	mockSvc := &mockService{
+		simpanPermintaanLabMBFn: func(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error) {
+			return &laboratorium.DetailPermintaanLabMB{
+				PermintaanLabMB: laboratorium.PermintaanLabMB{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      "MB202609040001",
+						NoRawat:           req.NoRawat,
+						TanggalPermintaan: req.TanggalPermintaan,
+						JamPermintaan:     req.JamPermintaan,
+						DiagnosaKlinis:    req.DiagnosaKlinis,
+						Status:            "ralan",
+					},
+				},
+				Pemeriksaan: []laboratorium.PemeriksaanLabMBItem{
+					{
+						KodeTindakan: "MB0001",
+						NamaTindakan: "Kultur dan Resistensi Mikroorganisme",
+						DetailTemplate: []laboratorium.DetailTemplateLabMBItem{
+							{
+								IdTemplate:      "101",
+								NamaPemeriksaan: "Bakteri Batang Gram Negatif",
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	body := map[string]any{
+		"no_rawat":           "2026/09/04/000001",
+		"tanggal_permintaan": "2026-09-04",
+		"jam_permintaan":     "10:00:00",
+		"diagnosa_klinis":    "Sepsis Curiga Bakteremia",
+		"pemeriksaan": []map[string]any{
+			{
+				"id_tindakan": encTindakan,
+				"id_template": []string{encTemplate},
+			},
+		},
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("Expected status 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_SimpanPermintaanLabMB_MismatchNoRawat(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encTindakan, _ := crypto.Encrypt("MB0001", testEncryptionKey)
+
+	handler := laboratorium.NewHandler(&mockService{}, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	body := map[string]any{
+		"no_rawat":           "2026/09/04/999999",
+		"tanggal_permintaan": "2026-09-04",
+		"jam_permintaan":     "10:00:00",
+		"diagnosa_klinis":    "Sepsis Curiga Bakteremia",
+		"pemeriksaan": []map[string]any{
+			{
+				"id_tindakan": encTindakan,
+			},
+		},
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 for mismatch no_rawat, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_DaftarPermintaanLabMB_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		getDaftarPermintaanLabMBFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]laboratorium.PermintaanLabMB, error) {
+			return []laboratorium.PermintaanLabMB{
+				{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      "MB202609040001",
+						NoRawat:           noRawat,
+						TanggalPermintaan: "2026-09-04",
+						JamPermintaan:     "10:00:00",
+						Status:            "ralan",
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_RiwayatPermintaanLabMBByRM_Success(t *testing.T) {
+	encPasien, _ := crypto.Encrypt("RM123456", testEncryptionKey)
+
+	mockSvc := &mockService{
+		getRiwayatPermintaanLabMBByRMFn: func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter laboratorium.FilterRiwayatLab) ([]laboratorium.PermintaanLabMB, shared.PaginationMeta, error) {
+			return []laboratorium.PermintaanLabMB{
+				{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      "MB202609040001",
+						NoRawat:           "2026/09/04/000001",
+						TanggalPermintaan: "2026-09-04",
+						JamPermintaan:     "10:00:00",
+						Status:            "ralan",
+					},
+				},
+			}, shared.NewPaginationMeta(1, 1, 10), nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/mb/permintaan/pasien/"+encPasien+"/Semua", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_DetailPermintaanLabMB_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("MB202609040001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		getDetailPermintaanLabMBFn: func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*laboratorium.DetailPermintaanLabMB, error) {
+			return &laboratorium.DetailPermintaanLabMB{
+				PermintaanLabMB: laboratorium.PermintaanLabMB{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      noPermintaan,
+						NoRawat:           noRawat,
+						TanggalPermintaan: "2026-09-04",
+						JamPermintaan:     "10:00:00",
+						DiagnosaKlinis:    "Sepsis Curiga Bakteremia",
+						Status:            "ralan",
+					},
+				},
+				Pemeriksaan: []laboratorium.PemeriksaanLabMBItem{
+					{
+						KodeTindakan: "MB0001",
+						NamaTindakan: "Kultur dan Resistensi Mikroorganisme",
+						DetailTemplate: []laboratorium.DetailTemplateLabMBItem{
+							{
+								IdTemplate:      "101",
+								NamaPemeriksaan: "Bakteri Batang Gram Negatif",
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_HapusPermintaanLabMB_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("MB202609040001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		hapusPermintaanLabMBFn: func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
+			return nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_UpdatePermintaanLabPK_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("PK202609040001", testEncryptionKey)
+	encTindakan, _ := crypto.Encrypt("TND001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		updatePermintaanLabPKFn: func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPKRequest) (*laboratorium.DetailPermintaanLabPK, error) {
+			return &laboratorium.DetailPermintaanLabPK{
+				PermintaanLabPK: laboratorium.PermintaanLabPK{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      noPermintaan,
+						NoRawat:           noRawat,
+						TanggalPermintaan: req.TanggalPermintaan,
+						JamPermintaan:     req.JamPermintaan,
+						DiagnosaKlinis:    req.DiagnosaKlinis,
+						Status:            "ralan",
+					},
+				},
+				Pemeriksaan: []laboratorium.PemeriksaanLabPKItem{
+					{
+						KodeTindakan: req.Pemeriksaan[0].KodeTindakan,
+						NamaTindakan: "Darah Lengkap",
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	body := `{
+		"no_rawat": "2026/09/04/000001",
+		"tanggal_permintaan": "2026-09-04",
+		"jam_permintaan": "10:00:00",
+		"diagnosa_klinis": "Febris Update",
+		"pemeriksaan": [
+			{"id_tindakan": "` + encTindakan + `"}
+		]
+	}`
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/laboratorium/pk/permintaan/"+encKunjungan+"/Ralan/"+encOrder, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_UpdatePermintaanLabPA_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("PA202609040001", testEncryptionKey)
+	encTindakan, _ := crypto.Encrypt("PA001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		updatePermintaanLabPAFn: func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabPARequest) (*laboratorium.DetailPermintaanLabPA, error) {
+			return &laboratorium.DetailPermintaanLabPA{
+				PermintaanLabPA: laboratorium.PermintaanLabPA{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      noPermintaan,
+						NoRawat:           noRawat,
+						TanggalPermintaan: req.TanggalPermintaan,
+						JamPermintaan:     req.JamPermintaan,
+						DiagnosaKlinis:    req.DiagnosaKlinis,
+						Status:            "ralan",
+					},
+				},
+				Pemeriksaan: []laboratorium.PemeriksaanLabPAItem{
+					{
+						KodeTindakan: req.Pemeriksaan[0].KodeTindakan,
+						NamaTindakan: "Biopsi PA",
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	body := `{
+		"no_rawat": "2026/09/04/000001",
+		"tanggal_permintaan": "2026-09-04",
+		"jam_permintaan": "10:00:00",
+		"diagnosa_klinis": "Tumor Mammae Update",
+		"pemeriksaan": [
+			{"id_tindakan": "` + encTindakan + `"}
+		]
+	}`
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Ralan/"+encOrder, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandler_UpdatePermintaanLabMB_Success(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/04/000001", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("MB202609040001", testEncryptionKey)
+	encTindakan, _ := crypto.Encrypt("MB001", testEncryptionKey)
+
+	mockSvc := &mockService{
+		updatePermintaanLabMBFn: func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req laboratorium.SimpanPermintaanLabMBRequest) (*laboratorium.DetailPermintaanLabMB, error) {
+			return &laboratorium.DetailPermintaanLabMB{
+				PermintaanLabMB: laboratorium.PermintaanLabMB{
+					PermintaanLabHeader: laboratorium.PermintaanLabHeader{
+						NoPermintaan:      noPermintaan,
+						NoRawat:           noRawat,
+						TanggalPermintaan: req.TanggalPermintaan,
+						JamPermintaan:     req.JamPermintaan,
+						DiagnosaKlinis:    req.DiagnosaKlinis,
+						Status:            "ralan",
+					},
+				},
+				Pemeriksaan: []laboratorium.PemeriksaanLabMBItem{
+					{
+						KodeTindakan: req.Pemeriksaan[0].KodeTindakan,
+						NamaTindakan: "Kultur MB",
+					},
+				},
+			}, nil
+		},
+	}
+
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	body := `{
+		"no_rawat": "2026/09/04/000001",
+		"tanggal_permintaan": "2026-09-04",
+		"jam_permintaan": "10:00:00",
+		"diagnosa_klinis": "Sepsis Update",
+		"pemeriksaan": [
+			{"id_tindakan": "` + encTindakan + `"}
+		]
+	}`
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan/"+encOrder, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
