@@ -17,6 +17,10 @@ type mockRepository struct {
 	getDetailTindakanLabFn     func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.TindakanLab, []tindakan.TemplateLab, error)
 	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
+
+	daftarTindakanRadiologiFn        func(ctx context.Context, filter tindakan.FilterDaftarTindakanRadiologi) ([]tindakan.TindakanRadiologi, int, error)
+	getDetailTindakanRadiologiFn     func(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error)
+	cekKeberadaanTindakanRadiologiFn func(ctx context.Context, listKodeTindakan []string) (map[string]bool, error)
 }
 
 func (m *mockRepository) DaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, int, error) {
@@ -46,6 +50,28 @@ func (m *mockRepository) CekKeberadaanTemplateLab(ctx context.Context, listKodeT
 	}
 	return make(map[string]map[int]bool), nil
 }
+
+func (m *mockRepository) DaftarTindakanRadiologi(ctx context.Context, filter tindakan.FilterDaftarTindakanRadiologi) ([]tindakan.TindakanRadiologi, int, error) {
+	if m.daftarTindakanRadiologiFn != nil {
+		return m.daftarTindakanRadiologiFn(ctx, filter)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockRepository) GetDetailTindakanRadiologi(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error) {
+	if m.getDetailTindakanRadiologiFn != nil {
+		return m.getDetailTindakanRadiologiFn(ctx, kodeTindakan)
+	}
+	return nil, nil
+}
+
+func (m *mockRepository) CekKeberadaanTindakanRadiologi(ctx context.Context, listKodeTindakan []string) (map[string]bool, error) {
+	if m.cekKeberadaanTindakanRadiologiFn != nil {
+		return m.cekKeberadaanTindakanRadiologiFn(ctx, listKodeTindakan)
+	}
+	return make(map[string]bool), nil
+}
+
 
 func TestService_GetDaftarTindakanLab_Success(t *testing.T) {
 	log := logger.New()
@@ -226,4 +252,125 @@ func TestService_CekKeberadaanTemplateLab(t *testing.T) {
 		t.Errorf("Expected PK001 template 101 to be true")
 	}
 }
+
+func TestService_GetDaftarTindakanRadiologi_Success(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		daftarTindakanRadiologiFn: func(ctx context.Context, filter tindakan.FilterDaftarTindakanRadiologi) ([]tindakan.TindakanRadiologi, int, error) {
+			return []tindakan.TindakanRadiologi{
+				{
+					KodeTindakan: "RAD001",
+					NamaTindakan: "RONTGEN THORAX AP/PA",
+					Biaya:        125000,
+				},
+			}, 1, nil
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	list, meta, err := svc.GetDaftarTindakanRadiologi(context.Background(), tindakan.FilterDaftarTindakanRadiologi{Page: 1, Limit: 20})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(list))
+	}
+	if list[0].KodeTindakan != "RAD001" {
+		t.Errorf("Expected kode tindakan RAD001, got %s", list[0].KodeTindakan)
+	}
+	if meta.TotalRecords != 1 {
+		t.Errorf("Expected total records 1, got %d", meta.TotalRecords)
+	}
+}
+
+func TestService_GetDaftarTindakanRadiologi_Error(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		daftarTindakanRadiologiFn: func(ctx context.Context, filter tindakan.FilterDaftarTindakanRadiologi) ([]tindakan.TindakanRadiologi, int, error) {
+			return nil, 0, errors.New("db error")
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	_, _, err := svc.GetDaftarTindakanRadiologi(context.Background(), tindakan.FilterDaftarTindakanRadiologi{Page: 1, Limit: 20})
+	if err == nil {
+		t.Fatalf("Expected error, got nil")
+	}
+}
+
+func TestService_GetDetailTindakanRadiologi_Success(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		getDetailTindakanRadiologiFn: func(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error) {
+			return &tindakan.TindakanRadiologi{
+				KodeTindakan: kodeTindakan,
+				NamaTindakan: "RONTGEN THORAX",
+				Biaya:        125000,
+			}, nil
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	res, err := svc.GetDetailTindakanRadiologi(context.Background(), "RAD001")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if res.KodeTindakan != "RAD001" {
+		t.Errorf("Expected RAD001, got %s", res.KodeTindakan)
+	}
+}
+
+func TestService_GetDetailTindakanRadiologi_NotFound(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		getDetailTindakanRadiologiFn: func(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error) {
+			return nil, sql.ErrNoRows
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	_, err := svc.GetDetailTindakanRadiologi(context.Background(), "RAD999")
+	if err == nil {
+		t.Fatalf("Expected not found error, got nil")
+	}
+	var notFoundErr *apperror.NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Errorf("Expected NotFoundError, got %T: %v", err, err)
+	}
+}
+
+func TestService_GetDetailTindakanRadiologi_Error(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		getDetailTindakanRadiologiFn: func(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error) {
+			return nil, errors.New("db error")
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	_, err := svc.GetDetailTindakanRadiologi(context.Background(), "RAD001")
+	if err == nil {
+		t.Fatalf("Expected error, got nil")
+	}
+}
+
+func TestService_CekKeberadaanTindakanRadiologi(t *testing.T) {
+	log := logger.New()
+	mockRepo := &mockRepository{
+		cekKeberadaanTindakanRadiologiFn: func(ctx context.Context, listKodeTindakan []string) (map[string]bool, error) {
+			return map[string]bool{"RAD001": true}, nil
+		},
+	}
+
+	svc := tindakan.NewService(mockRepo, log)
+	res, err := svc.CekKeberadaanTindakanRadiologi(context.Background(), []string{"RAD001"})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !res["RAD001"] {
+		t.Errorf("Expected RAD001 to be true")
+	}
+}
+
 

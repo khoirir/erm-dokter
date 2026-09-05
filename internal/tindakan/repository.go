@@ -14,6 +14,10 @@ type Repository interface {
 	GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*TindakanLab, []TemplateLab, error)
 	CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	CekKeberadaanTemplateLab(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
+
+	DaftarTindakanRadiologi(ctx context.Context, filter FilterDaftarTindakanRadiologi) ([]TindakanRadiologi, int, error)
+	GetDetailTindakanRadiologi(ctx context.Context, kodeTindakan string) (*TindakanRadiologi, error)
+	CekKeberadaanTindakanRadiologi(ctx context.Context, listKodeTindakan []string) (map[string]bool, error)
 }
 
 type repository struct {
@@ -244,4 +248,127 @@ func (r *repository) CekKeberadaanTemplateLab(ctx context.Context, listKodeTinda
 
 	return result, rows.Err()
 }
+
+func (r *repository) DaftarTindakanRadiologi(ctx context.Context, filter FilterDaftarTindakanRadiologi) ([]TindakanRadiologi, int, error) {
+	var conditions []string
+	var args []any
+
+	conditions = append(conditions, "status = '1'")
+
+	if filter.Keyword != "" {
+		conditions = append(conditions, "(kd_jenis_prw LIKE ? OR nm_perawatan LIKE ?)")
+		args = append(args, "%"+filter.Keyword+"%", "%"+filter.Keyword+"%")
+	}
+
+	whereSQL := "WHERE " + strings.Join(conditions, " AND ")
+
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM jns_perawatan_radiologi
+		%s
+	`, whereSQL)
+
+	var total int
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return make([]TindakanRadiologi, 0), 0, nil
+	}
+
+	dataQuery := fmt.Sprintf(`
+		SELECT 
+			kd_jenis_prw,
+			nm_perawatan,
+			total_byr
+		FROM jns_perawatan_radiologi
+		%s
+		ORDER BY nm_perawatan ASC
+		LIMIT ? OFFSET ?
+	`, whereSQL)
+
+	argsWithPaging := append(args, filter.Limit, filter.Offset())
+	rows, err := r.db.QueryContext(ctx, dataQuery, argsWithPaging...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	list := make([]TindakanRadiologi, 0)
+	for rows.Next() {
+		var item TindakanRadiologi
+		err = rows.Scan(&item.KodeTindakan, &item.NamaTindakan, &item.Biaya)
+		if err != nil {
+			return nil, 0, err
+		}
+		list = append(list, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) GetDetailTindakanRadiologi(ctx context.Context, kodeTindakan string) (*TindakanRadiologi, error) {
+	query := `
+		SELECT 
+			kd_jenis_prw,
+			nm_perawatan,
+			total_byr
+		FROM jns_perawatan_radiologi
+		WHERE status = '1' AND kd_jenis_prw = ?
+	`
+	var t TindakanRadiologi
+	err := r.db.QueryRowContext(ctx, query, kodeTindakan).Scan(
+		&t.KodeTindakan,
+		&t.NamaTindakan,
+		&t.Biaya,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func (r *repository) CekKeberadaanTindakanRadiologi(ctx context.Context, listKodeTindakan []string) (map[string]bool, error) {
+	result := make(map[string]bool)
+	if len(listKodeTindakan) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(listKodeTindakan))
+	args := make([]any, 0, len(listKodeTindakan))
+	for i, kode := range listKodeTindakan {
+		placeholders[i] = "?"
+		args = append(args, kode)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT kd_jenis_prw
+		FROM jns_perawatan_radiologi
+		WHERE status = '1' AND kd_jenis_prw IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var kode string
+		if err := rows.Scan(&kode); err != nil {
+			return nil, err
+		}
+		result[kode] = true
+	}
+
+	return result, rows.Err()
+}
+
 

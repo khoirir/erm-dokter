@@ -66,7 +66,6 @@ func (r *repository) queryRiwayatLabMB(ctx context.Context, whereClause string, 
 		return make([]HasilLaboratorium, 0), 0, nil
 	}
 
-	filter.Sanitize()
 	dataQuery := fmt.Sprintf(`
 		SELECT 
 			pl.no_rawat,

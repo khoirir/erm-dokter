@@ -12,10 +12,6 @@ import (
 )
 
 func (s *service) SimpanPermintaanLabPK(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error) {
-	if !statusLanjut.IsValid() {
-		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
-	}
-
 	noRawat := req.NoRawat
 
 	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "membuat"); err != nil {
@@ -38,10 +34,6 @@ func (s *service) SimpanPermintaanLabPK(ctx context.Context, kodeDokterLogin str
 }
 
 func (s *service) UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error) {
-	if !statusLanjut.IsValid() {
-		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
-	}
-
 	detail, err := s.repo.DetailPermintaanLabPK(ctx, noPermintaan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

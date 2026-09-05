@@ -368,3 +368,29 @@ Content-Type: application/json
   ]
 }
 
+### 32. Tindakan Radiologi - Daftar Tindakan
+GET {{baseUrl}}/api/v1/tindakan/radiologi?keyword=Thorax&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 33. Tindakan Radiologi - Detail Tindakan
+GET {{baseUrl}}/api/v1/tindakan/radiologi/contohIdTindakanTerenkripsi
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 34. Radiologi - Riwayat Hasil Radiologi per Kunjungan
+GET {{baseUrl}}/api/v1/radiologi/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=10
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 35. Radiologi - Riwayat Hasil Radiologi Pasien by RM
+GET {{baseUrl}}/api/v1/radiologi/pasien/2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI/Semua?page=1&limit=10
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 36. Radiologi - Detail Hasil Radiologi
+GET {{baseUrl}}/api/v1/radiologi/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/contohIdRadiologiTerenkripsi
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+

@@ -14,6 +14,7 @@ import (
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pemeriksaan"
 	"erm-dokter/internal/penilaianmedis"
+	"erm-dokter/internal/radiologi"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
 	"erm-dokter/internal/rujukaninternal"
@@ -34,6 +35,7 @@ type RouteConfig struct {
 	PenilaianMedisHandler  *penilaianmedis.Handler
 	TindakanHandler        *tindakan.Handler
 	LaboratoriumHandler    *laboratorium.Handler
+	RadiologiHandler       *radiologi.Handler
 	BerkasDigitalHandler   *berkasdigital.Handler
 	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
@@ -52,6 +54,7 @@ func NewRouteConfig(
 	penilaianMedisHandler *penilaianmedis.Handler,
 	tindakanHandler *tindakan.Handler,
 	laboratoriumHandler *laboratorium.Handler,
+	radiologiHandler *radiologi.Handler,
 	berkasDigitalHandler *berkasdigital.Handler,
 	jwtSecret string,
 ) *RouteConfig {
@@ -69,6 +72,7 @@ func NewRouteConfig(
 		PenilaianMedisHandler:  penilaianMedisHandler,
 		TindakanHandler:        tindakanHandler,
 		LaboratoriumHandler:    laboratoriumHandler,
+		RadiologiHandler:       radiologiHandler,
 		BerkasDigitalHandler:   berkasDigitalHandler,
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
@@ -90,6 +94,7 @@ func (c *RouteConfig) Setup() {
 	c.PenilaianMedisHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.TindakanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.LaboratoriumHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.RadiologiHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.BerkasDigitalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 

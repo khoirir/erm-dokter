@@ -45,6 +45,8 @@ tags:
       description: Master Data & Katalog Tindakan Medis / Laboratorium
     - name: Laboratorium
       description: Hasil & Permintaan Pemeriksaan Laboratorium Pasien (PK, PA, MB)
+    - name: Radiologi
+      description: Hasil Ekspertise & Link Gambar PACS Radiologi Pasien
     - name: Berkas Digital
       description: Berkas Digital Universal Perawatan Pasien
 
@@ -2152,6 +2154,27 @@ components:
                     type: string
                     example: "O2 kanul 3 lpm, Aspilet 320mg, Clopidogrel 300mg, Rujuk Cathlab"
 
+        TindakanRadiologi:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier terenkripsi URL-safe
+                    example: "wVf8s0p..."
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan radiologi di database
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan / pemeriksaan radiologi
+                    example: "RONTGEN THORAX AP/PA"
+                biaya:
+                    type: number
+                    format: double
+                    description: Total tarif pemeriksaan radiologi
+                    example: 125000
+
         TindakanLab:
             type: object
             properties:
@@ -2380,6 +2403,78 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/BerkasDigital"
+
+        HasilRadiologi:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Composite identifier hasil radiologi terenkripsi URL-safe (noRawat~kodeTindakan~tanggalPeriksa~jamPeriksa)
+                    example: "hS8xP1..."
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "kR2mZ9..."
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan
+                    example: "2026/04/22/000001"
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan radiologi
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    description: Nama pemeriksaan radiologi
+                    example: "Rontgen Thorax AP/PA"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                tanggal_periksa:
+                    type: string
+                    format: date
+                    example: "2026-04-22"
+                jam_periksa:
+                    type: string
+                    example: "10:00:00"
+                dokter_perujuk:
+                    type: object
+                    properties:
+                        kode_dokter:
+                            type: string
+                            example: "DR001"
+                        nama_dokter:
+                            type: string
+                            example: "dr. Handi"
+                dokter_radiologi:
+                    type: object
+                    properties:
+                        kode_dokter:
+                            type: string
+                            example: "DR002"
+                        nama_dokter:
+                            type: string
+                            example: "dr. Spesialis Radiologi, Sp.Rad"
+                petugas:
+                    type: object
+                    properties:
+                        nip:
+                            type: string
+                            example: "P001"
+                        nama:
+                            type: string
+                            example: "Radiografer"
+                hasil:
+                    type: string
+                    description: Teks bacaan / ekspertise hasil pemeriksaan radiologi
+                    example: "Cor dan pulmo dalam batas normal. Tidak tampak infiltrat aktif."
+                gambar_pacs:
+                    type: array
+                    items:
+                        type: string
+                    description: Daftar URL viewer PACS DICOM pasien
+                    example: ["http://pacs.rsudkarsahusadabatu.com/explore_v5.asp?token=xyz..."]
 
 paths:
     /health:
@@ -4291,6 +4386,120 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/ErrorResponse"
 
+    /api/v1/tindakan/radiologi:
+        get:
+            summary: Daftar & Pencarian Master Tindakan Radiologi
+            description: Mengambil daftar tindakan / pemeriksaan radiologi dengan pencarian keyword dan paginasi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian nama pemeriksaan (minimal 3 karakter)
+                  schema:
+                      type: string
+                      example: Thorax
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                      type: integer
+                      default: 1
+                      example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                      type: integer
+                      default: 20
+                      example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar tindakan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar tindakan radiologi
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/TindakanRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi query parameter gagal
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+
+    /api/v1/tindakan/radiologi/{id_tindakan}:
+        get:
+            summary: Detail Tindakan Radiologi
+            description: Mengambil detail tarif tindakan radiologi berdasarkan ID terenkripsi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_tindakan
+                  in: path
+                  required: true
+                  description: Identifier tindakan radiologi terenkripsi URL-safe
+                  schema:
+                      type: string
+                      example: "tX9kL2..."
+            responses:
+                "200":
+                    description: Berhasil mengambil detail tindakan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail tindakan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/TindakanRadiologi"
+                "400":
+                    description: ID tindakan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+                "404":
+                    description: Data tindakan radiologi tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+
     /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}:
         get:
             summary: Riwayat Hasil Laboratorium Kunjungan
@@ -5378,6 +5587,123 @@ paths:
                     description: Dilarang membatalkan order dokter lain
                 "404":
                     description: Permintaan tidak ditemukan
+
+    /api/v1/radiologi/{id_kunjungan}/{status_lanjut}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Hasil Radiologi per Kunjungan
+            description: Mengambil seluruh riwayat hasil pemeriksaan radiologi dan link PACS DICOM pasien untuk 1 kunjungan tertentu.
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                  description: ID kunjungan terenkripsi
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                  description: Status lanjut kunjungan
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 10
+                - name: tanggal
+                  in: query
+                  schema:
+                      type: string
+                  description: Rentang tanggal pemeriksaan (YYYY-MM-DD,YYYY-MM-DD)
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil radiologi
+                "400":
+                    description: Parameter tidak valid
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+
+    /api/v1/radiologi/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Hasil Radiologi Pasien (Lintas Kunjungan)
+            description: Mengambil riwayat hasil pemeriksaan radiologi dan link PACS pasien di seluruh kunjungan berdasarkan No. Rekam Medis.
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                  description: ID pasien terenkripsi
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 10
+                - name: tanggal
+                  in: query
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil radiologi pasien
+                "400":
+                    description: Parameter tidak valid
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+
+    /api/v1/radiologi/{id_kunjungan}/{status_lanjut}/{id_radiologi}:
+        get:
+            tags: [Radiologi]
+            summary: Detail Hasil Pemeriksaan Radiologi
+            description: Mengambil detail 1 pemeriksaan radiologi, hasil teks ekspertise, dan daftar link gambar PACS DICOM.
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                  description: ID kunjungan terenkripsi
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                - name: id_radiologi
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                  description: ID hasil radiologi terenkripsi (URL-safe token)
+            responses:
+                "200":
+                    description: Berhasil mengambil detail hasil radiologi
+                "400":
+                    description: Parameter atau token tidak valid
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+                "404":
+                    description: Data hasil pemeriksaan radiologi tidak ditemukan
+
 
 
 

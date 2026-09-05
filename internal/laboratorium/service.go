@@ -104,8 +104,6 @@ func (s *service) GetRiwayatLabKunjungan(ctx context.Context, kategori shared.Ka
 	case shared.KategoriLabMB:
 		items, total, err = s.repo.DaftarHasilLabMB(ctx, noRawat, statusLanjut, filter)
 		kodeBerkas = s.kodeBerkasMB
-	default:
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("Kategori laboratorium tidak valid")
 	}
 
 	if err != nil {
@@ -136,8 +134,6 @@ func (s *service) GetRiwayatLabPasien(ctx context.Context, kategori shared.Kateg
 		items, total, err = s.repo.DaftarHasilLabPAByRM(ctx, noRM, statusLanjut, filter)
 	case shared.KategoriLabMB:
 		items, total, err = s.repo.DaftarHasilLabMBByRM(ctx, noRM, statusLanjut, filter)
-	default:
-		return nil, shared.PaginationMeta{}, apperror.NewBusinessError("Kategori laboratorium tidak valid")
 	}
 
 	if err != nil {
@@ -160,8 +156,6 @@ func (s *service) GetDetailHasilLab(ctx context.Context, kategori shared.Kategor
 		item, err = s.repo.DetailHasilLabPA(ctx, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa)
 	case shared.KategoriLabMB:
 		item, err = s.repo.DetailHasilLabMB(ctx, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa)
-	default:
-		return nil, apperror.NewBusinessError("Kategori laboratorium tidak valid")
 	}
 
 	if err != nil {
