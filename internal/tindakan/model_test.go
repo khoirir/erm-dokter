@@ -122,3 +122,99 @@ func TestFilterDaftarTindakanLab_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterDaftarTindakanRadiologi_Sanitize(t *testing.T) {
+	f := tindakan.FilterDaftarTindakanRadiologi{
+		Keyword: "   Rontgen Thorax   ",
+		Page:    -1,
+		Limit:   0,
+	}
+	f.Sanitize()
+
+	if f.Page != 1 {
+		t.Errorf("Expected page to default to 1, got %d", f.Page)
+	}
+	if f.Limit != 20 {
+		t.Errorf("Expected limit to default to 20, got %d", f.Limit)
+	}
+	if f.Keyword != "Rontgen Thorax" {
+		t.Errorf("Expected trimmed keyword, got %q", f.Keyword)
+	}
+
+	fOver := tindakan.FilterDaftarTindakanRadiologi{
+		Page:  2,
+		Limit: 200,
+	}
+	fOver.Sanitize()
+	if fOver.Limit != 100 {
+		t.Errorf("Expected max limit 100, got %d", fOver.Limit)
+	}
+}
+
+func TestFilterDaftarTindakanRadiologi_Offset(t *testing.T) {
+	f := tindakan.FilterDaftarTindakanRadiologi{Page: 1, Limit: 20}
+	if f.Offset() != 0 {
+		t.Errorf("Expected offset 0 for page 1, got %d", f.Offset())
+	}
+
+	f2 := tindakan.FilterDaftarTindakanRadiologi{Page: 3, Limit: 25}
+	if f2.Offset() != 50 {
+		t.Errorf("Expected offset 50 for page 3 with limit 25, got %d", f2.Offset())
+	}
+}
+
+func TestFilterDaftarTindakanRadiologi_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		filter      tindakan.FilterDaftarTindakanRadiologi
+		expectError bool
+		errorField  string
+	}{
+		{
+			name: "Valid Filter without keyword",
+			filter: tindakan.FilterDaftarTindakanRadiologi{
+				Page:  1,
+				Limit: 20,
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid Filter with keyword >= 3 chars",
+			filter: tindakan.FilterDaftarTindakanRadiologi{
+				Keyword: "Thorax",
+				Page:    1,
+				Limit:   20,
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid Keyword < 3 chars",
+			filter: tindakan.FilterDaftarTindakanRadiologi{
+				Keyword: "Th",
+				Page:    1,
+				Limit:   20,
+			},
+			expectError: true,
+			errorField:  "keyword",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := tt.filter.Validate()
+			if tt.expectError {
+				if errs == nil {
+					t.Fatalf("Expected validation error, got nil")
+				}
+				if _, ok := errs[tt.errorField]; !ok {
+					t.Errorf("Expected error in field %s, got errors: %v", tt.errorField, errs)
+				}
+				return
+			}
+			if errs != nil {
+				t.Fatalf("Expected no validation errors, got: %v", errs)
+			}
+		})
+	}
+}
+

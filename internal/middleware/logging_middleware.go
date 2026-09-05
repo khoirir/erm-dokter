@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"bufio"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -18,6 +20,23 @@ type statusResponseWriter struct {
 func (sw *statusResponseWriter) WriteHeader(code int) {
 	sw.statusCode = code
 	sw.ResponseWriter.WriteHeader(code)
+}
+
+func (sw *statusResponseWriter) Flush() {
+	if flusher, ok := sw.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func (sw *statusResponseWriter) Unwrap() http.ResponseWriter {
+	return sw.ResponseWriter
+}
+
+func (sw *statusResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := sw.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, http.ErrNotSupported
 }
 
 func LoggingMiddleware(next http.Handler) http.Handler {

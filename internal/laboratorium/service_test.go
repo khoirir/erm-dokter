@@ -349,16 +349,9 @@ func (m *mockRawatInapService) CekStatusKamarInap(ctx context.Context, noRawat s
 }
 
 type mockTindakanService struct {
+	tindakan.Service
 	cekKeberadaanTindakanLabFn func(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error)
 	cekKeberadaanTemplateLabFn func(ctx context.Context, listKodeTindakan []string, templateMap map[string][]int) (map[string]map[int]bool, error)
-}
-
-func (m *mockTindakanService) GetDaftarTindakanLab(ctx context.Context, kategori shared.KategoriLab, filter tindakan.FilterDaftarTindakanLab) ([]tindakan.TindakanLab, shared.PaginationMeta, error) {
-	return nil, shared.PaginationMeta{}, nil
-}
-
-func (m *mockTindakanService) GetDetailTindakanLab(ctx context.Context, kategori shared.KategoriLab, encryptedId string) (*tindakan.DetailTindakanLab, error) {
-	return nil, nil
 }
 
 func (m *mockTindakanService) CekKeberadaanTindakanLab(ctx context.Context, kategori shared.KategoriLab, listKodeTindakan []string) (map[string]bool, error) {
@@ -385,6 +378,8 @@ func (m *mockTindakanService) CekKeberadaanTemplateLab(ctx context.Context, list
 	}
 	return res, nil
 }
+
+
 
 const testURLBerkas = "http://192.168.30.24/webapps/berkasrawat/"
 

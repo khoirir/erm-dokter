@@ -14,6 +14,7 @@ import (
 	"erm-dokter/internal/obat"
 	"erm-dokter/internal/pemeriksaan"
 	"erm-dokter/internal/penilaianmedis"
+	"erm-dokter/internal/radiologi"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
 	"erm-dokter/internal/routes"
@@ -35,6 +36,7 @@ func TestRouteConfig_SetupAndBuildHandler(t *testing.T) {
 		penilaianmedis.NewHandler(nil, "key"),
 		tindakan.NewHandler(nil, "key"),
 		laboratorium.NewHandler(nil, "key"),
+		radiologi.NewHandler(nil, "key"),
 		berkasdigital.NewHandler(nil, "key"),
 		"test-jwt-secret",
 	)

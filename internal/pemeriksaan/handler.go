@@ -26,8 +26,8 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/pemeriksaan/kesadaran", authMiddleware(timeoutMiddleware(h.DaftarKesadaran)))
-	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaan)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaanByRM)))
+	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPemeriksaan)))
 	mux.HandleFunc("GET /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.DetailPemeriksaan)))
 	mux.HandleFunc("POST /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPemeriksaan)))
 	mux.HandleFunc("PUT /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}", authMiddleware(timeoutMiddleware(h.UpdatePemeriksaan)))

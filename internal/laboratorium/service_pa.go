@@ -12,10 +12,6 @@ import (
 )
 
 func (s *service) SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error) {
-	if !statusLanjut.IsValid() {
-		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
-	}
-
 	noRawat := req.NoRawat
 
 	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "membuat"); err != nil {
@@ -38,10 +34,6 @@ func (s *service) SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin str
 }
 
 func (s *service) UpdatePermintaanLabPA(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error) {
-	if !statusLanjut.IsValid() {
-		return nil, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
-	}
-
 	detail, err := s.repo.DetailPermintaanLabPA(ctx, noPermintaan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -173,7 +165,7 @@ func (s *service) GetDetailPermintaanLabPA(ctx context.Context, noRawat string, 
 		return nil, apperror.NewBusinessError("Permintaan laboratorium tidak sesuai dengan kunjungan pasien")
 	}
 
-	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
+	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
 		return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 	}
 
@@ -195,7 +187,7 @@ func (s *service) HapusPermintaanLabPA(ctx context.Context, noRawat string, noPe
 		return apperror.NewBusinessError("Permintaan laboratorium tidak sesuai dengan kunjungan pasien")
 	}
 
-	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
+	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
 		return apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 	}
 
