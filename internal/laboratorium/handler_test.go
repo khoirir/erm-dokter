@@ -345,6 +345,7 @@ func TestHandler_DetailHasilLab_Success(t *testing.T) {
 				JamPeriksa:     jamPeriksa,
 				NamaTindakan:   "DARAH LENGKAP",
 				Kategori:       "PK",
+				Status:         "Ralan",
 			}, nil
 		},
 	}
@@ -354,7 +355,7 @@ func TestHandler_DetailHasilLab_Success(t *testing.T) {
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pk/"+encKunjungan+"/Semua/"+encHasil, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pk/"+encKunjungan+"/Ralan/"+encHasil, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -530,7 +531,7 @@ func TestHandler_DetailPermintaanLabPK_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pk/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pk/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -553,7 +554,7 @@ func TestHandler_HapusPermintaanLabPK_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/pk/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/pk/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -720,7 +721,7 @@ func TestHandler_DetailPermintaanLabPA_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -743,7 +744,7 @@ func TestHandler_HapusPermintaanLabPA_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/pa/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -946,7 +947,7 @@ func TestHandler_DetailPermintaanLabMB_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -969,7 +970,7 @@ func TestHandler_HapusPermintaanLabMB_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Semua/"+encOrder, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/laboratorium/mb/permintaan/"+encKunjungan+"/Ralan/"+encOrder, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -1133,3 +1134,59 @@ func TestHandler_UpdatePermintaanLabMB_Success(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
+
+func TestHandler_DetailEndpoints_RejectSemua(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/04/22/000001", testEncryptionKey)
+	encHasil, _ := crypto.Encrypt("2026/04/22/000001~LAB001~2026-04-22~10:00:00", testEncryptionKey)
+	encOrder, _ := crypto.Encrypt("PK001", testEncryptionKey)
+
+	mockSvc := &mockService{}
+	handler := laboratorium.NewHandler(mockSvc, testEncryptionKey)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, authMiddlewareForTest, func(next http.HandlerFunc) http.HandlerFunc { return next })
+
+	testCases := []struct {
+		name   string
+		method string
+		url    string
+	}{
+		{
+			name:   "DetailHasilLab_RejectSemua",
+			method: http.MethodGet,
+			url:    "/api/v1/laboratorium/pk/" + encKunjungan + "/Semua/" + encHasil,
+		},
+		{
+			name:   "DetailPermintaanLabPK_RejectSemua",
+			method: http.MethodGet,
+			url:    "/api/v1/laboratorium/pk/permintaan/" + encKunjungan + "/Semua/" + encOrder,
+		},
+		{
+			name:   "HapusPermintaanLabPK_RejectSemua",
+			method: http.MethodDelete,
+			url:    "/api/v1/laboratorium/pk/permintaan/" + encKunjungan + "/Semua/" + encOrder,
+		},
+		{
+			name:   "DetailPermintaanLabPA_RejectSemua",
+			method: http.MethodGet,
+			url:    "/api/v1/laboratorium/pa/permintaan/" + encKunjungan + "/Semua/" + encOrder,
+		},
+		{
+			name:   "DetailPermintaanLabMB_RejectSemua",
+			method: http.MethodGet,
+			url:    "/api/v1/laboratorium/mb/permintaan/" + encKunjungan + "/Semua/" + encOrder,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.url, nil)
+			rr := httptest.NewRecorder()
+			mux.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusBadRequest {
+				t.Errorf("Expected 400 Bad Request for %s, got %d: %s", tc.url, rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+

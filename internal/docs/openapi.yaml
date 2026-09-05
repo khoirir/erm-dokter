@@ -623,6 +623,115 @@ components:
                           items:
                               $ref: "#/components/schemas/PemeriksaanLabMBItem"
 
+        ItemPemeriksaanRadiologiRequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Token terenkripsi ID tindakan radiologi
+                    example: "tNd8xL..."
+
+        SimpanPermintaanRadiologiRequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - diagnosa_klinis
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien
+                    example: "2026/09/05/000001"
+                tanggal_permintaan:
+                    type: string
+                    format: date
+                    example: "2026-09-05"
+                jam_permintaan:
+                    type: string
+                    example: "10:00:00"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    example: "Thorax AP"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    example: "Susp. Pneumonia"
+                pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanRadiologiRequest"
+
+        PemeriksaanRadiologiItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    example: "tNd8xL..."
+                kode_tindakan:
+                    type: string
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    example: "Rontgen Thorax AP/PA"
+                biaya:
+                    type: number
+                    example: 125000
+                status_bayar:
+                    type: string
+                    example: "Belum"
+
+        DetailPermintaanRadiologi:
+            type: object
+            properties:
+                id_permintaan:
+                    type: string
+                    example: "rAd9X2..."
+                tanggal_permintaan:
+                    type: string
+                    example: "2026-09-05"
+                jam_permintaan:
+                    type: string
+                    example: "10:00:00"
+                tanggal_sampel:
+                    type: string
+                    example: "0000-00-00"
+                jam_sampel:
+                    type: string
+                    example: "00:00:00"
+                tanggal_hasil:
+                    type: string
+                    example: "0000-00-00"
+                jam_hasil:
+                    type: string
+                    example: "00:00:00"
+                dokter_perujuk:
+                    type: object
+                    properties:
+                        kode_dokter:
+                            type: string
+                            example: "DR01"
+                        nama_dokter:
+                            type: string
+                            example: "dr. Handi, Sp.Rad"
+                status:
+                    type: string
+                    example: "Ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "Thorax AP"
+                diagnosa_klinis:
+                    type: string
+                    example: "Susp. Pneumonia"
+                pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PemeriksaanRadiologiItem"
+
         LoginRequest:
             type: object
             required:
@@ -2709,6 +2818,38 @@ paths:
                                           meta:
                                               $ref: "#/components/schemas/PaginationMeta"
 
+    /api/v1/obat/{id_obat}:
+        get:
+            tags: [Obat]
+            summary: Detail Obat & Rincian Stok per Depo
+            description: Mengambil informasi detail satu obat beserta breakdown ketersediaan stok di seluruh depo farmasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_obat
+                  in: path
+                  required: true
+                  description: Encrypted ID kode obat
+                  schema:
+                      type: string
+                  example: "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/Obat"
+                "400":
+                    description: ID obat tidak valid
+                "404":
+                    description: Data obat tidak ditemukan
+
     /api/v1/obat/jenis:
         get:
             tags: [Obat]
@@ -2774,38 +2915,6 @@ paths:
                                               type: array
                                               items:
                                                   $ref: "#/components/schemas/KategoriObat"
-
-    /api/v1/obat/{id_obat}:
-        get:
-            tags: [Obat]
-            summary: Detail Obat & Rincian Stok per Depo
-            description: Mengambil informasi detail satu obat beserta breakdown ketersediaan stok di seluruh depo farmasi.
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id_obat
-                  in: path
-                  required: true
-                  description: Encrypted ID kode obat
-                  schema:
-                      type: string
-                  example: "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI"
-            responses:
-                "200":
-                    description: Berhasil mengambil detail obat
-                    content:
-                        application/json:
-                            schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              $ref: "#/components/schemas/Obat"
-                "400":
-                    description: ID obat tidak valid
-                "404":
-                    description: Data obat tidak ditemukan
 
     /api/v1/rawat-jalan/status-pemeriksaan:
         get:
@@ -3066,6 +3175,59 @@ paths:
                                               items:
                                                   $ref: "#/components/schemas/OpsiReferensi"
 
+    /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan Pasien (Lintas Kunjungan)
+            description: Mengambil seluruh riwayat catatan pemeriksaan SOAP & TTV seorang pasien dari semua kunjungan berdasarkan token terenkripsi `id_pasien` (no_rkm_medis).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pasien (no_rkm_medis)
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status perawatan
+                  schema:
+                      type: string
+                      enum: [Semua, Ralan, Ranap]
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan pasien
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/Pemeriksaan"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+
     /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}:
         get:
             tags: [Pemeriksaan]
@@ -3160,59 +3322,6 @@ paths:
                                               $ref: "#/components/schemas/Pemeriksaan"
                 "400":
                     description: Validasi klinis gagal atau duplikasi waktu pemeriksaan
-
-    /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}:
-        get:
-            tags: [Pemeriksaan]
-            summary: Riwayat Pemeriksaan Pasien (Lintas Kunjungan)
-            description: Mengambil seluruh riwayat catatan pemeriksaan SOAP & TTV seorang pasien dari semua kunjungan berdasarkan token terenkripsi `id_pasien` (no_rkm_medis).
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id_pasien
-                  in: path
-                  required: true
-                  description: Token terenkripsi ID Pasien (no_rkm_medis)
-                  schema:
-                      type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Status perawatan
-                  schema:
-                      type: string
-                      enum: [Semua, Ralan, Ranap]
-                - name: tanggal
-                  in: query
-                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
-                  schema:
-                      type: string
-                - name: page
-                  in: query
-                  schema:
-                      type: integer
-                      default: 1
-                - name: limit
-                  in: query
-                  schema:
-                      type: integer
-                      default: 20
-            responses:
-                "200":
-                    description: Berhasil mengambil riwayat pemeriksaan pasien
-                    content:
-                        application/json:
-                            schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              type: array
-                                              items:
-                                                  $ref: "#/components/schemas/Pemeriksaan"
-                                          meta:
-                                              $ref: "#/components/schemas/PaginationMeta"
 
     /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}:
         get:
@@ -3404,7 +3513,7 @@ paths:
     /api/v1/resep/{id_kunjungan}/{status_lanjut}:
         get:
             tags: [Resep]
-            summary: Daftar Resep per Kunjungan
+            summary: Riwayat Resep per Kunjungan
             description: Mengambil riwayat peresepan obat pasien untuk satu kunjungan tertentu (Ralan, Ranap, atau Semua).
             security:
                 - BearerAuth: []
@@ -4667,8 +4776,8 @@ paths:
                   required: true
                   schema:
                       type: string
-                      enum: [Semua, Ralan, Ranap]
-                      example: Semua
+                      enum: [Ralan, Ranap]
+                      example: Ralan
                 - name: id_hasil
                   in: path
                   required: true
@@ -4915,11 +5024,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -4966,11 +5075,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                       type: string
-                      enum: [Ralan, Ranap, Semua]
-                      example: Semua
+                      enum: [Ralan, Ranap]
+                      example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5020,11 +5129,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5189,11 +5298,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5240,11 +5349,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                       type: string
-                      enum: [Ralan, Ranap, Semua]
-                      example: Semua
+                      enum: [Ralan, Ranap]
+                      example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5294,11 +5403,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5463,11 +5572,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5514,11 +5623,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                       type: string
-                      enum: [Ralan, Ranap, Semua]
-                      example: Semua
+                      enum: [Ralan, Ranap]
+                      example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5568,11 +5677,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
-                  description: Status pelayanan (Ralan, Ranap, Semua)
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                     type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
+                    enum: [Ralan, Ranap]
+                    example: Ralan
                 - name: id_permintaan
                   in: path
                   required: true
@@ -5685,9 +5794,11 @@ paths:
                 - name: status_lanjut
                   in: path
                   required: true
+                  description: Status pelayanan (Ralan, Ranap)
                   schema:
                       type: string
-                      enum: [Ralan, Ranap, Semua]
+                      enum: [Ralan, Ranap]
+                      example: Ralan
                 - name: id_radiologi
                   in: path
                   required: true
@@ -5703,6 +5814,264 @@ paths:
                     description: Token JWT tidak valid atau kedaluwarsa
                 "404":
                     description: Data hasil pemeriksaan radiologi tidak ditemukan
+
+    /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}:
+        post:
+            tags: [Radiologi]
+            summary: Simpan Permintaan Radiologi Baru
+            description: Membuat order permintaan pemeriksaan radiologi baru untuk kunjungan rawat jalan atau rawat inap dengan proteksi batas waktu 48 jam dan kamar inap aktif.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status pelayanan (Ralan, Ranap)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                      example: Ralan
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanRadiologiRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Validasi input gagal atau tindakan radiologi tidak valid
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu 48 jam rawat jalan
+        get:
+            tags: [Radiologi]
+            summary: Daftar Permintaan Radiologi per Kunjungan
+            description: Mengambil seluruh riwayat permintaan radiologi untuk satu kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                      example: Semua
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan radiologi
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+
+    /api/v1/radiologi/pasien/{id_pasien}/permintaan/{status_lanjut}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Permintaan Radiologi Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan radiologi pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status pelayanan (Ralan, Ranap, Semua)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap, Semua]
+                      example: Semua
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal YYYY-MM-DD,YYYY-MM-DD
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  schema:
+                      type: integer
+                      default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan radiologi pasien
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+
+    /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
+        get:
+            tags: [Radiologi]
+            summary: Detail Permintaan Radiologi
+            description: Mengambil rincian lengkap 1 order permintaan radiologi beserta daftar item tindakannya.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status pelayanan (Ralan, Ranap)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                      example: Ralan
+                - name: id_permintaan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Parameter status lanjut tidak valid (pilihan: Ralan, Ranap)
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+                "404":
+                    description: Permintaan radiologi tidak ditemukan
+        put:
+            tags: [Radiologi]
+            summary: Perbarui Permintaan Radiologi
+            description: Memperbarui order permintaan radiologi sebelum sampel/periksa dilakukan oleh petugas radiologi dan hanya dapat diperbarui oleh dokter pembuat order.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status pelayanan (Ralan, Ranap)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                      example: Ralan
+                - name: id_permintaan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanRadiologiRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Permintaan sudah diproses oleh petugas atau tindakan tidak valid
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+                "403":
+                    description: Dilarang memperbarui order dokter lain atau melebihi batas waktu 48 jam
+                "404":
+                    description: Permintaan tidak ditemukan
+        delete:
+            tags: [Radiologi]
+            summary: Batalkan Permintaan Radiologi
+            description: Menghapus permintaan radiologi sebelum diproses petugas radiologi (tgl_sampel & tgl_hasil masih kosong) dan hanya dapat dibatalkan oleh dokter yang membuat order tersebut.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status pelayanan (Ralan, Ranap)
+                  schema:
+                      type: string
+                      enum: [Ralan, Ranap]
+                      example: Ralan
+                - name: id_permintaan
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan radiologi
+                "400":
+                    description: Permintaan sudah diproses petugas radiologi
+                "401":
+                    description: Token JWT tidak valid atau kedaluwarsa
+                "403":
+                    description: Dilarang membatalkan order dokter lain
+                "404":
+                    description: Permintaan tidak ditemukan
+
 
 
 

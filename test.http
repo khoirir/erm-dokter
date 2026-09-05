@@ -84,23 +84,23 @@ GET {{baseUrl}}/api/v1/obat?keyword=PARA&page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 9b. Obat - Daftar Jenis Obat
+### 9b. Obat - Detail Obat & Stok per Depo
+GET {{baseUrl}}/api/v1/obat/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 9c. Obat - Daftar Jenis Obat
 GET {{baseUrl}}/api/v1/obat/jenis
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 9c. Obat - Daftar Golongan Obat
+### 9d. Obat - Daftar Golongan Obat
 GET {{baseUrl}}/api/v1/obat/golongan
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 9d. Obat - Daftar Kategori Obat
+### 9e. Obat - Daftar Kategori Obat
 GET {{baseUrl}}/api/v1/obat/kategori
-Authorization: Bearer {{login.response.body.data.token}}
-Accept: application/json
-
-### 9e. Obat - Detail Obat & Stok per Depo
-GET {{baseUrl}}/api/v1/obat/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -109,23 +109,23 @@ GET {{baseUrl}}/api/v1/pemeriksaan/kesadaran
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 11. Pemeriksaan - Riwayat Kunjungan (Semua)
+### 11. Pemeriksaan - Riwayat Pasien (Semua Kunjungan)
+GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 12a. Pemeriksaan - Riwayat Kunjungan (Semua)
 GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 11. Pemeriksaan - Riwayat Kunjungan (Ralan)
+### 12b. Pemeriksaan - Riwayat Kunjungan (Ralan)
 GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 12. Pemeriksaan - Riwayat Kunjungan (Ranap)
+### 12c. Pemeriksaan - Riwayat Kunjungan (Ranap)
 GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap?page=1&limit=20
-Authorization: Bearer {{login.response.body.data.token}}
-Accept: application/json
-
-### 13. Pemeriksaan - Riwayat Pasien (Semua Kunjungan)
-GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
@@ -294,7 +294,7 @@ GET {{baseUrl}}/api/v1/resep/metode-racik
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
-### 27. Resep - Daftar Resep per Kunjungan (Ralan)
+### 27. Resep - Riwayat Resep per Kunjungan (Ralan)
 GET {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=5
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json

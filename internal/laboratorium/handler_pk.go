@@ -139,8 +139,8 @@ func (h *Handler) DaftarPermintaanLabPKByRM(w http.ResponseWriter, r *http.Reque
 func (h *Handler) DetailPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap, Semua)"))
+	if !statusLanjut.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 
@@ -237,8 +237,8 @@ func (h *Handler) UpdatePermintaanLabPK(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) HapusPermintaanLabPK(w http.ResponseWriter, r *http.Request) {
 	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
 	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap, Semua)"))
+	if !statusLanjut.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
 		return
 	}
 

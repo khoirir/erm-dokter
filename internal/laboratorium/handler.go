@@ -169,6 +169,13 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
+	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
+	if !statusLanjut.IsValid() {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
+		return
+	}
+
 	idKunjungan := strings.TrimSpace(r.PathValue("id_kunjungan"))
 	if idKunjungan == "" {
 		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan wajib diisi"))
@@ -212,6 +219,11 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.GetDetailHasilLab(r.Context(), kat, noRawat, kodeTindakan, tanggalPeriksa, jamPeriksa)
 	if err != nil {
 		apperror.HandleError(w, err)
+		return
+	}
+
+	if data != nil && !strings.EqualFold(data.Status, string(statusLanjut)) {
+		apperror.HandleError(w, apperror.NewNotFoundError("Data hasil laboratorium tidak ditemukan"))
 		return
 	}
 

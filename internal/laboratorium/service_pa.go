@@ -165,7 +165,7 @@ func (s *service) GetDetailPermintaanLabPA(ctx context.Context, noRawat string, 
 		return nil, apperror.NewBusinessError("Permintaan laboratorium tidak sesuai dengan kunjungan pasien")
 	}
 
-	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
+	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
 		return nil, apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 	}
 
@@ -187,7 +187,7 @@ func (s *service) HapusPermintaanLabPA(ctx context.Context, noRawat string, noPe
 		return apperror.NewBusinessError("Permintaan laboratorium tidak sesuai dengan kunjungan pasien")
 	}
 
-	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
+	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
 		return apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
 	}
 

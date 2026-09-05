@@ -24,10 +24,10 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/obat", authMiddleware(timeoutMiddleware(h.DaftarObat)))
+	mux.HandleFunc("GET /api/v1/obat/{id_obat}", authMiddleware(timeoutMiddleware(h.DetailObat)))
 	mux.HandleFunc("GET /api/v1/obat/jenis", authMiddleware(timeoutMiddleware(h.DaftarJenis)))
 	mux.HandleFunc("GET /api/v1/obat/golongan", authMiddleware(timeoutMiddleware(h.DaftarGolongan)))
 	mux.HandleFunc("GET /api/v1/obat/kategori", authMiddleware(timeoutMiddleware(h.DaftarKategori)))
-	mux.HandleFunc("GET /api/v1/obat/{id_obat}", authMiddleware(timeoutMiddleware(h.DetailObat)))
 }
 
 func (h *Handler) DaftarObat(w http.ResponseWriter, r *http.Request) {

@@ -174,3 +174,78 @@ func TestHasilRadiologi_CompositeKey(t *testing.T) {
 		t.Errorf("Expected composite key %s, got %s", expected, key)
 	}
 }
+
+func TestSimpanPermintaanRadiologiRequest_SanitizeAndValidate(t *testing.T) {
+	req := radiologi.SimpanPermintaanRadiologiRequest{
+		NoRawat:           "  2026/09/05/000001  ",
+		TanggalPermintaan: "  2026-09-05  ",
+		JamPermintaan:     "  10:00  ",
+		InformasiTambahan: "",
+		DiagnosaKlinis:    "",
+		Pemeriksaan: []radiologi.ItemPemeriksaanRadiologiRequest{
+			{IdTindakan: "  enc123  "},
+		},
+	}
+	req.Sanitize()
+
+	if req.NoRawat != "2026/09/05/000001" {
+		t.Errorf("Expected trimmed NoRawat, got %q", req.NoRawat)
+	}
+	if req.JamPermintaan != "10:00:00" {
+		t.Errorf("Expected auto-appended :00, got %q", req.JamPermintaan)
+	}
+	if req.InformasiTambahan != "-" {
+		t.Errorf("Expected '-' for empty InformasiTambahan, got %q", req.InformasiTambahan)
+	}
+	if req.DiagnosaKlinis != "-" {
+		t.Errorf("Expected '-' for empty DiagnosaKlinis, got %q", req.DiagnosaKlinis)
+	}
+	if req.Pemeriksaan[0].IdTindakan != "enc123" {
+		t.Errorf("Expected trimmed IdTindakan, got %q", req.Pemeriksaan[0].IdTindakan)
+	}
+
+	errs := req.Validate()
+	if errs != nil {
+		t.Fatalf("Expected valid request, got errs: %v", errs)
+	}
+
+	// Test validation failure
+	invalidReq := radiologi.SimpanPermintaanRadiologiRequest{
+		NoRawat: "",
+	}
+	errsInvalid := invalidReq.Validate()
+	if errsInvalid == nil {
+		t.Fatalf("Expected validation error for empty fields, got nil")
+	}
+	if _, ok := errsInvalid["no_rawat"]; !ok {
+		t.Errorf("Expected no_rawat error, got %v", errsInvalid)
+	}
+	if _, ok := errsInvalid["pemeriksaan"]; !ok {
+		t.Errorf("Expected pemeriksaan error, got %v", errsInvalid)
+	}
+}
+
+func TestFilterRiwayatPermintaanRadiologi_SanitizeAndValidate(t *testing.T) {
+	f := radiologi.FilterRiwayatPermintaanRadiologi{
+		Tanggal: "  2026-09-01,2026-09-05  ",
+		Page:    0,
+		Limit:   200,
+	}
+	f.Sanitize()
+
+	if f.Page != 1 {
+		t.Errorf("Expected page 1, got %d", f.Page)
+	}
+	if f.Limit != 100 {
+		t.Errorf("Expected limit capped at 100, got %d", f.Limit)
+	}
+	if f.Offset() != 0 {
+		t.Errorf("Expected offset 0, got %d", f.Offset())
+	}
+
+	errs := f.Validate()
+	if errs != nil {
+		t.Fatalf("Expected valid filter, got %v", errs)
+	}
+}
+
