@@ -5975,7 +5975,7 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/DetailPermintaanRadiologi"
                 "400":
-                    description: Parameter status lanjut tidak valid (pilihan: Ralan, Ranap)
+                    description: "Parameter status lanjut tidak valid (pilihan: Ralan, Ranap)"
                 "401":
                     description: Token JWT tidak valid atau kedaluwarsa
                 "404":
