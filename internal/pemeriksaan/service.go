@@ -115,7 +115,7 @@ func (s *service) DaftarKesadaran(ctx context.Context) []OpsiReferensi {
 }
 
 func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error) {
-	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "membuat"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut); err != nil {
 		return nil, err
 	}
 
@@ -166,7 +166,7 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "mengubah"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut); err != nil {
 		return nil, err
 	}
 
@@ -217,7 +217,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut, "menghapus"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut); err != nil {
 		return err
 	}
 
@@ -230,7 +230,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	return nil
 }
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string, statusLanjut shared.StatusLanjut, action string) error {
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string, statusLanjut shared.StatusLanjut) error {
 	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)

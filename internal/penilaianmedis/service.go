@@ -53,7 +53,7 @@ func (s *service) Referensi(ctx context.Context) ReferensiPenilaianMedis {
 	return GetReferensiPenilaianMedis()
 }
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tglPenilaian string, action string) error {
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tglPenilaian string) error {
 	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil waktu registrasi no_rawat %s: %v", noRawat, err)

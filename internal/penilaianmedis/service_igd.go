@@ -33,7 +33,7 @@ func (s *service) RiwayatPenilaianMedisIGDByNoRM(ctx context.Context, noRM strin
 }
 
 func (s *service) SimpanPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, noRawat string, req SimpanPenilaianMedisIGDRequest) (*PenilaianMedisIGD, error) {
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian, "membuat"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func (s *service) UpdatePenilaianMedisIGD(ctx context.Context, kodeDokterLogin, 
 		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah penilaian medis ini karena dibuat oleh dokter lain (%s)", existing.NamaDokter))
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian, "mengubah"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian); err != nil {
 		return nil, err
 	}
 
@@ -101,7 +101,7 @@ func (s *service) HapusPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, n
 		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus penilaian medis ini karena dibuat oleh dokter lain (%s)", existing.NamaDokter))
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, "", "menghapus"); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, ""); err != nil {
 		return err
 	}
 
