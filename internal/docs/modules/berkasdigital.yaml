@@ -1,0 +1,96 @@
+paths:
+    /api/v1/master/berkas-digital:
+        get:
+            summary: Master Kategori Berkas Digital
+            description: Mengambil seluruh daftar referensi kategori berkas digital aktif di rumah sakit dari master_berkas_digital.
+            tags:
+                - Master Data
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil master berkas digital
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    code:
+                                        type: integer
+                                        example: 200
+                                    status:
+                                        type: string
+                                        example: OK
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil master berkas digital
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/MasterBerkasDigital"
+    /api/v1/berkas-digital/{id_berkas}:
+        get:
+            summary: Secure Stream Berkas Digital Universal (PDF / Gambar)
+            description: Mengalirkan (reverse proxy stream) dokumen PDF atau gambar dari server penyimpanan Khanza secara aman untuk seluruh modul RS (Laboratorium, Radiologi, EKG, USG, dll.).
+            tags:
+                - Berkas Digital
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_berkas
+                  in: path
+                  required: true
+                  description: Token URL berkas terenkripsi
+                  schema:
+                    type: string
+                    example: "bK8mQ1..."
+            responses:
+                "200":
+                    description: File stream PDF / Gambar
+                    content:
+                        application/pdf:
+                            schema:
+                                type: string
+                                format: binary
+                        image/jpeg:
+                            schema:
+                                type: string
+                                format: binary
+                        image/png:
+                            schema:
+                                type: string
+                                format: binary
+                "400":
+                    description: Token berkas tidak valid
+                "404":
+                    description: Berkas tidak ditemukan di server penyimpanan
+components:
+    schemas:
+        BerkasDigital:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    description: Kode master berkas digital
+                    example: "015"
+                nama_berkas:
+                    type: string
+                    description: Nama jenis berkas lampiran
+                    example: "Hasil PA FNAB"
+                id_berkas:
+                    type: string
+                    description: Token terenkripsi URL-safe untuk streaming berkas
+                    example: "bK8mQ1..."
+                url_berkas:
+                    type: string
+                    description: Path API untuk mengalirkan file PDF/Gambar
+                    example: "/api/v1/berkas-digital/bK8mQ1..."
+        MasterBerkasDigital:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: "015"
+                nama:
+                    type: string
+                    example: "PATOLOGI ANATOMI"

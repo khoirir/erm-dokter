@@ -1,0 +1,302 @@
+paths:
+    /api/v1/rawat-jalan/status-pemeriksaan:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Pemeriksaan Antrean
+            description: Mengambil daftar opsi status pemeriksaan untuk filter antrean pasien.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/OpsiReferensi"
+    /api/v1/rawat-jalan/status-lanjut:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Lanjut
+            description: Mengambil opsi status perawatan (Rawat Jalan / Rawat Inap).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status lanjut
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/OpsiReferensi"
+    /api/v1/rawat-jalan/status-bayar:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Status Pembayaran
+            description: Mengambil opsi status pembayaran (Sudah Bayar / Belum Bayar).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status bayar
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/OpsiReferensi"
+    /api/v1/rawat-jalan/jenis-antrean:
+        get:
+            tags: [Rawat Jalan]
+            summary: Referensi Jenis Antrean
+            description: Mengambil opsi jenis antrean (Rujukan / Bukan Rujukan).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi jenis antrean
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/OpsiReferensi"
+    /api/v1/rawat-jalan/antrean:
+        get:
+            tags: [Rawat Jalan]
+            summary: Daftar Antrean Pasien Dokter
+            description: |
+                Mengambil daftar antrean kunjungan pasien yang ditangani oleh dokter yang sedang login.
+                - Parameter `tanggal` default-nya adalah hari ini jika dikosongkan.
+                - Kosongkan parameter filter (status, jenis antrean, dll) untuk menampilkan semua data.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: tanggal
+                  in: query
+                  description: Rentang tanggal registrasi (format YYYY-MM-DD,YYYY-MM-DD). Default hari ini.
+                  example: "2026-04-22,2026-04-22"
+                  schema:
+                    type: string
+                - name: order_by
+                  in: query
+                  description: Kolom pengurutan data
+                  example: waktu_registrasi
+                  schema:
+                    type: string
+                    enum: [waktu_registrasi, nama_pasien, penjamin, status_pemeriksaan, status_lanjut, status_bayar, jenis_antrean]
+                    default: waktu_registrasi
+                - name: sort_order
+                  in: query
+                  description: Urutan ascending atau descending
+                  example: ASC
+                  schema:
+                    type: string
+                    enum: [ASC, DESC]
+                    default: ASC
+                - name: jenis_antrean
+                  in: query
+                  description: Filter jenis antrean (kosongkan untuk semua)
+                  schema:
+                    type: string
+                    enum: [Rujukan, Bukan Rujukan]
+                - name: status_pemeriksaan
+                  in: query
+                  description: Filter status pemeriksaan pasien (kosongkan untuk semua)
+                  schema:
+                    type: string
+                    enum: [Belum, Sudah, Batal, Berkas Diterima, Dirujuk, Meninggal, Dirawat, Pulang Paksa]
+                - name: status_bayar
+                  in: query
+                  description: Filter status pembayaran (kosongkan untuk semua)
+                  schema:
+                    type: string
+                    enum: [Sudah Bayar, Belum Bayar]
+                - name: status_lanjut
+                  in: query
+                  description: Filter status lanjutan (kosongkan untuk semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                - name: penjamin
+                  in: query
+                  description: Filter kode penjamin / asuransi (misal BPJ)
+                  schema:
+                    type: string
+                - name: keyword
+                  in: query
+                  description: Pencarian nama pasien, no rkm medis, atau no rawat (minimal 3 karakter)
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  description: Nomor halaman (Page number)
+                  example: 1
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  description: Jumlah data per halaman (Items per page, maks 1000)
+                  example: 20
+                  schema:
+                    type: integer
+                    default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar antrean
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/KunjunganRawatJalan"
+                                        meta:
+                                            $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Parameter filter tidak valid
+                "401":
+                    description: Tidak terautentikasi
+    /api/v1/rawat-jalan/{id_kunjungan}:
+        get:
+            tags: [Rawat Jalan]
+            summary: Detail Kunjungan Pasien
+            description: Mengambil data detail kunjungan rawat jalan berdasarkan token enkripsi `id_kunjungan`.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Detail kunjungan ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/KunjunganRawatJalan"
+components:
+    schemas:
+        KunjunganRawatJalan:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted No Rawat (URL-Safe Token)
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                id_pasien:
+                    type: string
+                    description: Encrypted No Rekam Medis
+                    example: FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG
+                no_rawat:
+                    type: string
+                    example: 2026/04/22/036934
+                no_registrasi:
+                    type: string
+                    example: "001"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-04-22"
+                jam_registrasi:
+                    type: string
+                    example: "08:30:00"
+                no_rekam_medis:
+                    type: string
+                    example: "123456"
+                nama_pasien:
+                    type: string
+                    example: NY. SITI AMINAH
+                jenis_kelamin:
+                    type: string
+                    example: P
+                tanggal_lahir:
+                    type: string
+                    example: "1985-05-12"
+                alamat:
+                    type: string
+                    example: Jl. Mawar No. 12, Jakarta
+                kode_poli_asal:
+                    type: string
+                    example: U0001
+                nama_poli_asal:
+                    type: string
+                    example: Poli Penyakit Dalam
+                kode_dokter_asal:
+                    type: string
+                    example: DR001
+                nama_dokter_asal:
+                    type: string
+                    example: dr. Handi, Sp.PD
+                kode_penjamin:
+                    type: string
+                    example: BPJ
+                nama_penjamin:
+                    type: string
+                    example: BPJS Kesehatan
+                status_pemeriksaan:
+                    type: string
+                    example: Belum Periksa
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+                status_bayar:
+                    type: string
+                    example: Sudah Bayar
+                jenis_antrean:
+                    type: string
+                    example: Bukan Rujukan
+        ReferensiFilterRawatJalan:
+            type: object
+            properties:
+                status_pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                status_lanjut:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                status_bayar:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                jenis_antrean:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"

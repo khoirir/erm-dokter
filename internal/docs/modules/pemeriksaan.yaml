@@ -1,0 +1,492 @@
+paths:
+    /api/v1/pemeriksaan/kesadaran:
+        get:
+            tags: [Pemeriksaan]
+            summary: Referensi Tingkat Kesadaran Pasien
+            description: Mengambil daftar tingkat kesadaran valid (GCS/AVPU) yang didukung sistem.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi tingkat kesadaran
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/OpsiReferensi"
+    /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan Pasien (Lintas Kunjungan)
+            description: Mengambil seluruh riwayat catatan pemeriksaan SOAP & TTV seorang pasien dari semua kunjungan berdasarkan token terenkripsi `id_pasien` (no_rkm_medis).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pasien (no_rkm_medis)
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status perawatan
+                  schema:
+                    type: string
+                    enum: [Semua, Ralan, Ranap]
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan pasien
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Pemeriksaan"
+                                        meta:
+                                            $ref: "#/components/schemas/PaginationMeta"
+    /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan per Kunjungan
+            description: Mengambil riwayat catatan pemeriksaan SOAP & TTV pada 1 kunjungan pasien tertentu berdasarkan token terenkripsi `id_kunjungan` (no_rawat).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan (no_rawat)
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status perawatan
+                  schema:
+                    type: string
+                    enum: [Semua, Ralan, Ranap]
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan kunjungan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Pemeriksaan"
+                                        meta:
+                                            $ref: "#/components/schemas/PaginationMeta"
+        post:
+            tags: [Pemeriksaan]
+            summary: Simpan Catatan Pemeriksaan Baru
+            description: |
+                Menyimpan catatan pemeriksaan SOAP & TTV baru pada kunjungan pasien.
+                - `no_rawat` di body harus cocok dengan `id_kunjungan`.
+                - Waktu pemeriksaan tidak boleh mendahului waktu registrasi pasien dan tidak boleh melebihi waktu saat ini.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPemeriksaanRequest"
+            responses:
+                "201":
+                    description: Pemeriksaan berhasil disimpan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi klinis gagal atau duplikasi waktu pemeriksaan
+    /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Detail Catatan Pemeriksaan
+            description: Mengambil detail satu catatan pemeriksaan SOAP & TTV berdasarkan ID Pemeriksaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Detail pemeriksaan ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+        put:
+            tags: [Pemeriksaan]
+            summary: Update Catatan Pemeriksaan
+            description: |
+                Memperbarui catatan pemeriksaan SOAP & TTV.
+                - Hanya dokter pembuat (`nip`) yang berhak memperbarui.
+                - Batas waktu perubahan rekam medis maksimal 48 jam sejak pemeriksaan dibuat.
+                - Tanggal dan jam pemeriksaan juga dapat diperbarui selama valid dan tidak duplikat.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                    type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdatePemeriksaanRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi input gagal
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau telah melewati batas waktu 48 jam
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+        delete:
+            tags: [Pemeriksaan]
+            summary: Hapus Catatan Pemeriksaan
+            description: |
+                Menghapus catatan pemeriksaan dari database.
+                - Hanya dokter pembuat (`nip`) yang berhak menghapus.
+                - Batas waktu maksimal penghapusan 48 jam sejak pemeriksaan dibuat.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Encrypted Composite Key ID Pemeriksaan
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+components:
+    schemas:
+        OpsiReferensi:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: Compos Mentis
+                label:
+                    type: string
+                    example: Compos Mentis
+        DataPemeriksaanPayload:
+            type: object
+            required:
+                - kesadaran
+                - keluhan
+                - pemeriksaan
+                - penilaian
+                - rencana_tindak_lanjut
+                - instruksi
+                - evaluasi
+            properties:
+                tanggal_pemeriksaan:
+                    type: string
+                    description: Format YYYY-MM-DD. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    description: Format HH:mm:ss. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    description: Rentang 25.0 - 45.0 °C
+                    example: "36.5"
+                tensi:
+                    type: string
+                    description: Format Sistolik/Diastolik (sistolik > diastolik, mmHg)
+                    example: "120/80"
+                nadi:
+                    type: string
+                    description: 20 - 300 x/menit
+                    example: "80"
+                respirasi:
+                    type: string
+                    description: 5 - 100 x/menit
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    description: 20 - 250 cm
+                    example: "170"
+                berat_badan:
+                    type: string
+                    description: 0.5 - 500 kg
+                    example: "65"
+                spo2:
+                    type: string
+                    description: 0 - 100 %
+                    example: "98"
+                gcs:
+                    type: string
+                    description: Glasgow Coma Scale (maks 10 karakter)
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Somnolence, Sopor, Coma, Alert, Confusion, Voice, Pain, Unresponsive, Apatis, Delirium]
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    description: Anamnesis / Subjective (S)
+                    example: Pasien mengeluh demam sejak 3 hari yang lalu disertai pusing
+                pemeriksaan:
+                    type: string
+                    description: Pemeriksaan Fisik / Objective (O)
+                    example: Keadaan umum sedang, faring hiperemis, ronki -/-, wheezing -/-
+                alergi:
+                    type: string
+                    description: Riwayat Alergi Obat/Makanan
+                    example: Tidak ada riwayat alergi obat
+                lingkar_perut:
+                    type: string
+                    description: Khusus Rawat Jalan (cm)
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    description: Plan / Rencana Tindak Lanjut (P)
+                    example: Kontrol poli 3 hari kemudian jika demam belum turun
+                penilaian:
+                    type: string
+                    description: Diagnosis / Assessment (A)
+                    example: Febris H-3 e.c Susp. Viral Infection
+                instruksi:
+                    type: string
+                    description: Instruksi Medis
+                    example: Paracetamol 3x500mg prn demam, perbanyak minum air putih
+                evaluasi:
+                    type: string
+                    description: Evaluasi Perkembangan Pasien
+                    example: Keadaan umum stabil, tanda vital dalam batas normal
+        SimpanPemeriksaanRequest:
+            allOf:
+                - type: object
+                  required:
+                    - no_rawat
+                  properties:
+                    no_rawat:
+                        type: string
+                        description: Nomor Rawat Pasien
+                        example: 2026/04/22/036934
+                - $ref: "#/components/schemas/DataPemeriksaanPayload"
+        UpdatePemeriksaanRequest:
+            $ref: "#/components/schemas/DataPemeriksaanPayload"
+        Pemeriksaan:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted Composite Key ID Pemeriksaan
+                    example: 0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+                id_kunjungan:
+                    type: string
+                    description: Encrypted No Rawat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                no_rawat:
+                    type: string
+                    example: 2026/04/22/036934
+                tanggal_pemeriksaan:
+                    type: string
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    example: "36.5"
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "80"
+                respirasi:
+                    type: string
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    example: "170"
+                berat_badan:
+                    type: string
+                    example: "65"
+                spo2:
+                    type: string
+                    example: "98"
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    example: Pasien mengeluh demam
+                pemeriksaan:
+                    type: string
+                    example: Faring hiperemis
+                alergi:
+                    type: string
+                    example: Tidak ada
+                lingkar_perut:
+                    type: string
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    example: Kontrol 3 hari
+                penilaian:
+                    type: string
+                    example: Febris H-3
+                instruksi:
+                    type: string
+                    example: Paracetamol 3x500mg
+                evaluasi:
+                    type: string
+                    example: Stabil
+                kode_dokter_petugas:
+                    type: string
+                    example: DR001
+                nama_dokter_petugas:
+                    type: string
+                    example: dr. Handi, Sp.PD
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
