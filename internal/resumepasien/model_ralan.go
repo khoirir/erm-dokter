@@ -6,19 +6,8 @@ import (
 	"erm-dokter/internal/shared/apperror"
 )
 
-type KondisiPulang string
-
-const (
-	KondisiPulangHidup     KondisiPulang = "Hidup"
-	KondisiPulangMeninggal KondisiPulang = "Meninggal"
-)
-
-func (k KondisiPulang) IsValid() bool {
-	return k == KondisiPulangHidup || k == KondisiPulangMeninggal
-}
-
-// DataResumePasien memuat seluruh data isian resume pasien (clinical content)
-type DataResumePasien struct {
+// DataResumePasienRalan memuat seluruh data isian resume pasien rawat jalan (clinical content)
+type DataResumePasienRalan struct {
 	KeluhanUtama          string        `json:"keluhan_utama"`
 	JalannyaPenyakit      string        `json:"jalannya_penyakit"`
 	PemeriksaanPenunjang  string        `json:"pemeriksaan_penunjang"`
@@ -45,7 +34,7 @@ type DataResumePasien struct {
 	ObatPulang            string        `json:"obat_pulang"`
 }
 
-func (d *DataResumePasien) Sanitize() {
+func (d *DataResumePasienRalan) Sanitize() {
 	d.KeluhanUtama = strings.TrimSpace(d.KeluhanUtama)
 	d.JalannyaPenyakit = strings.TrimSpace(d.JalannyaPenyakit)
 	d.PemeriksaanPenunjang = strings.TrimSpace(d.PemeriksaanPenunjang)
@@ -75,7 +64,7 @@ func (d *DataResumePasien) Sanitize() {
 	d.ObatPulang = strings.TrimSpace(d.ObatPulang)
 }
 
-func (d *DataResumePasien) Validate(errs apperror.ValidationError) {
+func (d *DataResumePasienRalan) Validate(errs apperror.ValidationError) {
 	if d.KeluhanUtama == "" {
 		errs["keluhan_utama"] = "Keluhan utama wajib diisi"
 	}
@@ -135,56 +124,64 @@ func (d *DataResumePasien) Validate(errs apperror.ValidationError) {
 	}
 }
 
-// ResumePasien merepresentasikan data lengkap domain resume pasien untuk response API
-type ResumePasien struct {
+type DataResumePasien = DataResumePasienRalan
+
+// ResumePasienRalan merepresentasikan data lengkap domain resume pasien rawat jalan untuk response API
+type ResumePasienRalan struct {
 	IdKunjungan string `json:"id_kunjungan"`
 	NoRawat     string `json:"no_rawat"`
 	KodeDokter  string `json:"kode_dokter"`
 	NamaDokter  string `json:"nama_dokter"`
 
-	DataResumePasien
+	DataResumePasienRalan
 }
 
-// SimpanResumePasienRequest request payload untuk menyimpan resume pasien baru
-type SimpanResumePasienRequest struct {
+// SimpanResumePasienRalanRequest request payload untuk menyimpan resume pasien rawat jalan baru
+type SimpanResumePasienRalanRequest struct {
 	NoRawat string `json:"no_rawat"`
-	DataResumePasien
+	DataResumePasienRalan
 }
 
-func (req *SimpanResumePasienRequest) Sanitize() {
+func (req *SimpanResumePasienRalanRequest) Sanitize() {
 	req.NoRawat = strings.TrimSpace(req.NoRawat)
-	req.DataResumePasien.Sanitize()
+	req.DataResumePasienRalan.Sanitize()
 }
 
-func (req *SimpanResumePasienRequest) Validate() apperror.ValidationError {
+func (req *SimpanResumePasienRalanRequest) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 
 	if req.NoRawat == "" {
 		errs["no_rawat"] = "Nomor rawat wajib diisi"
 	}
 
-	req.DataResumePasien.Validate(errs)
+	req.DataResumePasienRalan.Validate(errs)
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
 }
 
-// UpdateResumePasienRequest request payload untuk memperbarui resume pasien
-type UpdateResumePasienRequest struct {
-	DataResumePasien
+// UpdateResumePasienRalanRequest request payload untuk memperbarui resume pasien rawat jalan
+type UpdateResumePasienRalanRequest struct {
+	DataResumePasienRalan
 }
 
-func (req *UpdateResumePasienRequest) Sanitize() {
-	req.DataResumePasien.Sanitize()
+func (req *UpdateResumePasienRalanRequest) Sanitize() {
+	req.DataResumePasienRalan.Sanitize()
 }
 
-func (req *UpdateResumePasienRequest) Validate() apperror.ValidationError {
+func (req *UpdateResumePasienRalanRequest) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 
-	req.DataResumePasien.Validate(errs)
+	req.DataResumePasienRalan.Validate(errs)
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
 }
+
+// Type aliases untuk backwards-compatibility
+type ResumePasien = ResumePasienRalan
+type SimpanResumePasienRequest = SimpanResumePasienRalanRequest
+type UpdateResumePasienRequest = UpdateResumePasienRalanRequest
+

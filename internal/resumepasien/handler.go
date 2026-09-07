@@ -1,11 +1,8 @@
 package resumepasien
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"erm-dokter/internal/middleware"
-	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/response"
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
@@ -28,6 +25,7 @@ func (h *Handler) RegisterRoutes(
 	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
 	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
 ) {
+	mux.HandleFunc("GET /api/v1/resume/referensi/{status_lanjut}", authMiddleware(timeoutMiddleware(h.Referensi)))
 	mux.HandleFunc("GET /api/v1/resume/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DetailResumePasien)))
 	mux.HandleFunc("GET /api/v1/resume/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.RiwayatResumePasienByNoRM)))
 	mux.HandleFunc("POST /api/v1/resume/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanResumePasien)))
@@ -38,12 +36,26 @@ func (h *Handler) RegisterRoutes(
 func (h *Handler) parseStatusLanjut(r *http.Request) (shared.StatusLanjut, error) {
 	status := shared.StatusLanjut(r.PathValue("status_lanjut"))
 	if !status.IsValid() {
-		return "", apperror.NewBusinessError("Status lanjut tidak valid")
-	}
-	if status != shared.StatusLanjutRawatJalan {
-		return "", apperror.NewBusinessError("Resume pasien ini khusus untuk rawat jalan (Ralan)")
+		return "", apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
 	}
 	return status, nil
+}
+
+func (h *Handler) Referensi(w http.ResponseWriter, r *http.Request) {
+	statusLanjut, err := h.parseStatusLanjut(r)
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		ref := h.service.ReferensiRalan(r.Context())
+		response.Success(w, "Berhasil mengambil opsi referensi resume ralan", ref)
+	case shared.StatusLanjutRawatInap:
+		ref := h.service.ReferensiRanap(r.Context())
+		response.Success(w, "Berhasil mengambil opsi referensi resume ranap", ref)
+	}
 }
 
 func (h *Handler) DetailResumePasien(w http.ResponseWriter, r *http.Request) {
@@ -53,21 +65,12 @@ func (h *Handler) DetailResumePasien(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idKunjungan := r.PathValue("id_kunjungan")
-	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
-	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
-		return
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		h.DetailResumePasienRalan(w, r)
+	case shared.StatusLanjutRawatInap:
+		h.DetailResumePasienRanap(w, r)
 	}
-
-	detail, err := h.service.DetailResumePasien(r.Context(), noRawat, statusLanjut)
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	detail.IdKunjungan = idKunjungan
-	response.Success(w, "Berhasil mengambil detail resume pasien", detail)
 }
 
 func (h *Handler) RiwayatResumePasienByNoRM(w http.ResponseWriter, r *http.Request) {
@@ -77,26 +80,12 @@ func (h *Handler) RiwayatResumePasienByNoRM(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	idPasien := r.PathValue("id_pasien")
-	noRM, err := crypto.Decrypt(idPasien, h.encryptionKey)
-	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID pasien tidak valid"))
-		return
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		h.RiwayatResumePasienRalanByNoRM(w, r)
+	case shared.StatusLanjutRawatInap:
+		h.RiwayatResumePasienRanapByNoRM(w, r)
 	}
-
-	riwayat, err := h.service.RiwayatResumePasienByNoRM(r.Context(), noRM, statusLanjut)
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	for i := range riwayat {
-		if enc, err := crypto.Encrypt(riwayat[i].NoRawat, h.encryptionKey); err == nil {
-			riwayat[i].IdKunjungan = enc
-		}
-	}
-
-	response.Success(w, "Berhasil mengambil riwayat resume pasien", riwayat)
 }
 
 func (h *Handler) SimpanResumePasien(w http.ResponseWriter, r *http.Request) {
@@ -106,44 +95,12 @@ func (h *Handler) SimpanResumePasien(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idKunjungan := r.PathValue("id_kunjungan")
-	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
-	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
-		return
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		h.SimpanResumePasienRalan(w, r)
+	case shared.StatusLanjutRawatInap:
+		h.SimpanResumePasienRanap(w, r)
 	}
-
-	var req SimpanResumePasienRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
-		return
-	}
-
-	if req.NoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
-		return
-	}
-
-	req.Sanitize()
-	if errs := req.Validate(); errs != nil {
-		apperror.HandleError(w, errs)
-		return
-	}
-
-	kodeDokter, err := middleware.GetKodeDokter(r.Context())
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	hasil, err := h.service.SimpanResumePasien(r.Context(), noRawat, kodeDokter, statusLanjut, req)
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	hasil.IdKunjungan = idKunjungan
-	response.Created(w, "Berhasil menyimpan resume pasien", hasil)
 }
 
 func (h *Handler) UpdateResumePasien(w http.ResponseWriter, r *http.Request) {
@@ -153,39 +110,12 @@ func (h *Handler) UpdateResumePasien(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idKunjungan := r.PathValue("id_kunjungan")
-	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
-	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
-		return
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		h.UpdateResumePasienRalan(w, r)
+	case shared.StatusLanjutRawatInap:
+		h.UpdateResumePasienRanap(w, r)
 	}
-
-	var req UpdateResumePasienRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
-		return
-	}
-
-	req.Sanitize()
-	if errs := req.Validate(); errs != nil {
-		apperror.HandleError(w, errs)
-		return
-	}
-
-	kodeDokter, err := middleware.GetKodeDokter(r.Context())
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	hasil, err := h.service.UpdateResumePasien(r.Context(), kodeDokter, noRawat, statusLanjut, req)
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	hasil.IdKunjungan = idKunjungan
-	response.Success(w, "Berhasil memperbarui resume pasien", hasil)
 }
 
 func (h *Handler) HapusResumePasien(w http.ResponseWriter, r *http.Request) {
@@ -195,23 +125,10 @@ func (h *Handler) HapusResumePasien(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idKunjungan := r.PathValue("id_kunjungan")
-	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
-	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
-		return
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		h.HapusResumePasienRalan(w, r)
+	case shared.StatusLanjutRawatInap:
+		h.HapusResumePasienRanap(w, r)
 	}
-
-	kodeDokter, err := middleware.GetKodeDokter(r.Context())
-	if err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	if err := h.service.HapusResumePasien(r.Context(), kodeDokter, noRawat, statusLanjut); err != nil {
-		apperror.HandleError(w, err)
-		return
-	}
-
-	response.Success(w, "Berhasil menghapus resume pasien", nil)
 }

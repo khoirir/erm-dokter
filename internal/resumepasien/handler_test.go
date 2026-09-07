@@ -12,52 +12,117 @@ import (
 	"erm-dokter/internal/pkg/crypto"
 	"erm-dokter/internal/pkg/token"
 	"erm-dokter/internal/resumepasien"
-	"erm-dokter/internal/shared"
 )
 
 const testEncKey = "bafaa956-751d-4f59-98cc-574ee9dfe9f6"
 
 type mockResumePasienService struct {
-	detailFn  func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) (*resumepasien.ResumePasien, error)
-	riwayatFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut) ([]resumepasien.ResumePasien, error)
-	simpanFn  func(ctx context.Context, noRawat, kodeDokter string, statusLanjut shared.StatusLanjut, req resumepasien.SimpanResumePasienRequest) (*resumepasien.ResumePasien, error)
-	updateFn  func(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut, req resumepasien.UpdateResumePasienRequest) (*resumepasien.ResumePasien, error)
-	hapusFn   func(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut) error
+	detailFn  func(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRalan, error)
+	riwayatFn func(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRalan, error)
+	simpanFn  func(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error)
+	updateFn  func(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error)
+	hapusFn   func(ctx context.Context, kodeDokterLogin, noRawat string) error
+
+	// Ranap
+	detailRanapFn  func(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRanap, error)
+	riwayatRanapFn func(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRanap, error)
+	simpanRanapFn  func(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error)
+	updateRanapFn  func(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error)
+	hapusRanapFn   func(ctx context.Context, kodeDokterLogin, noRawat string) error
+
+	// Referensi
+	referensiRanapFn func(ctx context.Context) resumepasien.ReferensiResumeRanap
+	referensiRalanFn func(ctx context.Context) resumepasien.ReferensiResumeRalan
 }
 
-func (m *mockResumePasienService) DetailResumePasien(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) (*resumepasien.ResumePasien, error) {
+func (m *mockResumePasienService) DetailResumePasienRalan(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRalan, error) {
 	if m.detailFn != nil {
-		return m.detailFn(ctx, noRawat, statusLanjut)
+		return m.detailFn(ctx, noRawat)
 	}
 	return nil, nil
 }
 
-func (m *mockResumePasienService) RiwayatResumePasienByNoRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut) ([]resumepasien.ResumePasien, error) {
+func (m *mockResumePasienService) RiwayatResumePasienRalanByNoRM(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRalan, error) {
 	if m.riwayatFn != nil {
-		return m.riwayatFn(ctx, noRM, statusLanjut)
+		return m.riwayatFn(ctx, noRM)
 	}
 	return nil, nil
 }
 
-func (m *mockResumePasienService) SimpanResumePasien(ctx context.Context, noRawat, kodeDokter string, statusLanjut shared.StatusLanjut, req resumepasien.SimpanResumePasienRequest) (*resumepasien.ResumePasien, error) {
+func (m *mockResumePasienService) SimpanResumePasienRalan(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error) {
 	if m.simpanFn != nil {
-		return m.simpanFn(ctx, noRawat, kodeDokter, statusLanjut, req)
+		return m.simpanFn(ctx, noRawat, kodeDokter, req)
 	}
 	return nil, nil
 }
 
-func (m *mockResumePasienService) UpdateResumePasien(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut, req resumepasien.UpdateResumePasienRequest) (*resumepasien.ResumePasien, error) {
+func (m *mockResumePasienService) UpdateResumePasienRalan(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error) {
 	if m.updateFn != nil {
-		return m.updateFn(ctx, kodeDokterLogin, noRawat, statusLanjut, req)
+		return m.updateFn(ctx, kodeDokterLogin, noRawat, req)
 	}
 	return nil, nil
 }
 
-func (m *mockResumePasienService) HapusResumePasien(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut) error {
+func (m *mockResumePasienService) HapusResumePasienRalan(ctx context.Context, kodeDokterLogin, noRawat string) error {
 	if m.hapusFn != nil {
-		return m.hapusFn(ctx, kodeDokterLogin, noRawat, statusLanjut)
+		return m.hapusFn(ctx, kodeDokterLogin, noRawat)
 	}
 	return nil
+}
+
+func (m *mockResumePasienService) DetailResumePasienRanap(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRanap, error) {
+	if m.detailRanapFn != nil {
+		return m.detailRanapFn(ctx, noRawat)
+	}
+	return nil, nil
+}
+
+func (m *mockResumePasienService) RiwayatResumePasienRanapByNoRM(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRanap, error) {
+	if m.riwayatRanapFn != nil {
+		return m.riwayatRanapFn(ctx, noRM)
+	}
+	return nil, nil
+}
+
+func (m *mockResumePasienService) SimpanResumePasienRanap(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error) {
+	if m.simpanRanapFn != nil {
+		return m.simpanRanapFn(ctx, noRawat, kodeDokter, req)
+	}
+	return nil, nil
+}
+
+func (m *mockResumePasienService) UpdateResumePasienRanap(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error) {
+	if m.updateRanapFn != nil {
+		return m.updateRanapFn(ctx, kodeDokterLogin, noRawat, req)
+	}
+	return nil, nil
+}
+
+func (m *mockResumePasienService) HapusResumePasienRanap(ctx context.Context, kodeDokterLogin, noRawat string) error {
+	if m.hapusRanapFn != nil {
+		return m.hapusRanapFn(ctx, kodeDokterLogin, noRawat)
+	}
+	return nil
+}
+
+func (m *mockResumePasienService) ReferensiRanap(ctx context.Context) resumepasien.ReferensiResumeRanap {
+	if m.referensiRanapFn != nil {
+		return m.referensiRanapFn(ctx)
+	}
+	return resumepasien.ReferensiResumeRanap{
+		CaraKeluar:    resumepasien.DaftarOpsiCaraKeluar(),
+		KeadaanPulang: resumepasien.DaftarOpsiKeadaanPulang(),
+		Dilanjutkan:   resumepasien.DaftarOpsiDilanjutkan(),
+	}
+}
+
+func (m *mockResumePasienService) ReferensiRalan(ctx context.Context) resumepasien.ReferensiResumeRalan {
+	if m.referensiRalanFn != nil {
+		return m.referensiRalanFn(ctx)
+	}
+	return resumepasien.ReferensiResumeRalan{
+		KondisiPulang: resumepasien.DaftarOpsiKondisiPulang(),
+	}
 }
 
 func dummyAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -85,12 +150,12 @@ func TestResumePasienHandler(t *testing.T) {
 
 	t.Run("GET DetailResumePasien Sukses", func(t *testing.T) {
 		mockSvc := &mockResumePasienService{
-			detailFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) (*resumepasien.ResumePasien, error) {
-				return &resumepasien.ResumePasien{
+			detailFn: func(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRalan, error) {
+				return &resumepasien.ResumePasienRalan{
 					NoRawat:    noRawat,
 					KodeDokter: "DR01",
 					NamaDokter: "dr. Handi",
-					DataResumePasien: resumepasien.DataResumePasien{
+					DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 						KeluhanUtama:  "Batuk",
 						DiagnosaUtama: "ISPA",
 						KondisiPulang: resumepasien.KondisiPulangHidup,
@@ -112,27 +177,27 @@ func TestResumePasienHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("GET DetailResumePasien Status Ranap Ditolak (400)", func(t *testing.T) {
+	t.Run("GET DetailResumePasien Status Tidak Valid (400)", func(t *testing.T) {
 		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/Ranap", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/InvalidStatus", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
 		if w.Code != http.StatusBadRequest {
-			t.Fatalf("expected status 400 for non-ralan status, got %d", w.Code)
+			t.Fatalf("expected status 400 for invalid status, got %d", w.Code)
 		}
 	})
 
 	t.Run("GET RiwayatResumePasienByNoRM Sukses", func(t *testing.T) {
 		mockSvc := &mockResumePasienService{
-			riwayatFn: func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut) ([]resumepasien.ResumePasien, error) {
-				return []resumepasien.ResumePasien{
+			riwayatFn: func(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRalan, error) {
+				return []resumepasien.ResumePasienRalan{
 					{
 						NoRawat: rawNoRawat,
-						DataResumePasien: resumepasien.DataResumePasien{
+						DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 							KeluhanUtama:  "Batuk",
 							DiagnosaUtama: "ISPA",
 						},
@@ -156,11 +221,11 @@ func TestResumePasienHandler(t *testing.T) {
 
 	t.Run("POST SimpanResumePasien 201 Created", func(t *testing.T) {
 		mockSvc := &mockResumePasienService{
-			simpanFn: func(ctx context.Context, noRawat, kodeDokter string, statusLanjut shared.StatusLanjut, req resumepasien.SimpanResumePasienRequest) (*resumepasien.ResumePasien, error) {
-				return &resumepasien.ResumePasien{
-					NoRawat:          noRawat,
-					KodeDokter:       kodeDokter,
-					DataResumePasien: req.DataResumePasien,
+			simpanFn: func(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error) {
+				return &resumepasien.ResumePasienRalan{
+					NoRawat:               noRawat,
+					KodeDokter:            kodeDokter,
+					DataResumePasienRalan: req.DataResumePasienRalan,
 				}, nil
 			},
 		}
@@ -171,7 +236,7 @@ func TestResumePasienHandler(t *testing.T) {
 
 		payload := resumepasien.SimpanResumePasienRequest{
 			NoRawat: rawNoRawat,
-			DataResumePasien: resumepasien.DataResumePasien{
+			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam 3 hari",
 				DiagnosaUtama: "Febris suspect DHF",
 				KondisiPulang: resumepasien.KondisiPulangHidup,
@@ -196,7 +261,7 @@ func TestResumePasienHandler(t *testing.T) {
 
 		payload := resumepasien.SimpanResumePasienRequest{
 			NoRawat: "DIFFERENT_NO_RAWAT",
-			DataResumePasien: resumepasien.DataResumePasien{
+			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam",
 				DiagnosaUtama: "Febris",
 			},
@@ -215,11 +280,11 @@ func TestResumePasienHandler(t *testing.T) {
 
 	t.Run("PUT UpdateResumePasien 200 OK", func(t *testing.T) {
 		mockSvc := &mockResumePasienService{
-			updateFn: func(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut, req resumepasien.UpdateResumePasienRequest) (*resumepasien.ResumePasien, error) {
-				return &resumepasien.ResumePasien{
-					NoRawat:          noRawat,
-					KodeDokter:       kodeDokterLogin,
-					DataResumePasien: req.DataResumePasien,
+			updateFn: func(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRalanRequest) (*resumepasien.ResumePasienRalan, error) {
+				return &resumepasien.ResumePasienRalan{
+					NoRawat:               noRawat,
+					KodeDokter:            kodeDokterLogin,
+					DataResumePasienRalan: req.DataResumePasienRalan,
 				}, nil
 			},
 		}
@@ -229,7 +294,7 @@ func TestResumePasienHandler(t *testing.T) {
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
 		payload := resumepasien.UpdateResumePasienRequest{
-			DataResumePasien: resumepasien.DataResumePasien{
+			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam membaik",
 				DiagnosaUtama: "DHF Grade 1",
 				KondisiPulang: resumepasien.KondisiPulangHidup,
@@ -249,7 +314,7 @@ func TestResumePasienHandler(t *testing.T) {
 
 	t.Run("DELETE HapusResumePasien 200 OK", func(t *testing.T) {
 		mockSvc := &mockResumePasienService{
-			hapusFn: func(ctx context.Context, kodeDokterLogin, noRawat string, statusLanjut shared.StatusLanjut) error {
+			hapusFn: func(ctx context.Context, kodeDokterLogin, noRawat string) error {
 				return nil
 			},
 		}
@@ -266,4 +331,235 @@ func TestResumePasienHandler(t *testing.T) {
 			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 		}
 	})
+
+	// ==================== RANAP ====================
+
+	t.Run("GET DetailResumePasienRanap Sukses", func(t *testing.T) {
+		mockSvc := &mockResumePasienService{
+			detailRanapFn: func(ctx context.Context, noRawat string) (*resumepasien.ResumePasienRanap, error) {
+				return &resumepasien.ResumePasienRanap{
+					NoRawat:    noRawat,
+					KodeDokter: "DR01",
+					NamaDokter: "dr. Handi",
+					DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+						KeluhanUtama:  "Nyeri dada",
+						DiagnosaUtama: "STEMI",
+						CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+						Keadaan:       resumepasien.KeadaanPulangMembaik,
+						Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+					},
+				}, nil
+			},
+		}
+
+		handler := resumepasien.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/Ranap", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("GET RiwayatResumePasienRanapByNoRM Sukses", func(t *testing.T) {
+		mockSvc := &mockResumePasienService{
+			riwayatRanapFn: func(ctx context.Context, noRM string) ([]resumepasien.ResumePasienRanap, error) {
+				return []resumepasien.ResumePasienRanap{
+					{
+						NoRawat: rawNoRawat,
+						DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+							DiagnosaUtama: "STEMI",
+						},
+					},
+				}, nil
+			},
+		}
+
+		handler := resumepasien.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/pasien/"+encNoRM+"/Ranap", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("POST SimpanResumePasienRanap 201 Created", func(t *testing.T) {
+		mockSvc := &mockResumePasienService{
+			simpanRanapFn: func(ctx context.Context, noRawat, kodeDokter string, req resumepasien.SimpanResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error) {
+				return &resumepasien.ResumePasienRanap{
+					NoRawat:               noRawat,
+					KodeDokter:            kodeDokter,
+					DataResumePasienRanap: req.DataResumePasienRanap,
+				}, nil
+			},
+		}
+
+		handler := resumepasien.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		payload := resumepasien.SimpanResumePasienRanapRequest{
+			NoRawat: rawNoRawat,
+			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+				DiagnosaAwal:  "Chest Pain",
+				Alasan:        "Evaluasi nyeri dada",
+				KeluhanUtama:  "Nyeri dada kiri menjalar",
+				DiagnosaUtama: "STEMI Anterior",
+				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+				Keadaan:       resumepasien.KeadaanPulangMembaik,
+				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			},
+		}
+		bodyBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("expected status 201, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("POST SimpanResumePasienRanap Mismatch NoRawat 400 Bad Request", func(t *testing.T) {
+		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		payload := resumepasien.SimpanResumePasienRanapRequest{
+			NoRawat: "DIFFERENT_NO_RAWAT",
+			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+				DiagnosaAwal:  "Chest Pain",
+				Alasan:        "Evaluasi nyeri dada",
+				KeluhanUtama:  "Nyeri dada",
+				DiagnosaUtama: "STEMI",
+				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+				Keadaan:       resumepasien.KeadaanPulangMembaik,
+				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			},
+		}
+		bodyBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400 for mismatch NoRawat, got %d", w.Code)
+		}
+	})
+
+	t.Run("PUT UpdateResumePasienRanap 200 OK", func(t *testing.T) {
+		mockSvc := &mockResumePasienService{
+			updateRanapFn: func(ctx context.Context, kodeDokterLogin, noRawat string, req resumepasien.UpdateResumePasienRanapRequest) (*resumepasien.ResumePasienRanap, error) {
+				return &resumepasien.ResumePasienRanap{
+					NoRawat:               noRawat,
+					KodeDokter:            kodeDokterLogin,
+					DataResumePasienRanap: req.DataResumePasienRanap,
+				}, nil
+			},
+		}
+
+		handler := resumepasien.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		payload := resumepasien.UpdateResumePasienRanapRequest{
+			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+				DiagnosaAwal:  "Chest Pain",
+				Alasan:        "Evaluasi nyeri dada",
+				KeluhanUtama:  "Nyeri dada berkurang",
+				DiagnosaUtama: "STEMI Anterior Resolving",
+				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+				Keadaan:       resumepasien.KeadaanPulangSembuh,
+				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			},
+		}
+		bodyBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("DELETE HapusResumePasienRanap 200 OK", func(t *testing.T) {
+		mockSvc := &mockResumePasienService{
+			hapusRanapFn: func(ctx context.Context, kodeDokterLogin, noRawat string) error {
+				return nil
+			},
+		}
+
+		handler := resumepasien.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/resume/"+encNoRawat+"/Ranap", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	// ==================== REFERENSI ====================
+
+	t.Run("GET Referensi Ralan Sukses", func(t *testing.T) {
+		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/Ralan", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("GET Referensi Ranap Sukses", func(t *testing.T) {
+		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/Ranap", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("GET Referensi Status Tidak Valid (400)", func(t *testing.T) {
+		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/InvalidStatus", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
 }
+

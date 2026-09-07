@@ -27,7 +27,7 @@ func TestKondisiPulang_IsValid(t *testing.T) {
 func TestSimpanResumePasienRequest_Sanitize_Defaults(t *testing.T) {
 	req := resumepasien.SimpanResumePasienRequest{
 		NoRawat: "  2026/09/07/000001  ",
-		DataResumePasien: resumepasien.DataResumePasien{
+		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:  "  Demam tinggi sejak 3 hari  ",
 			DiagnosaUtama: "  Demam Tifoid  ",
 			// Kode ICD dibiarkan kosong untuk menguji default string kosong ""
@@ -77,7 +77,7 @@ func TestSimpanResumePasienRequest_Validation(t *testing.T) {
 	longStr81 := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	reqLong := resumepasien.SimpanResumePasienRequest{
 		NoRawat: "2026/09/07/000001",
-		DataResumePasien: resumepasien.DataResumePasien{
+		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:      "Keluhan valid",
 			DiagnosaUtama:     "Diagnosa valid",
 			KodeDiagnosaUtama: "TOOLONGICDCODE", // > 10 chars
@@ -110,7 +110,7 @@ func TestSimpanResumePasienRequest_Validation(t *testing.T) {
 	// Kasus: Valid penuh
 	reqValid := resumepasien.SimpanResumePasienRequest{
 		NoRawat: "2026/09/07/000001",
-		DataResumePasien: resumepasien.DataResumePasien{
+		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:         "Demam",
 			JalannyaPenyakit:     "Demam naik turun",
 			PemeriksaanPenunjang: "Widal positif",
@@ -131,7 +131,7 @@ func TestSimpanResumePasienRequest_Validation(t *testing.T) {
 
 func TestUpdateResumePasienRequest_Validation(t *testing.T) {
 	reqValid := resumepasien.UpdateResumePasienRequest{
-		DataResumePasien: resumepasien.DataResumePasien{
+		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:  "Batuk pilek",
 			DiagnosaUtama: "ISPA",
 			KondisiPulang: resumepasien.KondisiPulangHidup,
@@ -143,7 +143,7 @@ func TestUpdateResumePasienRequest_Validation(t *testing.T) {
 	}
 
 	reqInvalid := resumepasien.UpdateResumePasienRequest{
-		DataResumePasien: resumepasien.DataResumePasien{
+		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:  "",
 			DiagnosaUtama: "",
 			KondisiPulang: "Asal",
@@ -162,5 +162,125 @@ func TestUpdateResumePasienRequest_Validation(t *testing.T) {
 	}
 	if _, ok := errs["kondisi_pulang"]; !ok {
 		t.Error("expected error on kondisi_pulang")
+	}
+}
+
+func TestRanapEnums_IsValid(t *testing.T) {
+	// Cara Keluar
+	if !resumepasien.CaraKeluarAtasIzinDokter.IsValid() {
+		t.Error("expected CaraKeluarAtasIzinDokter to be valid")
+	}
+	if resumepasien.CaraKeluar("Sembarangan").IsValid() {
+		t.Error("expected Sembarangan to be invalid")
+	}
+
+	// Keadaan Pulang
+	if !resumepasien.KeadaanPulangMembaik.IsValid() {
+		t.Error("expected KeadaanPulangMembaik to be valid")
+	}
+	if resumepasien.KeadaanPulang("Sembarangan").IsValid() {
+		t.Error("expected Sembarangan to be invalid")
+	}
+
+	// Dilanjutkan
+	if !resumepasien.DilanjutkanKembaliKeRS.IsValid() {
+		t.Error("expected DilanjutkanKembaliKeRS to be valid")
+	}
+	if resumepasien.Dilanjutkan("Sembarangan").IsValid() {
+		t.Error("expected Sembarangan to be invalid")
+	}
+}
+
+func TestSimpanResumePasienRanapRequest_Sanitize_Defaults(t *testing.T) {
+	req := resumepasien.SimpanResumePasienRanapRequest{
+		NoRawat: "  2026/09/07/000001  ",
+		DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+			DiagnosaAwal: "  Demam Thypoid  ",
+			Alasan:       "  Panas tinggi 5 hari  ",
+			KeluhanUtama: "  Demam menggigil  ",
+			Kontrol:      "  2026-09-15 10:00  ", // YYYY-MM-DD HH:mm -> harus auto append :00
+		},
+	}
+	req.Sanitize()
+
+	if req.NoRawat != "2026/09/07/000001" {
+		t.Errorf("expected NoRawat '2026/09/07/000001', got '%s'", req.NoRawat)
+	}
+	if req.DiagnosaAwal != "Demam Thypoid" {
+		t.Errorf("expected DiagnosaAwal 'Demam Thypoid', got '%s'", req.DiagnosaAwal)
+	}
+	if req.Kontrol != "2026-09-15 10:00:00" {
+		t.Errorf("expected Kontrol '2026-09-15 10:00:00', got '%s'", req.Kontrol)
+	}
+}
+
+func TestSimpanResumePasienRanapRequest_Validation(t *testing.T) {
+	// Kosong
+	reqEmpty := resumepasien.SimpanResumePasienRanapRequest{}
+	reqEmpty.Sanitize()
+	errs := reqEmpty.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty ranap request")
+	}
+	if _, ok := errs["no_rawat"]; !ok {
+		t.Error("expected error on no_rawat")
+	}
+	if _, ok := errs["diagnosa_awal"]; !ok {
+		t.Error("expected error on diagnosa_awal")
+	}
+	if _, ok := errs["alasan"]; !ok {
+		t.Error("expected error on alasan")
+	}
+	if _, ok := errs["keluhan_utama"]; !ok {
+		t.Error("expected error on keluhan_utama")
+	}
+	if _, ok := errs["diagnosa_utama"]; !ok {
+		t.Error("expected error on diagnosa_utama")
+	}
+	if _, ok := errs["cara_keluar"]; !ok {
+		t.Error("expected error on cara_keluar")
+	}
+	if _, ok := errs["keadaan"]; !ok {
+		t.Error("expected error on keadaan")
+	}
+	if _, ok := errs["dilanjutkan"]; !ok {
+		t.Error("expected error on dilanjutkan")
+	}
+
+	// Valid
+	reqValid := resumepasien.SimpanResumePasienRanapRequest{
+		NoRawat: "2026/09/07/000001",
+		DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+			DiagnosaAwal:  "Febris H-3",
+			Alasan:        "Demam tinggi dan dehidrasi",
+			KeluhanUtama:  "Demam tinggi dan lemas",
+			DiagnosaUtama: "DHF Grade 1",
+			CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+			Keadaan:       resumepasien.KeadaanPulangMembaik,
+			Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			Kontrol:       "2026-09-15 10:00:00",
+		},
+	}
+	reqValid.Sanitize()
+	if errsValid := reqValid.Validate(); errsValid != nil {
+		t.Errorf("expected no validation errors, got: %v", errsValid)
+	}
+}
+
+func TestUpdateResumePasienRanapRequest_Validation(t *testing.T) {
+	reqValid := resumepasien.UpdateResumePasienRanapRequest{
+		DataResumePasienRanap: resumepasien.DataResumePasienRanap{
+			DiagnosaAwal:  "Febris",
+			Alasan:        "Demam",
+			KeluhanUtama:  "Keluhan",
+			DiagnosaUtama: "DHF",
+			CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
+			Keadaan:       resumepasien.KeadaanPulangMembaik,
+			Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+		},
+	}
+	reqValid.Sanitize()
+	if errs := reqValid.Validate(); errs != nil {
+		t.Errorf("expected valid update request, got: %v", errs)
 	}
 }
