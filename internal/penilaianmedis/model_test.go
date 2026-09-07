@@ -365,3 +365,373 @@ func TestUpdatePenilaianMedisIGDRequest_Validation(t *testing.T) {
 		t.Fatalf("expected valid update IGD request to have no errors, got: %+v", errs)
 	}
 }
+
+func TestSimpanPenilaianMedisRanapRequest_Sanitize_Defaults(t *testing.T) {
+	req := SimpanPenilaianMedisRanapRequest{
+		NoRawat: " 2026/04/22/000003 ",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			KeluhanUtama: " Sesak nafas berat ",
+			SuhuTubuh:    " 38,2 ",
+			BeratBadan:   " 70,5 ",
+			TinggiBadan:  " 165,0 ",
+			Diagnosis:    " Pneumonia Bilateral ",
+			TataLaksana:  " Ceftriaxone 1g IV ",
+		},
+	}
+
+	req.Sanitize()
+
+	if req.NoRawat != "2026/04/22/000003" {
+		t.Errorf("expected trimmed no_rawat, got %s", req.NoRawat)
+	}
+	if req.TanggalPenilaian == "" {
+		t.Error("expected default TanggalPenilaian to be populated")
+	}
+	if req.KeluhanUtama != "Sesak nafas berat" {
+		t.Errorf("expected trimmed keluhan utama, got %s", req.KeluhanUtama)
+	}
+	if req.SuhuTubuh != "38.2" || req.BeratBadan != "70.5" || req.TinggiBadan != "165.0" {
+		t.Errorf("expected comma replaced with dot in TTV: suhu=%s, bb=%s, tb=%s", req.SuhuTubuh, req.BeratBadan, req.TinggiBadan)
+	}
+
+	// Cek auto defaults
+	if req.Anamnesis != Autoanamnesis {
+		t.Errorf("expected default Anamnesis to be Autoanamnesis, got %s", req.Anamnesis)
+	}
+	if req.Keadaan != KeadaanSehat {
+		t.Errorf("expected default Keadaan to be Sehat, got %s", req.Keadaan)
+	}
+	if req.Kesadaran != KesadaranComposMentis {
+		t.Errorf("expected default Kesadaran to be Compos Mentis, got %s", req.Kesadaran)
+	}
+	if req.Kepala != StatusFisikNormal || req.Mata != StatusFisikNormal || req.Gigi != StatusFisikNormal ||
+		req.TelingaHidungTenggorok != StatusFisikNormal || req.Thoraks != StatusFisikNormal ||
+		req.Jantung != StatusFisikNormal || req.Paru != StatusFisikNormal ||
+		req.Abdomen != StatusFisikNormal || req.Genital != StatusFisikNormal ||
+		req.Ekstremitas != StatusFisikNormal || req.Kulit != StatusFisikNormal {
+		t.Errorf("expected default Pemeriksaan Fisik to be Normal, got kepala=%s, jantung=%s, paru=%s", req.Kepala, req.Jantung, req.Paru)
+	}
+}
+
+func TestSimpanPenilaianMedisRanapRequest_Validation(t *testing.T) {
+	// 1. Empty request
+	req := SimpanPenilaianMedisRanapRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty request, got nil")
+	}
+	if _, exists := errs["no_rawat"]; !exists {
+		t.Error("expected error on no_rawat")
+	}
+	if _, exists := errs["keluhan_utama"]; !exists {
+		t.Error("expected error on keluhan_utama")
+	}
+	if _, exists := errs["diagnosis"]; !exists {
+		t.Error("expected error on diagnosis")
+	}
+	if _, exists := errs["tata_laksana"]; !exists {
+		t.Error("expected error on tata_laksana")
+	}
+
+	// 2. Valid Ranap Request
+	req = SimpanPenilaianMedisRanapRequest{
+		NoRawat: "2026/04/22/000003",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Sesak nafas memberat sejak 2 hari",
+			Diagnosis:        "Pneumonia Komuniti",
+			TataLaksana:      "O2 nasal 3 lpm, IVFD RL 20 tpm, Ceftriaxone 1x2g IV",
+			Tensi:            "120/80",
+			SuhuTubuh:        "37.8",
+			Nadi:             "92",
+			Respirasi:        "24",
+			SpO2:             "96",
+			Laboratorium:     "Leukosit 14.500",
+			Radiologi:        "Infiltrat pada lobus kanan bawah",
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid Ranap request to have no errors, got: %+v", errs)
+	}
+}
+
+func TestUpdatePenilaianMedisRanapRequest_Validation(t *testing.T) {
+	req := UpdatePenilaianMedisRanapRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty update Ranap request")
+	}
+
+	req = UpdatePenilaianMedisRanapRequest{
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Sesak nafas berkurang",
+			Diagnosis:        "Pneumonia Komuniti Perbaikan",
+			TataLaksana:      "Lanjut antibiotik IV",
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid update Ranap request to have no errors, got: %+v", errs)
+	}
+}
+
+// ==========================================
+// RALAN KANDUNGAN MODEL & VALIDATION TESTS
+// ==========================================
+
+func TestKontraksi_IsValid(t *testing.T) {
+	if !KontraksiAda.IsValid() || !KontraksiTidak.IsValid() {
+		t.Error("expected valid Kontraksi enums to return true")
+	}
+	if Kontraksi("Jarang").IsValid() {
+		t.Error("expected invalid Kontraksi to return false")
+	}
+}
+
+func TestSimpanPenilaianMedisRalanKandunganRequest_Sanitize_Defaults(t *testing.T) {
+	req := SimpanPenilaianMedisRalanKandunganRequest{
+		NoRawat: " 2026/04/22/000004 ",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			KeluhanUtama: " Perut kencang-kencang ",
+			SuhuTubuh:    " 36,8 ",
+			BeratBadan:   " 62,5 ",
+			TinggiBadan:  " 158,0 ",
+			Diagnosis:    " G1P0A0 hamil 38 minggu ",
+			TataLaksana:  " Observasi kemajuan persalinan ",
+			TinggiFundusUteri:  " 30 cm ",
+			TaksiranBeratJanin: " 3000 gr ",
+			His:                " 3x/10m/40s ",
+			DenyutJantungJanin: " 140 dpm ",
+		},
+	}
+
+	req.Sanitize()
+
+	if req.NoRawat != "2026/04/22/000004" {
+		t.Errorf("expected trimmed no_rawat, got %s", req.NoRawat)
+	}
+	if req.TanggalPenilaian == "" {
+		t.Error("expected default TanggalPenilaian to be populated")
+	}
+	if req.KeluhanUtama != "Perut kencang-kencang" {
+		t.Errorf("expected trimmed keluhan utama, got %s", req.KeluhanUtama)
+	}
+	if req.SuhuTubuh != "36.8" || req.BeratBadan != "62.5" || req.TinggiBadan != "158.0" {
+		t.Errorf("expected comma replaced with dot in TTV: suhu=%s, bb=%s, tb=%s", req.SuhuTubuh, req.BeratBadan, req.TinggiBadan)
+	}
+	if req.Kontraksi != KontraksiTidak {
+		t.Errorf("expected default Kontraksi to be Tidak, got %s", req.Kontraksi)
+	}
+	if req.TinggiFundusUteri != "30 cm" || req.TaksiranBeratJanin != "3000 gr" || req.His != "3x/10m/40s" || req.DenyutJantungJanin != "140 dpm" {
+		t.Errorf("expected trimmed obgyn fields, got tfu=%s, tbj=%s, his=%s, djj=%s", req.TinggiFundusUteri, req.TaksiranBeratJanin, req.His, req.DenyutJantungJanin)
+	}
+
+	// Cek default fisik
+	if req.Kepala != StatusFisikNormal || req.Mata != StatusFisikNormal || req.Gigi != StatusFisikNormal ||
+		req.TelingaHidungTenggorok != StatusFisikNormal || req.Thoraks != StatusFisikNormal ||
+		req.Abdomen != StatusFisikNormal || req.Genital != StatusFisikNormal ||
+		req.Ekstremitas != StatusFisikNormal || req.Kulit != StatusFisikNormal {
+		t.Errorf("expected default Pemeriksaan Fisik to be Normal, got mata=%s, kulit=%s", req.Mata, req.Kulit)
+	}
+}
+
+func TestSimpanPenilaianMedisRalanKandunganRequest_Validation(t *testing.T) {
+	// 1. Empty request
+	req := SimpanPenilaianMedisRalanKandunganRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty request, got nil")
+	}
+	if _, exists := errs["no_rawat"]; !exists {
+		t.Error("expected error on no_rawat")
+	}
+	if _, exists := errs["keluhan_utama"]; !exists {
+		t.Error("expected error on keluhan_utama")
+	}
+	if _, exists := errs["diagnosis"]; !exists {
+		t.Error("expected error on diagnosis")
+	}
+	if _, exists := errs["tata_laksana"]; !exists {
+		t.Error("expected error on tata_laksana")
+	}
+
+	// 2. Invalid Kontraksi
+	req = SimpanPenilaianMedisRalanKandunganRequest{
+		NoRawat: "2026/04/22/000004",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			KeluhanUtama: "Mules-mules",
+			Diagnosis:    "G1P0A0 inpartu",
+			TataLaksana:  "Observasi his dan DJJ",
+			Kontraksi:    "Sering", // invalid
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs == nil || errs["kontraksi"] == "" {
+		t.Errorf("expected error on invalid kontraksi, got: %+v", errs)
+	}
+
+	// 3. Valid Request
+	req.Kontraksi = KontraksiAda
+	req.TanggalPenilaian = "2026-04-22 09:30:00"
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid Ralan Kandungan request to have no errors, got: %+v", errs)
+	}
+}
+
+func TestUpdatePenilaianMedisRalanKandunganRequest_Validation(t *testing.T) {
+	req := UpdatePenilaianMedisRalanKandunganRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty update Ralan Kandungan request")
+	}
+
+	req = UpdatePenilaianMedisRalanKandunganRequest{
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Mules-mules berkurang",
+			Diagnosis:        "G1P0A0 belum inpartu",
+			TataLaksana:      "Rawat jalan, kontrol ulang 3 hari",
+			Kontraksi:        KontraksiTidak,
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid update Ralan Kandungan request to have no errors, got: %+v", errs)
+	}
+}
+
+// ==========================================
+// RANAP KANDUNGAN MODEL & VALIDATION TESTS
+// ==========================================
+
+func TestSimpanPenilaianMedisRanapKandunganRequest_Sanitize_Defaults(t *testing.T) {
+	req := SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: " 2026/04/22/000005 ",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			KeluhanUtama: " Perut kencang-kencang teratur ",
+			SuhuTubuh:    " 37,2 ",
+			BeratBadan:   " 65,5 ",
+			TinggiBadan:  " 160,0 ",
+			Diagnosis:    " G2P1A0 hamil aterm inpartu kala I fase aktif ",
+			TataLaksana:  " Siapkan partus set, pantau his dan djj ",
+			Edukasi:      " Edukasi teknik relaksasi saat kontraksi ",
+			TinggiFundusUteri:  " 32 cm ",
+			TaksiranBeratJanin: " 3200 gr ",
+			His:                " 4x/10m/45s ",
+			DenyutJantungJanin: " 144 dpm ",
+		},
+	}
+
+	req.Sanitize()
+
+	if req.NoRawat != "2026/04/22/000005" {
+		t.Errorf("expected trimmed no_rawat, got %s", req.NoRawat)
+	}
+	if req.TanggalPenilaian == "" {
+		t.Error("expected default TanggalPenilaian to be populated")
+	}
+	if req.KeluhanUtama != "Perut kencang-kencang teratur" {
+		t.Errorf("expected trimmed keluhan utama, got %s", req.KeluhanUtama)
+	}
+	if req.Edukasi != "Edukasi teknik relaksasi saat kontraksi" {
+		t.Errorf("expected trimmed edukasi, got %s", req.Edukasi)
+	}
+	if req.SuhuTubuh != "37.2" || req.BeratBadan != "65.5" || req.TinggiBadan != "160.0" {
+		t.Errorf("expected comma replaced with dot in TTV: suhu=%s, bb=%s, tb=%s", req.SuhuTubuh, req.BeratBadan, req.TinggiBadan)
+	}
+	if req.Kontraksi != KontraksiTidak {
+		t.Errorf("expected default Kontraksi to be Tidak, got %s", req.Kontraksi)
+	}
+	if req.TinggiFundusUteri != "32 cm" || req.TaksiranBeratJanin != "3200 gr" || req.His != "4x/10m/45s" || req.DenyutJantungJanin != "144 dpm" {
+		t.Errorf("expected trimmed obgyn fields, got tfu=%s, tbj=%s, his=%s, djj=%s", req.TinggiFundusUteri, req.TaksiranBeratJanin, req.His, req.DenyutJantungJanin)
+	}
+
+	// Cek default fisik (termasuk Jantung dan Paru)
+	if req.Kepala != StatusFisikNormal || req.Mata != StatusFisikNormal || req.Gigi != StatusFisikNormal ||
+		req.TelingaHidungTenggorok != StatusFisikNormal || req.Thoraks != StatusFisikNormal ||
+		req.Jantung != StatusFisikNormal || req.Paru != StatusFisikNormal ||
+		req.Abdomen != StatusFisikNormal || req.Genital != StatusFisikNormal ||
+		req.Ekstremitas != StatusFisikNormal || req.Kulit != StatusFisikNormal {
+		t.Errorf("expected default Pemeriksaan Fisik to be Normal, got jantung=%s, paru=%s", req.Jantung, req.Paru)
+	}
+}
+
+func TestSimpanPenilaianMedisRanapKandunganRequest_Validation(t *testing.T) {
+	// 1. Empty request
+	req := SimpanPenilaianMedisRanapKandunganRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty request, got nil")
+	}
+	if _, exists := errs["no_rawat"]; !exists {
+		t.Error("expected error on no_rawat")
+	}
+	if _, exists := errs["keluhan_utama"]; !exists {
+		t.Error("expected error on keluhan_utama")
+	}
+	if _, exists := errs["diagnosis"]; !exists {
+		t.Error("expected error on diagnosis")
+	}
+	if _, exists := errs["tata_laksana"]; !exists {
+		t.Error("expected error on tata_laksana")
+	}
+
+	// 2. Invalid Kontraksi
+	req = SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: "2026/04/22/000005",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			KeluhanUtama: "Mules-mules",
+			Diagnosis:    "G2P1A0 inpartu",
+			TataLaksana:  "Observasi his dan DJJ",
+			Kontraksi:    "Sering", // invalid
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs == nil || errs["kontraksi"] == "" {
+		t.Errorf("expected error on invalid kontraksi, got: %+v", errs)
+	}
+
+	// 3. Valid Request
+	req.Kontraksi = KontraksiAda
+	req.TanggalPenilaian = "2026-04-22 09:30:00"
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid Ranap Kandungan request to have no errors, got: %+v", errs)
+	}
+}
+
+func TestUpdatePenilaianMedisRanapKandunganRequest_Validation(t *testing.T) {
+	req := UpdatePenilaianMedisRanapKandunganRequest{}
+	errs := req.Validate()
+	if errs == nil {
+		t.Fatal("expected validation errors for empty update Ranap Kandungan request")
+	}
+
+	req = UpdatePenilaianMedisRanapKandunganRequest{
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: "2026-04-22 09:30:00",
+			KeluhanUtama:     "Mules-mules berkurang",
+			Diagnosis:        "G2P1A0",
+			TataLaksana:      "Observasi lanjut",
+			Kontraksi:        KontraksiTidak,
+			Edukasi:          "Tetap tirah baring",
+		},
+	}
+	req.Sanitize()
+	errs = req.Validate()
+	if errs != nil {
+		t.Fatalf("expected valid update Ranap Kandungan request to have no errors, got: %+v", errs)
+	}
+}
+
+

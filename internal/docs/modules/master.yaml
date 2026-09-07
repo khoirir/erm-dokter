@@ -1,0 +1,99 @@
+paths:
+    /api/v1/master/penjamin:
+        get:
+            tags: [Master]
+            summary: Daftar Master Penjamin
+            description: Mengambil daftar penjamin / asuransi pasien yang aktif di sistem.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar penjamin
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Penjamin"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+    /api/v1/master/depo:
+        get:
+            tags: [Master]
+            summary: Daftar Master Depo Farmasi
+            description: Mengambil daftar bangsal / depo farmasi yang aktif.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar depo
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Depo"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+    /api/v1/master/poliklinik:
+        get:
+            tags: [Master]
+            summary: Daftar Master Poliklinik
+            description: Mengambil daftar master poliklinik / unit rawat jalan yang aktif.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar poliklinik
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Poliklinik"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+components:
+    schemas:
+        Penjamin:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: BPJ
+                nama:
+                    type: string
+                    example: BPJS KESEHATAN
+        Depo:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: DPRJ
+                nama:
+                    type: string
+                    example: Depo Rawat Jalan
+        Poliklinik:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: INT
+                nama:
+                    type: string
+                    example: Penyakit Dalam

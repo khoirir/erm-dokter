@@ -1,0 +1,604 @@
+paths:
+    /api/v1/resep/aturan-pakai:
+        get:
+            tags: [Resep]
+            summary: Daftar Master Aturan Pakai
+            description: Mengambil daftar master aturan pakai obat untuk kebutuhan autocomplete / dropdown dengan fitur pencarian keyword (opsional).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian aturan pakai (contoh "3 x 1" atau "tablet")
+                  schema:
+                    type: string
+                    example: "3 x 1"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar aturan pakai
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/AturanPakai"
+    /api/v1/resep/metode-racik:
+        get:
+            tags: [Resep]
+            summary: Daftar Master Metode Racik
+            description: Mengambil daftar referensi metode racikan obat (misalnya Puyer/PULV, Kapsul/CAPS, Salep, Sirup, dll).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar metode racik
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/MetodeRacik"
+    /api/v1/resep/{id_kunjungan}/{status_lanjut}:
+        get:
+            tags: [Resep]
+            summary: Riwayat Resep per Kunjungan
+            description: Mengambil riwayat peresepan obat pasien untuk satu kunjungan tertentu (Ralan, Ranap, atau Semua).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Ralan
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                    example: "2026-08-01,2026-08-27"
+                - name: page
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar resep
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Resep"
+                                        meta:
+                                            $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+        post:
+            tags: [Resep]
+            summary: Simpan Resep Obat Baru
+            description: |
+                Membuat dan menyimpan resep obat baru untuk pasien kunjungan Rawat Jalan atau Rawat Inap.
+                Mendukung peresepan obat **Non-Racikan**, **Racikan**, ataupun **kombinasi keduanya**.
+
+                ### Aturan Bisnis & Validasi:
+                - Dokter pembuat otomatis diambil dari kredensial Token JWT login (`claims.KodeDokter`).
+                - **Validasi Cross-Check**: Kolom `no_rawat` pada request body wajib cocok dengan hasil dekripsi `id_kunjungan` di URL.
+                - **Batas Waktu Peresepan (Ralan)**: Dibatasi maksimal 48 jam dari waktu registrasi kunjungan pasien.
+                - **Status Kamar Inap (Ranap)**: Pasien yang dirawat inap aktif hanya dapat diresepkan berstatus `Ranap`.
+                - **Atomisitas Database**: Transaksi disimpan secara atomik ke tabel `resep_obat`, `resep_dokter`, `resep_dokter_racikan`, dan `resep_dokter_racikan_detail`.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Jenis perawatan (Ralan atau Ranap)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanResepRequest"
+            responses:
+                "200":
+                    description: Berhasil menyimpan resep obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Resep"
+                "400":
+                    description: Kesalahan format input, nomor rawat tidak cocok, atau data obat kosong
+                "403":
+                    description: Melebihi batas waktu peresepan 48 jam
+                "404":
+                    description: Kunjungan atau data registrasi pasien tidak ditemukan
+    /api/v1/resep/pasien/{id_pasien}/{status_lanjut}:
+        get:
+            tags: [Resep]
+            summary: Riwayat Resep Seluruh Kunjungan Pasien
+            description: Mengambil seluruh riwayat peresepan obat pasien berdasarkan Nomor Rekam Medis (Ralan, Ranap, atau Semua).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap, Semua]
+                    example: Semua
+                - name: tanggal
+                  in: query
+                  required: false
+                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                    example: "2026-08-01,2026-08-27"
+                - name: page
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                    default: 5
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat resep pasien
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Resep"
+                                        meta:
+                                            $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+    /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}:
+        get:
+            tags: [Resep]
+            summary: Detail Resep Obat Kunjungan Pasien
+            description: Mengambil informasi detail satu resep obat berdasarkan ID resep dan ID kunjungan pasien.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Jenis perawatan (Ralan atau Ranap)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+                - name: id_resep
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Resep Obat
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail resep obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Resep"
+                "400":
+                    description: ID kunjungan, ID resep, atau status lanjut tidak valid
+                "404":
+                    description: Data resep obat tidak ditemukan pada kunjungan ini
+        put:
+            tags: [Resep]
+            summary: Edit / Update Resep Obat
+            description: |
+                Memperbarui resep obat (non-racikan dan/atau racikan) yang telah dibuat dokter dengan nomor resep yang tetap.
+
+                ### Aturan Bisnis & Validasi:
+                - **Dokter Pembuat**: Hanya dokter yang membuat resep (`kd_dokter == claims.KodeDokter`) yang berhak mengedit.
+                - **Proteksi Farmasi**: Resep yang **sudah divalidasi oleh apotek** (`tgl_perawatan != 0000-00-00` && `jam != 00:00:00`) atau **sudah diserahkan ke pasien** (`tgl_penyerahan != 0000-00-00` && `jam_penyerahan != 00:00:00`) **terkunci permanen dan ditolak**.
+                - **Proteksi 48 Jam (Rawat Jalan)**: Batas waktu pengeditan maksimal 48 jam dari waktu registrasi pasien.
+                - **Validasi Ranap**: Pasien rawat inap tidak boleh berstatus checkout/selesai.
+                - **Atomisitas Transaksi**: Header `resep_obat` diperbarui dan detail resep di-*replace* secara atomik dalam 1 transaksi DB.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Jenis perawatan (Ralan atau Ranap)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+                - name: id_resep
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Resep Obat
+                  schema:
+                    type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanResepRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui resep obat
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            $ref: "#/components/schemas/Resep"
+                "400":
+                    description: Validasi payload gagal (obat tidak ditemukan, format salah, ranap tidak aktif)
+                "403":
+                    description: Ditolak karena bukan dokter pembuat, resep telah diproses farmasi, atau lewat batas 48 jam
+                "404":
+                    description: Data resep obat tidak ditemukan pada kunjungan ini
+        delete:
+            tags: [Resep]
+            summary: Hapus / Batalkan Resep Obat
+            description: |
+                Menghapus atau membatalkan resep obat yang telah dibuat oleh dokter.
+
+                ### Aturan Bisnis & Validasi:
+                - **Dokter Pembuat**: Hanya dokter yang membuat resep (`kd_dokter == claims.KodeDokter`) yang berhak menghapus.
+                - **Proteksi Farmasi**: Resep yang **sudah divalidasi oleh apotek** (`tgl_perawatan != 0000-00-00` && `jam != 00:00:00`) atau **sudah diserahkan ke pasien** (`tgl_penyerahan != 0000-00-00` && `jam_penyerahan != 00:00:00`) **terkunci permanen dan ditolak**.
+                - **Proteksi 48 Jam (Rawat Jalan)**: Batas waktu penghapusan maksimal 48 jam dari waktu registrasi pasien.
+                - **Atomisitas Transaksi**: Seluruh data racikan detail, racikan header, resep non-racik, dan header resep obat dibersihkan secara atomik.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Rawat Kunjungan
+                  schema:
+                    type: string
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Jenis perawatan (Ralan atau Ranap)
+                  schema:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan
+                - name: id_resep
+                  in: path
+                  required: true
+                  description: Encrypted ID Nomor Resep Obat
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus resep obat
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/BaseResponse"
+                "400":
+                    description: ID kunjungan, ID resep, atau status lanjut tidak valid
+                "403":
+                    description: Ditolak karena bukan dokter pembuat, resep telah divalidasi/diserahkan farmasi, atau melebihi batas waktu 48 jam
+                "404":
+                    description: Data resep obat tidak ditemukan pada kunjungan ini
+components:
+    schemas:
+        Resep:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Encrypted ID Nomor Resep
+                    example: 2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: eN781vJ9A8Z
+                no_resep:
+                    type: string
+                    example: "202604230001"
+                no_rawat:
+                    type: string
+                    example: "2026/04/23/000001"
+                tanggal_peresepan:
+                    type: string
+                    example: "2026-04-23"
+                jam_peresepan:
+                    type: string
+                    example: "10:15:00"
+                status:
+                    type: string
+                    example: "ralan"
+                kode_dokter:
+                    type: string
+                    example: "DK001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Hendra Pratama, Sp.A"
+                resep_dokter:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokter"
+                resep_dokter_racikan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokterRacikan"
+        ResepDokter:
+            type: object
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                kode_obat:
+                    type: string
+                    example: "B00001"
+                nama_obat:
+                    type: string
+                    example: "PARACETAMOL 500MG TABLET"
+                jumlah:
+                    type: number
+                    format: double
+                    example: 10.00
+                satuan:
+                    type: string
+                    example: "TAB"
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 tablet sesudah makan"
+        ResepDokterRacikan:
+            type: object
+            properties:
+                no_racik:
+                    type: string
+                    example: "1"
+                nama_racik:
+                    type: string
+                    example: "Puyer Batuk Pilek"
+                kode_racik:
+                    type: string
+                    example: "PULV"
+                metode_racik:
+                    type: string
+                    example: "Puyer / Serbuk"
+                jumlah_racikan:
+                    type: integer
+                    example: 10
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 bungkus"
+                keterangan:
+                    type: string
+                    example: "Sesudah makan"
+                detail_racikan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ResepDokterRacikanDetail"
+        ResepDokterRacikanDetail:
+            type: object
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                kode_obat:
+                    type: string
+                    example: "B00002"
+                nama_obat:
+                    type: string
+                    example: "CTM 4MG TABLET"
+                kandungan:
+                    type: string
+                    example: "2 mg"
+                jumlah:
+                    type: number
+                    format: double
+                    example: 5.00
+                satuan:
+                    type: string
+                    example: "TAB"
+        SimpanResepRequest:
+            type: object
+            required:
+                - no_rawat
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor Rawat Pasien (wajib cocok dengan hasil dekripsi id_kunjungan)
+                    example: "2026/04/22/036934"
+                tanggal_peresepan:
+                    type: string
+                    description: Tanggal peresepan YYYY-MM-DD (opsional, default hari ini)
+                    example: "2026-08-28"
+                jam_peresepan:
+                    type: string
+                    description: Jam peresepan HH:mm:ss (opsional, default jam sekarang)
+                    example: "10:00:00"
+                resep_dokter:
+                    type: array
+                    description: Daftar obat non-racikan
+                    items:
+                        $ref: "#/components/schemas/ResepDokterInput"
+                resep_racikan:
+                    type: array
+                    description: Daftar obat racikan
+                    items:
+                        $ref: "#/components/schemas/ResepRacikanInput"
+        ResepDokterInput:
+            type: object
+            required:
+                - id_obat
+                - jumlah
+                - aturan_pakai
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                jumlah:
+                    type: number
+                    format: double
+                    description: Jumlah obat (> 0)
+                    example: 10
+                aturan_pakai:
+                    type: string
+                    description: Aturan pakai obat
+                    example: "3 x 1 tablet sesudah makan"
+        ResepRacikanInput:
+            type: object
+            required:
+                - nama_racik
+                - kode_racik
+                - jumlah_racikan
+                - aturan_pakai
+                - detail
+            properties:
+                nama_racik:
+                    type: string
+                    description: Nama racikan
+                    example: "Puyer Batuk Pilek"
+                kode_racik:
+                    type: string
+                    description: Kode metode racikan (contoh PULV, CAPS)
+                    example: "PULV"
+                jumlah_racikan:
+                    type: integer
+                    description: Jumlah bungkus/kapsul racikan (> 0)
+                    example: 10
+                aturan_pakai:
+                    type: string
+                    description: Aturan pakai racikan
+                    example: "3 x 1 bungkus"
+                keterangan:
+                    type: string
+                    description: Keterangan tambahan (opsional)
+                    example: "Sebelum tidur"
+                detail:
+                    type: array
+                    description: Komposisi obat bahan racikan (minimal 1 bahan)
+                    items:
+                        $ref: "#/components/schemas/ResepRacikanDetailInput"
+        ResepRacikanDetailInput:
+            type: object
+            required:
+                - id_obat
+                - jumlah
+            properties:
+                id_obat:
+                    type: string
+                    description: Encrypted ID Kode Obat
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                kandungan:
+                    type: string
+                    description: Kandungan/dosis obat racikan (opsional)
+                    example: "500 mg"
+                jumlah:
+                    type: number
+                    format: double
+                    description: Jumlah bahan obat (> 0)
+                    example: 5.00
+        AturanPakai:
+            type: object
+            properties:
+                aturan_pakai:
+                    type: string
+                    example: "3 x 1 tablet sesudah makan"
+        MetodeRacik:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: "PULV"
+                nama:
+                    type: string
+                    example: "Puyer / Serbuk"

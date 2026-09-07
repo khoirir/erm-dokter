@@ -1,15 +1,53 @@
 package docs
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 )
 
-//go:embed openapi.yaml
-var openAPISpec []byte
+//go:embed base.yaml modules/*.yaml
+var embeddedDocsFS embed.FS
+
+var (
+	embeddedMergedSpec []byte
+	embeddedMergeErr   error
+	embeddedOnce       sync.Once
+)
+
+func getEmbeddedSpec() ([]byte, error) {
+	embeddedOnce.Do(func() {
+		baseBytes, err := embeddedDocsFS.ReadFile("base.yaml")
+		if err != nil {
+			embeddedMergeErr = fmt.Errorf("gagal membaca embedded base.yaml: %w", err)
+			return
+		}
+
+		entries, err := embeddedDocsFS.ReadDir("modules")
+		if err != nil {
+			embeddedMergeErr = fmt.Errorf("gagal membaca embedded modules dir: %w", err)
+			return
+		}
+
+		var moduleFiles [][]byte
+		for _, entry := range entries {
+			if strings.HasSuffix(entry.Name(), ".yaml") {
+				content, readErr := embeddedDocsFS.ReadFile("modules/" + entry.Name())
+				if readErr == nil {
+					moduleFiles = append(moduleFiles, content)
+				}
+			}
+		}
+
+		embeddedMergedSpec, embeddedMergeErr = MergeOpenAPISpecs(baseBytes, moduleFiles)
+	})
+	return embeddedMergedSpec, embeddedMergeErr
+}
 
 const scalarHTML = `<!doctype html>
 <html lang="id">
@@ -58,13 +96,12 @@ const scalarHTML = `<!doctype html>
 
           es.onmessage = function(e) {
             if (e.data === 'reload') {
-              console.log('[LiveReload] openapi.yaml diperbarui, me-reload halaman...');
+              console.log('[LiveReload] Dokumentasi API diperbarui, me-reload halaman...');
               location.reload();
             }
           };
 
           es.onerror = function() {
-            // Jangan pernah panggil location.reload() dari onerror untuk mencegah infinite reload loop
             console.warn('[LiveReload] Koneksi live reload terputus, menunggu server online...');
           };
         }
@@ -76,17 +113,24 @@ const scalarHTML = `<!doctype html>
 
 type Handler struct {
 	specFilePath string
+	docsDirPath  string
 }
 
 func NewHandler() *Handler {
 	return &Handler{
-		specFilePath: "internal/docs/openapi.yaml",
+		docsDirPath: "internal/docs",
 	}
 }
 
 func NewHandlerWithFilePath(filePath string) *Handler {
 	return &Handler{
 		specFilePath: filePath,
+	}
+}
+
+func NewHandlerWithDir(dirPath string) *Handler {
+	return &Handler{
+		docsDirPath: dirPath,
 	}
 }
 
@@ -103,21 +147,84 @@ func (h *Handler) ServeUI(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(scalarHTML))
 }
 
+func (h *Handler) getSpec() ([]byte, error) {
+	if h.specFilePath != "" {
+		return os.ReadFile(h.specFilePath)
+	}
+
+	if h.docsDirPath != "" {
+		basePath := filepath.Join(h.docsDirPath, "base.yaml")
+		if baseBytes, err := os.ReadFile(basePath); err == nil {
+			modulesDir := filepath.Join(h.docsDirPath, "modules")
+			entries, readErr := os.ReadDir(modulesDir)
+			if readErr == nil {
+				var moduleFiles [][]byte
+				for _, entry := range entries {
+					if strings.HasSuffix(entry.Name(), ".yaml") {
+						content, fileErr := os.ReadFile(filepath.Join(modulesDir, entry.Name()))
+						if fileErr == nil {
+							moduleFiles = append(moduleFiles, content)
+						}
+					}
+				}
+				return MergeOpenAPISpecs(baseBytes, moduleFiles)
+			}
+		}
+	}
+
+	return getEmbeddedSpec()
+}
+
 func (h *Handler) ServeOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-	data := openAPISpec
-	if h.specFilePath != "" {
-		if fileContent, err := os.ReadFile(h.specFilePath); err == nil {
-			data = fileContent
-		}
+	data, err := h.getSpec()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Gagal memuat spesifikasi OpenAPI: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(data)
 	}
+}
+
+func (h *Handler) getLatestModTime() time.Time {
+	if h.specFilePath != "" {
+		if info, err := os.Stat(h.specFilePath); err == nil {
+			return info.ModTime()
+		}
+		return time.Time{}
+	}
+
+	if h.docsDirPath == "" {
+		return time.Time{}
+	}
+
+	var latest time.Time
+
+	basePath := filepath.Join(h.docsDirPath, "base.yaml")
+	if info, err := os.Stat(basePath); err == nil {
+		latest = info.ModTime()
+	}
+
+	modulesDir := filepath.Join(h.docsDirPath, "modules")
+	entries, err := os.ReadDir(modulesDir)
+	if err == nil {
+		for _, entry := range entries {
+			if strings.HasSuffix(entry.Name(), ".yaml") {
+				if info, statErr := entry.Info(); statErr == nil {
+					if info.ModTime().After(latest) {
+						latest = info.ModTime()
+					}
+				}
+			}
+		}
+	}
+
+	return latest
 }
 
 func (h *Handler) ServeLiveReload(w http.ResponseWriter, r *http.Request) {
@@ -128,12 +235,7 @@ func (h *Handler) ServeLiveReload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	var lastMod time.Time
-	if h.specFilePath != "" {
-		if info, err := os.Stat(h.specFilePath); err == nil {
-			lastMod = info.ModTime()
-		}
-	}
+	lastMod := h.getLatestModTime()
 
 	_, _ = fmt.Fprintf(w, "retry: 1500\n\n")
 	_, _ = fmt.Fprintf(w, ": ping\n\n")
@@ -154,19 +256,16 @@ func (h *Handler) ServeLiveReload(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			if h.specFilePath == "" {
-				continue
-			}
-			info, err := os.Stat(h.specFilePath)
-			if err != nil {
+			currentMod := h.getLatestModTime()
+			if currentMod.IsZero() {
 				continue
 			}
 			if lastMod.IsZero() {
-				lastMod = info.ModTime()
+				lastMod = currentMod
 				continue
 			}
-			if info.ModTime().After(lastMod) {
-				lastMod = info.ModTime()
+			if currentMod.After(lastMod) {
+				lastMod = currentMod
 				_, _ = fmt.Fprintf(w, "data: reload\n\n")
 				_ = rc.Flush()
 				return

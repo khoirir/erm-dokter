@@ -70,6 +70,37 @@ func TestDocsHandler_ServeOpenAPISpec(t *testing.T) {
 	if !strings.Contains(body, "title: ERM Dokter API") {
 		t.Error("expected body to contain 'title: ERM Dokter API'")
 	}
+	// Pastikan rute dari modul ter-merge
+	if !strings.Contains(body, "/api/v1/auth/login:") {
+		t.Error("expected body to contain auth path")
+	}
+	if !strings.Contains(body, "/api/v1/penilaian-medis/ranap-kandungan/{id_kunjungan}:") {
+		t.Error("expected body to contain ranap kandungan path")
+	}
+
+}
+
+func TestDocsHandler_ServeOpenAPISpec_EmbeddedFallback(t *testing.T) {
+	handler := docs.NewHandlerWithDir("folder_tidak_ada")
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/openapi.yaml", nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "openapi: 3.1.0") {
+		t.Error("expected embedded spec to contain 'openapi: 3.1.0'")
+	}
+	if !strings.Contains(body, "title: ERM Dokter API") {
+		t.Error("expected embedded spec to contain 'title: ERM Dokter API'")
+	}
 }
 
 func TestDocsHandler_ServeOpenAPISpec_CustomFileAndHead(t *testing.T) {
@@ -160,3 +191,58 @@ func TestDocsHandler_ServeLiveReload(t *testing.T) {
 	}
 }
 
+func TestDocsHandler_ServeLiveReload_ModularDir(t *testing.T) {
+	tempDir := t.TempDir()
+	baseFile := filepath.Join(tempDir, "base.yaml")
+	modulesDir := filepath.Join(tempDir, "modules")
+	if err := os.MkdirAll(modulesDir, 0755); err != nil {
+		t.Fatalf("failed to create modules dir: %v", err)
+	}
+
+	if err := os.WriteFile(baseFile, []byte("openapi: 3.1.0\ninfo:\n  title: Modular Test\n"), 0644); err != nil {
+		t.Fatalf("failed to write base file: %v", err)
+	}
+
+	modFile := filepath.Join(modulesDir, "test.yaml")
+	if err := os.WriteFile(modFile, []byte("paths:\n  /test:\n    get:\n      summary: Test\n"), 0644); err != nil {
+		t.Fatalf("failed to write mod file: %v", err)
+	}
+
+	handler := docs.NewHandlerWithDir(tempDir)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/live-reload", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		mux.ServeHTTP(w, req)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Update salah satu file modul
+	time.Sleep(100 * time.Millisecond)
+	newModTime := time.Now().Add(1 * time.Second)
+	if err := os.WriteFile(modFile, []byte("paths:\n  /test:\n    get:\n      summary: Updated Test\n"), 0644); err != nil {
+		t.Fatalf("failed to update mod file: %v", err)
+	}
+	_ = os.Chtimes(modFile, newModTime, newModTime)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("timed out waiting for live reload notification from modular file")
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "data: reload") {
+		t.Errorf("expected stream to contain 'data: reload', got: %s", body)
+	}
+}

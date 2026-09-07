@@ -1,0 +1,103 @@
+openapi: 3.1.0
+info:
+    title: ERM Dokter API
+    version: 1.0.0
+    description: |
+        API Elektronik Rekam Medis (ERM) Dokter untuk Rumah Sakit & Klinik berbasis database Khanza.
+
+        ### Fitur Utama:
+        - **Authentication**: JWT Bearer Token dengan enkripsi password AES.
+        - **Rawat Jalan**: Antrean pasien dokter, pencarian & filter, detail kunjungan pasien.
+        - **Pemeriksaan Medis (SOAP & TTV)**: Riwayat pemeriksaan, pencatatan SOAP (Subjective, Objective, Assessment, Plan) baru, update pemeriksaan, dan penghapusan catatan dengan proteksi kepemilikan dokter & batas waktu edit rekam medis (48 jam).
+        - **Resep Obat**: Riwayat peresepan obat pasien per kunjungan dan riwayat peresepan seluruh kunjungan berdasarkan No. RM (mendukung filter Ralan, Ranap, Semua, dan rentang tanggal).
+        - **Security & Privacy**: Enkripsi identifier URL (`id_kunjungan`, `id_pasien`, `id_pemeriksaan`, `id_obat`) menggunakan AES-GCM URL-safe token untuk mencegah ID enumeration / scraping.
+    contact:
+        name: Tim Pengembang ERM Dokter
+servers:
+    - url: http://192.168.30.153:8082
+      description: Development Server (LAN / 192.168.30.153)
+    - url: http://localhost:8082
+      description: Development Server (Localhost)
+security:
+    - BearerAuth: []
+tags:
+    - name: Health
+      description: Server Health Check
+    - name: Auth
+      description: Autentikasi Dokter & Manajemen Sesi
+    - name: Master
+      description: Master Data Database (Penjamin, Depo Farmasi, Poliklinik)
+    - name: Obat
+      description: Katalog Obat, Ketersediaan Stok per Depo & Master Klasifikasi Obat
+    - name: Rawat Jalan
+      description: Antrean Pasien & Detail Kunjungan Rawat Jalan
+    - name: Pemeriksaan
+      description: Rekam Medis Pasien (SOAP & Tanda-Tanda Vital)
+    - name: Resep
+      description: Riwayat Peresepan Obat Pasien (Non-Racikan & Racikan)
+    - name: Rujukan Internal
+      description: Konsul & Rujukan Pasien Antar Poliklinik / Dokter Internal RS
+    - name: Penilaian Medis
+      description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan / Ralan, Ranap, IGD)
+    - name: Tindakan
+      description: Master Data & Katalog Tindakan Medis / Laboratorium
+    - name: Laboratorium
+      description: Hasil & Permintaan Pemeriksaan Laboratorium Pasien (PK, PA, MB)
+    - name: Radiologi
+      description: Hasil Ekspertise & Link Gambar PACS Radiologi Pasien
+    - name: Berkas Digital
+      description: Berkas Digital Universal Perawatan Pasien
+components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: Masukkan JWT Token yang didapatkan dari endpoint login (/api/v1/auth/login).
+    schemas:
+        BaseResponse:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    example: 200
+                status:
+                    type: string
+                    example: OK
+                message:
+                    type: string
+                    example: Berhasil memproses data
+        ErrorResponse:
+            type: object
+            properties:
+                code:
+                    type: integer
+                    example: 400
+                status:
+                    type: string
+                    example: Bad Request
+                message:
+                    type: string
+                    example: Terjadi kesalahan validasi atau bisnis
+                errors:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    example:
+                        keluhan: "Keluhan wajib diisi (Subjective)"
+                        tensi: "Nilai sistolik harus lebih besar dari diastolik (120/80)"
+        PaginationMeta:
+            type: object
+            properties:
+                total_records:
+                    type: integer
+                    example: 45
+                total_pages:
+                    type: integer
+                    example: 3
+                current_page:
+                    type: integer
+                    example: 1
+                per_page:
+                    type: integer
+                    example: 20

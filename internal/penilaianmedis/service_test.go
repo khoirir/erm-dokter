@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -42,6 +43,48 @@ type mockRepository struct {
 	simpanIGDCalledReq SimpanPenilaianMedisIGDRequest
 	updateIGDCalledReq UpdatePenilaianMedisIGDRequest
 	hapusIGDCalledNo   string
+
+	// Ranap
+	detailRanapData      *PenilaianMedisRanap
+	detailRanapErr       error
+	riwayatRanapData     []PenilaianMedisRanap
+	riwayatRanapErr      error
+	adaRanapResult       bool
+	adaRanapErr          error
+	simpanRanapErr       error
+	updateRanapErr       error
+	hapusRanapErr        error
+	simpanRanapCalledReq SimpanPenilaianMedisRanapRequest
+	updateRanapCalledReq UpdatePenilaianMedisRanapRequest
+	hapusRanapCalledNo   string
+
+	// Ralan Kandungan
+	detailRalanKandunganData      *PenilaianMedisRalanKandungan
+	detailRalanKandunganErr       error
+	riwayatRalanKandunganData     []PenilaianMedisRalanKandungan
+	riwayatRalanKandunganErr      error
+	adaRalanKandunganResult       bool
+	adaRalanKandunganErr          error
+	simpanRalanKandunganErr       error
+	updateRalanKandunganErr       error
+	hapusRalanKandunganErr        error
+	simpanRalanKandunganCalledReq SimpanPenilaianMedisRalanKandunganRequest
+	updateRalanKandunganCalledReq UpdatePenilaianMedisRalanKandunganRequest
+	hapusRalanKandunganCalledNo   string
+
+	// Ranap Kandungan
+	detailRanapKandunganData      *PenilaianMedisRanapKandungan
+	detailRanapKandunganErr       error
+	riwayatRanapKandunganData     []PenilaianMedisRanapKandungan
+	riwayatRanapKandunganErr      error
+	adaRanapKandunganResult       bool
+	adaRanapKandunganErr          error
+	simpanRanapKandunganErr       error
+	updateRanapKandunganErr       error
+	hapusRanapKandunganErr        error
+	simpanRanapKandunganCalledReq SimpanPenilaianMedisRanapKandunganRequest
+	updateRanapKandunganCalledReq UpdatePenilaianMedisRanapKandunganRequest
+	hapusRanapKandunganCalledNo   string
 }
 
 // Ralan Mock Methods
@@ -98,6 +141,90 @@ func (m *mockRepository) UpdatePenilaianMedisIGD(ctx context.Context, noRawat st
 func (m *mockRepository) HapusPenilaianMedisIGD(ctx context.Context, noRawat string) error {
 	m.hapusIGDCalledNo = noRawat
 	return m.hapusIGDErr
+}
+
+// Ranap Mock Methods
+func (m *mockRepository) DetailPenilaianMedisRanap(ctx context.Context, noRawat string) (*PenilaianMedisRanap, error) {
+	return m.detailRanapData, m.detailRanapErr
+}
+
+func (m *mockRepository) RiwayatPenilaianMedisRanapByNoRM(ctx context.Context, noRM string) ([]PenilaianMedisRanap, error) {
+	return m.riwayatRanapData, m.riwayatRanapErr
+}
+
+func (m *mockRepository) CekPenilaianMedisRanapAda(ctx context.Context, noRawat string) (bool, error) {
+	return m.adaRanapResult, m.adaRanapErr
+}
+
+func (m *mockRepository) SimpanPenilaianMedisRanap(ctx context.Context, noRawat, kodeDokter string, req SimpanPenilaianMedisRanapRequest) error {
+	m.simpanRanapCalledReq = req
+	return m.simpanRanapErr
+}
+
+func (m *mockRepository) UpdatePenilaianMedisRanap(ctx context.Context, noRawat string, req UpdatePenilaianMedisRanapRequest) error {
+	m.updateRanapCalledReq = req
+	return m.updateRanapErr
+}
+
+func (m *mockRepository) HapusPenilaianMedisRanap(ctx context.Context, noRawat string) error {
+	m.hapusRanapCalledNo = noRawat
+	return m.hapusRanapErr
+}
+
+// Ralan Kandungan Mock Methods
+func (m *mockRepository) DetailPenilaianMedisRalanKandungan(ctx context.Context, noRawat string) (*PenilaianMedisRalanKandungan, error) {
+	return m.detailRalanKandunganData, m.detailRalanKandunganErr
+}
+
+func (m *mockRepository) RiwayatPenilaianMedisRalanKandunganByNoRM(ctx context.Context, noRM string) ([]PenilaianMedisRalanKandungan, error) {
+	return m.riwayatRalanKandunganData, m.riwayatRalanKandunganErr
+}
+
+func (m *mockRepository) CekPenilaianMedisRalanKandunganAda(ctx context.Context, noRawat string) (bool, error) {
+	return m.adaRalanKandunganResult, m.adaRalanKandunganErr
+}
+
+func (m *mockRepository) SimpanPenilaianMedisRalanKandungan(ctx context.Context, noRawat, kodeDokter string, req SimpanPenilaianMedisRalanKandunganRequest) error {
+	m.simpanRalanKandunganCalledReq = req
+	return m.simpanRalanKandunganErr
+}
+
+func (m *mockRepository) UpdatePenilaianMedisRalanKandungan(ctx context.Context, noRawat string, req UpdatePenilaianMedisRalanKandunganRequest) error {
+	m.updateRalanKandunganCalledReq = req
+	return m.updateRalanKandunganErr
+}
+
+func (m *mockRepository) HapusPenilaianMedisRalanKandungan(ctx context.Context, noRawat string) error {
+	m.hapusRalanKandunganCalledNo = noRawat
+	return m.hapusRalanKandunganErr
+}
+
+// Ranap Kandungan Mock Methods
+func (m *mockRepository) DetailPenilaianMedisRanapKandungan(ctx context.Context, noRawat string) (*PenilaianMedisRanapKandungan, error) {
+	return m.detailRanapKandunganData, m.detailRanapKandunganErr
+}
+
+func (m *mockRepository) RiwayatPenilaianMedisRanapKandunganByNoRM(ctx context.Context, noRM string) ([]PenilaianMedisRanapKandungan, error) {
+	return m.riwayatRanapKandunganData, m.riwayatRanapKandunganErr
+}
+
+func (m *mockRepository) CekPenilaianMedisRanapKandunganAda(ctx context.Context, noRawat string) (bool, error) {
+	return m.adaRanapKandunganResult, m.adaRanapKandunganErr
+}
+
+func (m *mockRepository) SimpanPenilaianMedisRanapKandungan(ctx context.Context, noRawat, kodeDokter string, req SimpanPenilaianMedisRanapKandunganRequest) error {
+	m.simpanRanapKandunganCalledReq = req
+	return m.simpanRanapKandunganErr
+}
+
+func (m *mockRepository) UpdatePenilaianMedisRanapKandungan(ctx context.Context, noRawat string, req UpdatePenilaianMedisRanapKandunganRequest) error {
+	m.updateRanapKandunganCalledReq = req
+	return m.updateRanapKandunganErr
+}
+
+func (m *mockRepository) HapusPenilaianMedisRanapKandungan(ctx context.Context, noRawat string) error {
+	m.hapusRanapKandunganCalledNo = noRawat
+	return m.hapusRanapKandunganErr
 }
 
 type mockRawatJalanService struct {
@@ -968,3 +1095,978 @@ func TestService_HapusPenilaianMedisIGD_RanapCheckout_Ditolak(t *testing.T) {
 		t.Fatalf("expected BusinessError, got %v", err)
 	}
 }
+
+// ==========================================
+// PENGUJIAN PENILAIAN MEDIS RANAP
+// ==========================================
+
+func TestService_DetailPenilaianMedisRanap_Success(t *testing.T) {
+	log := logger.New()
+	expected := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			KeluhanUtama: "Sesak nafas dan batuk",
+			Diagnosis:    "Pneumonia",
+			TataLaksana:  "O2 nasal canul 3 lpm",
+		},
+	}
+	repo := &mockRepository{detailRanapData: expected}
+	rjSvc := &mockRawatJalanService{tglReg: "2026-04-22", jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	res, err := svc.DetailPenilaianMedisRanap(context.Background(), "2026/04/22/000003")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != expected.NoRawat || res.Diagnosis != expected.Diagnosis {
+		t.Errorf("expected %+v, got %+v", expected, res)
+	}
+}
+
+func TestService_DetailPenilaianMedisRanap_NotFound(t *testing.T) {
+	log := logger.New()
+	repo := &mockRepository{detailRanapErr: sql.ErrNoRows}
+	rjSvc := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	_, err := svc.DetailPenilaianMedisRanap(context.Background(), "2026/04/22/000099")
+	if err == nil {
+		t.Fatal("expected NotFoundError, got nil")
+	}
+	var notFound *apperror.NotFoundError
+	if !errors.As(err, &notFound) {
+		t.Fatalf("expected NotFoundError, got %v", err)
+	}
+}
+
+func TestService_RiwayatPenilaianMedisRanapByNoRM_Success(t *testing.T) {
+	log := logger.New()
+	expectedList := []PenilaianMedisRanap{
+		{
+			NoRawat:    "2026/04/22/000003",
+			KodeDokter: "DR001",
+			NamaDokter: "dr. Handi",
+		},
+	}
+	repo := &mockRepository{riwayatRanapData: expectedList}
+	rjSvc := &mockRawatJalanService{}
+	mockRI := &mockRawatInapService{}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	list, err := svc.RiwayatPenilaianMedisRanapByNoRM(context.Background(), "123456")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(list))
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanap_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	expected := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Nyeri dada hebat",
+			Diagnosis:        "STEMI",
+			TataLaksana:      "ISDN sublingual, rujuk ICCU",
+		},
+	}
+	repo := &mockRepository{
+		adaRanapResult:  false,
+		detailRanapData: expected,
+	}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil // aktif di kamar inap
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapRequest{
+		NoRawat: "2026/04/22/000003",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Nyeri dada hebat",
+			Diagnosis:        "STEMI",
+			TataLaksana:      "ISDN sublingual, rujuk ICCU",
+		},
+	}
+
+	res, err := svc.SimpanPenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000003" {
+		t.Errorf("expected no_rawat 2026/04/22/000003, got %s", res.NoRawat)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanap_BelumTerdaftarKamarInap(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil // belum terdaftar kamar inap
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapRequest{
+		NoRawat: "2026/04/22/000003",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Nyeri dada",
+			Diagnosis:        "STEMI",
+			TataLaksana:      "ISDN",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003", req)
+	if err == nil {
+		t.Fatal("expected error when patient not admitted to inpatient, got nil")
+	}
+	var busErr *apperror.BusinessError
+	if !errors.As(err, &busErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanap_CheckoutKamarInap(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, true, nil // pernah kamar inap tapi sudah checkout
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapRequest{
+		NoRawat: "2026/04/22/000003",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Nyeri dada",
+			Diagnosis:        "STEMI",
+			TataLaksana:      "ISDN",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003", req)
+	if err == nil {
+		t.Fatal("expected error when patient already checked out from inpatient, got nil")
+	}
+	var busErr *apperror.BusinessError
+	if !errors.As(err, &busErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanap_Duplikasi(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaRanapResult: true}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapRequest{
+		NoRawat: "2026/04/22/000003",
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Nyeri dada",
+			Diagnosis:        "STEMI",
+			TataLaksana:      "ISDN",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003", req)
+	if err == nil {
+		t.Fatal("expected BusinessError on duplicate assessment, got nil")
+	}
+	var busErr *apperror.BusinessError
+	if !errors.As(err, &busErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRanap_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRanapRequest{
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Keluhan membaik",
+			Diagnosis:        "STEMI perbaikan",
+			TataLaksana:      "Lanjut terapi oral",
+		},
+	}
+
+	res, err := svc.UpdatePenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000003" {
+		t.Errorf("expected no_rawat 2026/04/22/000003, got %s", res.NoRawat)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRanap_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRanapRequest{
+		DataPenilaianMedisRanap: DataPenilaianMedisRanap{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Keluhan membaik",
+			Diagnosis:        "STEMI perbaikan",
+			TataLaksana:      "Lanjut terapi oral",
+		},
+	}
+
+	_, err := svc.UpdatePenilaianMedisRanap(context.Background(), "DR002", "2026/04/22/000003", req)
+	if err == nil {
+		t.Fatal("expected ForbiddenError when updated by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+func TestService_HapusPenilaianMedisRanap_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRanap(context.Background(), "DR001", "2026/04/22/000003")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.hapusRanapCalledNo != "2026/04/22/000003" {
+		t.Errorf("expected repo.Hapus called with 2026/04/22/000003, got %s", repo.hapusRanapCalledNo)
+	}
+}
+
+func TestService_HapusPenilaianMedisRanap_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanap{
+		NoRawat:    "2026/04/22/000003",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRanap(context.Background(), "DR002", "2026/04/22/000003")
+	if err == nil {
+		t.Fatal("expected ForbiddenError when deleted by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+// ==========================================
+// RALAN KANDUNGAN SERVICE TESTS
+// ==========================================
+
+func TestService_DetailPenilaianMedisRalanKandungan_Success(t *testing.T) {
+	log := logger.New()
+	expected := &PenilaianMedisRalanKandungan{
+		NoRawat:    "2026/04/22/000004",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			KeluhanUtama: "Mules-mules",
+			Diagnosis:    "G1P0A0",
+			TataLaksana:  "Observasi",
+			Kontraksi:    KontraksiAda,
+		},
+	}
+	repo := &mockRepository{detailRalanKandunganData: expected}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	res, err := svc.DetailPenilaianMedisRalanKandungan(context.Background(), "2026/04/22/000004")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000004" || res.Kontraksi != KontraksiAda {
+		t.Errorf("unexpected result: %+v", res)
+	}
+}
+
+func TestService_DetailPenilaianMedisRalanKandungan_NotFound(t *testing.T) {
+	log := logger.New()
+	repo := &mockRepository{detailRalanKandunganErr: sql.ErrNoRows}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	_, err := svc.DetailPenilaianMedisRalanKandungan(context.Background(), "2026/04/22/999999")
+	if err == nil {
+		t.Fatal("expected NotFoundError, got nil")
+	}
+	var nfErr *apperror.NotFoundError
+	if !errors.As(err, &nfErr) {
+		t.Fatalf("expected NotFoundError, got %v", err)
+	}
+}
+
+func TestService_RiwayatPenilaianMedisRalanKandunganByNoRM_Success(t *testing.T) {
+	log := logger.New()
+	expected := []PenilaianMedisRalanKandungan{
+		{
+			NoRawat: "2026/04/22/000004",
+			DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+				KeluhanUtama: "Kontrol kehamilan",
+				Kontraksi:    KontraksiTidak,
+			},
+		},
+	}
+	repo := &mockRepository{riwayatRalanKandunganData: expected}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	res, err := svc.RiwayatPenilaianMedisRalanKandunganByNoRM(context.Background(), "123456")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) != 1 || res[0].Kontraksi != KontraksiTidak {
+		t.Errorf("unexpected result: %+v", res)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRalanKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{
+		adaRalanKandunganResult: false,
+		detailRalanKandunganData: &PenilaianMedisRalanKandungan{
+			NoRawat:    "2026/04/22/000004",
+			KodeDokter: "DR001",
+			DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+				KeluhanUtama: "Perut kencang",
+				Kontraksi:    KontraksiAda,
+			},
+		},
+	}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil // pasien ralan biasa
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRalanKandunganRequest{
+		NoRawat: "2026/04/22/000004",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Perut kencang",
+			Diagnosis:        "G1P0A0",
+			TataLaksana:      "Observasi",
+			Kontraksi:        KontraksiAda,
+		},
+	}
+
+	res, err := svc.SimpanPenilaianMedisRalanKandungan(context.Background(), "DR001", "2026/04/22/000004", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000004" {
+		t.Errorf("expected no_rawat 2026/04/22/000004, got %s", res.NoRawat)
+	}
+	if repo.simpanRalanKandunganCalledReq.KeluhanUtama != "Perut kencang" {
+		t.Errorf("expected repo called with KeluhanUtama, got %s", repo.simpanRalanKandunganCalledReq.KeluhanUtama)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRalanKandungan_Duplikasi(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaRalanKandunganResult: true}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRalanKandunganRequest{
+		NoRawat: "2026/04/22/000004",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Perut kencang",
+			Diagnosis:        "G1P0A0",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRalanKandungan(context.Background(), "DR001", "2026/04/22/000004", req)
+	if err == nil {
+		t.Fatal("expected BusinessError on duplicate, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRalanKandungan_Lewat48Jam(t *testing.T) {
+	log := logger.New()
+	threeDaysAgo := time.Now().Add(-72 * time.Hour).Format("2006-01-02")
+	repo := &mockRepository{adaRalanKandunganResult: false}
+	rjSvc := &mockRawatJalanService{tglReg: threeDaysAgo, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRalanKandunganRequest{
+		NoRawat: "2026/04/22/000004",
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", threeDaysAgo),
+			KeluhanUtama:     "Perut kencang",
+			Diagnosis:        "G1P0A0",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRalanKandungan(context.Background(), "DR001", "2026/04/22/000004", req)
+	if err == nil {
+		t.Fatal("expected ForbiddenError when > 48h, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRalanKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRalanKandungan{
+		NoRawat:    "2026/04/22/000004",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRalanKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRalanKandunganRequest{
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Mules-mules berkurang",
+			Diagnosis:        "G1P0A0 belum inpartu",
+			TataLaksana:      "Rawat jalan",
+			Kontraksi:        KontraksiTidak,
+		},
+	}
+
+	res, err := svc.UpdatePenilaianMedisRalanKandungan(context.Background(), "DR001", "2026/04/22/000004", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000004" {
+		t.Errorf("expected no_rawat 2026/04/22/000004, got %s", res.NoRawat)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRalanKandungan_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRalanKandungan{
+		NoRawat:    "2026/04/22/000004",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRalanKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRalanKandunganRequest{
+		DataPenilaianMedisRalanKandungan: DataPenilaianMedisRalanKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Mules-mules berkurang",
+			Diagnosis:        "G1P0A0 belum inpartu",
+			TataLaksana:      "Rawat jalan",
+		},
+	}
+
+	_, err := svc.UpdatePenilaianMedisRalanKandungan(context.Background(), "DR002", "2026/04/22/000004", req)
+	if err == nil {
+		t.Fatal("expected ForbiddenError when updated by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+func TestService_HapusPenilaianMedisRalanKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRalanKandungan{
+		NoRawat:    "2026/04/22/000004",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRalanKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRalanKandungan(context.Background(), "DR001", "2026/04/22/000004")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.hapusRalanKandunganCalledNo != "2026/04/22/000004" {
+		t.Errorf("expected repo.Hapus called with 2026/04/22/000004, got %s", repo.hapusRalanKandunganCalledNo)
+	}
+}
+
+func TestService_HapusPenilaianMedisRalanKandungan_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRalanKandungan{
+		NoRawat:    "2026/04/22/000004",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRalanKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRalanKandungan(context.Background(), "DR002", "2026/04/22/000004")
+	if err == nil {
+		t.Fatal("expected ForbiddenError when deleted by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+// ==========================================
+// RANAP KANDUNGAN SERVICE TESTS
+// ==========================================
+
+func TestService_DetailPenilaianMedisRanapKandungan_Success(t *testing.T) {
+	log := logger.New()
+	expected := &PenilaianMedisRanapKandungan{
+		NoRawat:    "2026/04/22/000005",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			KeluhanUtama: "Mules-mules teratur",
+			Diagnosis:    "G2P1A0 inpartu",
+			TataLaksana:  "Observasi persalinan",
+			Kontraksi:    KontraksiAda,
+			Edukasi:      "Edukasi proses melahirkan",
+		},
+	}
+	repo := &mockRepository{detailRanapKandunganData: expected}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	res, err := svc.DetailPenilaianMedisRanapKandungan(context.Background(), "2026/04/22/000005")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000005" || res.Kontraksi != KontraksiAda || res.Edukasi != "Edukasi proses melahirkan" {
+		t.Errorf("unexpected result: %+v", res)
+	}
+}
+
+func TestService_DetailPenilaianMedisRanapKandungan_NotFound(t *testing.T) {
+	log := logger.New()
+	repo := &mockRepository{detailRanapKandunganErr: sql.ErrNoRows}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	_, err := svc.DetailPenilaianMedisRanapKandungan(context.Background(), "2026/04/22/999999")
+	if err == nil {
+		t.Fatal("expected NotFoundError, got nil")
+	}
+	var nfErr *apperror.NotFoundError
+	if !errors.As(err, &nfErr) {
+		t.Fatalf("expected NotFoundError, got %v", err)
+	}
+}
+
+func TestService_RiwayatPenilaianMedisRanapKandunganByNoRM_Success(t *testing.T) {
+	log := logger.New()
+	expected := []PenilaianMedisRanapKandungan{
+		{
+			NoRawat: "2026/04/22/000005",
+			DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+				KeluhanUtama: "Inpartu kala I",
+				Kontraksi:    KontraksiAda,
+			},
+		},
+	}
+	repo := &mockRepository{riwayatRanapKandunganData: expected}
+	svc := NewService(repo, &mockRawatJalanService{}, &mockRawatInapService{}, 48, log)
+
+	res, err := svc.RiwayatPenilaianMedisRanapKandunganByNoRM(context.Background(), "123456")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) != 1 || res[0].Kontraksi != KontraksiAda {
+		t.Errorf("unexpected result: %+v", res)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanapKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{
+		adaRanapKandunganResult: false,
+		detailRanapKandunganData: &PenilaianMedisRanapKandungan{
+			NoRawat:    "2026/04/22/000005",
+			KodeDokter: "DR001",
+			DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+				KeluhanUtama: "Mules teratur",
+				Kontraksi:    KontraksiAda,
+			},
+		},
+	}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil // aktif di kamar inap
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: "2026/04/22/000005",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Mules teratur",
+			Diagnosis:        "G2P1A0 inpartu",
+			TataLaksana:      "Observasi ketat",
+			Kontraksi:        KontraksiAda,
+			Edukasi:          "Edukasi proses melahirkan",
+		},
+	}
+
+	res, err := svc.SimpanPenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000005" {
+		t.Errorf("expected no_rawat 2026/04/22/000005, got %s", res.NoRawat)
+	}
+	if repo.simpanRanapKandunganCalledReq.KeluhanUtama != "Mules teratur" {
+		t.Errorf("expected repo called with KeluhanUtama, got %s", repo.simpanRanapKandunganCalledReq.KeluhanUtama)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanapKandungan_BelumTerdaftarKamarInap(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaRanapKandunganResult: false}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, false, nil // belum di kamar inap
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: "2026/04/22/000005",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Mules teratur",
+			Diagnosis:        "G2P1A0",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005", req)
+	if err == nil {
+		t.Fatal("expected BusinessError when not registered in kamar inap, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanapKandungan_CheckoutKamarInap(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaRanapKandunganResult: false}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return false, true, nil // checkout
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: "2026/04/22/000005",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Mules teratur",
+			Diagnosis:        "G2P1A0",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005", req)
+	if err == nil {
+		t.Fatal("expected BusinessError when already checked out, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_SimpanPenilaianMedisRanapKandungan_Duplikasi(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaRanapKandunganResult: true}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := SimpanPenilaianMedisRanapKandunganRequest{
+		NoRawat: "2026/04/22/000005",
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 09:00:00", today),
+			KeluhanUtama:     "Mules teratur",
+			Diagnosis:        "G2P1A0",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.SimpanPenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005", req)
+	if err == nil {
+		t.Fatal("expected BusinessError on duplicate, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRanapKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanapKandungan{
+		NoRawat:    "2026/04/22/000005",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRanapKandunganRequest{
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Mules-mules bertambah kuat",
+			Diagnosis:        "G2P1A0 inpartu kala I fase aktif",
+			TataLaksana:      "Observasi ketat",
+			Kontraksi:        KontraksiAda,
+			Edukasi:          "Edukasi pendamping persalinan",
+		},
+	}
+
+	res, err := svc.UpdatePenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.NoRawat != "2026/04/22/000005" {
+		t.Errorf("expected no_rawat 2026/04/22/000005, got %s", res.NoRawat)
+	}
+}
+
+func TestService_UpdatePenilaianMedisRanapKandungan_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanapKandungan{
+		NoRawat:    "2026/04/22/000005",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	req := UpdatePenilaianMedisRanapKandunganRequest{
+		DataPenilaianMedisRanapKandungan: DataPenilaianMedisRanapKandungan{
+			TanggalPenilaian: fmt.Sprintf("%s 10:00:00", today),
+			KeluhanUtama:     "Mules-mules bertambah kuat",
+			Diagnosis:        "G2P1A0 inpartu",
+			TataLaksana:      "Observasi",
+		},
+	}
+
+	_, err := svc.UpdatePenilaianMedisRanapKandungan(context.Background(), "DR002", "2026/04/22/000005", req)
+	if err == nil {
+		t.Fatal("expected ForbiddenError when updated by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+func TestService_HapusPenilaianMedisRanapKandungan_Success(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanapKandungan{
+		NoRawat:    "2026/04/22/000005",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRanapKandungan(context.Background(), "DR001", "2026/04/22/000005")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.hapusRanapKandunganCalledNo != "2026/04/22/000005" {
+		t.Errorf("expected repo.Hapus called with 2026/04/22/000005, got %s", repo.hapusRanapKandunganCalledNo)
+	}
+}
+
+func TestService_HapusPenilaianMedisRanapKandungan_DokterLain(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	existing := &PenilaianMedisRanapKandungan{
+		NoRawat:    "2026/04/22/000005",
+		KodeDokter: "DR001",
+		NamaDokter: "dr. Handi",
+	}
+	repo := &mockRepository{detailRanapKandunganData: existing}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+	mockRI := &mockRawatInapService{
+		cekStatusKamarInapFunc: func(ctx context.Context, noRawat string) (bool, bool, error) {
+			return true, true, nil
+		},
+	}
+	svc := NewService(repo, rjSvc, mockRI, 48, log)
+
+	err := svc.HapusPenilaianMedisRanapKandungan(context.Background(), "DR002", "2026/04/22/000005")
+	if err == nil {
+		t.Fatal("expected ForbiddenError when deleted by different doctor, got nil")
+	}
+	var fErr *apperror.ForbiddenError
+	if !errors.As(err, &fErr) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+}
+
+
+

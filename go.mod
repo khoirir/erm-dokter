@@ -8,4 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 )
 
-require filippo.io/edwards25519 v1.2.0 // indirect
+require (
+	filippo.io/edwards25519 v1.2.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)

@@ -20,7 +20,7 @@
 - **Routing**: Go Standard Library `net/http` (`http.ServeMux` dengan method routing Go 1.22+).
 - **Database**: MySQL / MariaDB (Database SIMRS Khanza).
 - **Live Reload**: `air` (sudah mendukung ekstensi `.go`, `.yaml`, `.yml`, `.json`, `.html`, `.env`).
-- **Dokumentasi API**: Scalar API Reference terintegrasi di `GET /docs` (Spesifikasi OpenAPI 3.1.0 di `internal/docs/openapi.yaml`).
+- **Dokumentasi API**: Scalar API Reference terintegrasi di `GET /docs` (Spesifikasi modular OpenAPI 3.1.0 di `internal/docs/base.yaml` & `internal/docs/modules/*.yaml`).
 
 ### Struktur Lapisan (Layered Architecture & Manual DI)
 
