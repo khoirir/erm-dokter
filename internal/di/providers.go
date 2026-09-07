@@ -27,6 +27,7 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		provideLaboratorium(db, cfg, log),
 		provideRadiologi(db, cfg, log),
 		provideBerkasDigital(db, cfg, log),
+		provideResumePasien(db, cfg, log),
 		cfg.JWTSecret,
 	)
 }
