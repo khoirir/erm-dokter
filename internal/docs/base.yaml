@@ -47,6 +47,8 @@ tags:
       description: Hasil Ekspertise & Link Gambar PACS Radiologi Pasien
     - name: Berkas Digital
       description: Berkas Digital Universal Perawatan Pasien
+    - name: Resume
+      description: Resume Medis Pasien Rawat Jalan (Ralan)
 components:
     securitySchemes:
         BearerAuth:
