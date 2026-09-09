@@ -60,6 +60,11 @@ components:
             scheme: bearer
             bearerFormat: JWT
             description: Masukkan JWT Token yang didapatkan dari endpoint login (/api/v1/auth/login).
+        ApiKeyAuth:
+            type: apiKey
+            in: header
+            name: X-API-Key
+            description: API Key untuk integrasi Machine-to-Machine (aplikasi eksternal).
     schemas:
         BaseResponse:
             type: object

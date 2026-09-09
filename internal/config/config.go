@@ -26,6 +26,7 @@ type Config struct {
 	CORSOrigin           string
 	MaxEditRekamMedisJam int
 	URLBerkasDigital     string
+	ServiceAPIKey        string
 	KodeBerkasLabPK      []string
 	KodeBerkasLabPA      []string
 	KodeBerkasLabMB      []string
@@ -70,6 +71,7 @@ func Load() *Config {
 		CORSOrigin:           getEnvOrDefault("CORS_ORIGIN", "*"),
 		MaxEditRekamMedisJam: maxEditJam,
 		URLBerkasDigital:     os.Getenv("URL_BERKAS_DIGITAL"),
+		ServiceAPIKey:        strings.TrimSpace(os.Getenv("SERVICE_API_KEY")),
 		KodeBerkasLabPK:      parseKodeSlice("KODE_BERKAS_LAB_PK"),
 		KodeBerkasLabPA:      parseKodeSlice("KODE_BERKAS_LAB_PA"),
 		KodeBerkasLabMB:      parseKodeSlice("KODE_BERKAS_LAB_MB"),

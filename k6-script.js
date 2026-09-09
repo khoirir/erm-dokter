@@ -5,11 +5,18 @@ import { Rate, Trend } from "k6/metrics";
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8082/api/v1";
 const USERNAME = __ENV.API_USERNAME || __ENV.DOKTER_USERNAME || "DRHANDI";
 const PASSWORD = __ENV.API_PASSWORD || __ENV.DOKTER_PASSWORD || "1";
-const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | rawat_inap | riwayat_pasien | rawatinap_riwayat | all
+const SERVICE_API_KEY = __ENV.SERVICE_API_KEY || "5c603a34-8254-4e4e-9a25-91fe5a26ff65";
+const AUTH_MODE = (__ENV.AUTH_MODE || "jwt").toLowerCase(); // jwt | api_key
+const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | antrean_compare | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | rawat_inap | riwayat_pasien | rawatinap_riwayat | all
 
 const errorRate = new Rate("errors");
 const obatDuration = new Trend("obat_duration");
 const antreanDuration = new Trend("antrean_duration");
+const antreanDokterDuration = new Trend("antrean_dokter_duration", true);
+const antreanApiKeyDuration = new Trend("antrean_api_key_duration", true);
+const antreanDokterFail = new Rate("antrean_dokter_fail");
+const antreanApiKeyFail = new Rate("antrean_api_key_fail");
+
 const pemeriksaanKunjunganDuration = new Trend("pemeriksaan_kunjungan_duration");
 const pemeriksaanPasienDuration = new Trend("pemeriksaan_pasien_duration");
 const resepKunjunganDuration = new Trend("resep_kunjungan_duration");
@@ -24,8 +31,44 @@ const permintaanLabDetailDuration = new Trend("permintaan_lab_detail_duration");
 const rawatInapDuration = new Trend("rawat_inap_duration");
 const riwayatPasienDuration = new Trend("riwayat_pasien_duration");
 
-export const options = {
-    scenarios: {
+let scenariosConfig;
+let thresholdsConfig;
+
+if (ENDPOINT === "antrean_compare") {
+    scenariosConfig = {
+        skenario_dokter_jwt: {
+            executor: "ramping-vus",
+            exec: "antreanDokterWorkload",
+            startVUs: 0,
+            stages: [
+                { duration: "3s", target: 10 },
+                { duration: "10s", target: 20 },
+                { duration: "2s", target: 0 },
+            ],
+            tags: { skenario: "dokter_jwt" },
+        },
+        skenario_api_key: {
+            executor: "ramping-vus",
+            exec: "antreanApiKeyWorkload",
+            startVUs: 0,
+            startTime: "16s",
+            stages: [
+                { duration: "3s", target: 10 },
+                { duration: "10s", target: 20 },
+                { duration: "2s", target: 0 },
+            ],
+            tags: { skenario: "api_key" },
+        },
+    };
+    thresholdsConfig = {
+        http_req_failed: ["rate<0.01"],
+        "antrean_dokter_duration": ["p(95)<300"],
+        "antrean_api_key_duration": ["p(95)<300"],
+        "antrean_dokter_fail": ["rate<0.01"],
+        "antrean_api_key_fail": ["rate<0.01"],
+    };
+} else {
+    scenariosConfig = {
         operasional: {
             executor: "ramping-vus",
             exec: "mixedWorkload",
@@ -61,8 +104,8 @@ export const options = {
             ],
             tags: { skenario: "stress" },
         },
-    },
-    thresholds: {
+    };
+    thresholdsConfig = {
         http_req_failed: ["rate<0.01"],
         "http_req_duration{skenario:operasional}": ["p(95)<200"],
         "http_req_duration{skenario:load}":        ["p(95)<500"],
@@ -70,7 +113,12 @@ export const options = {
         "errors{skenario:operasional}": ["rate<0.01"],
         "errors{skenario:load}":        ["rate<0.05"],
         "errors{skenario:stress}":      ["rate<0.10"],
-    },
+    };
+}
+
+export const options = {
+    scenarios: scenariosConfig,
+    thresholds: thresholdsConfig,
 };
 
 const statusLanjutList = ["Semua", "Ralan", "Ranap"];
@@ -190,6 +238,7 @@ export function setup() {
 
     return {
         token: token,
+        apiKey: SERVICE_API_KEY,
         kunjungans: kunjungans,
         pasiens: pasiens,
         bangsalList: bangsalList,
@@ -513,12 +562,61 @@ export default function (data) {
     mixedWorkload(data);
 }
 
-export function mixedWorkload(data) {
+export function antreanDokterWorkload(data) {
     const params = {
         headers: {
             "Accept": "application/json",
             "Authorization": `Bearer ${data.token}`,
         },
+    };
+    const res = requestAntrean(params);
+    antreanDokterDuration.add(res.timings.duration);
+    const ok = check(res, {
+        "status 200": (r) => r.status === 200,
+        "success true": (r) => {
+            try { return r.json("success") === true; } catch (_) { return false; }
+        },
+    });
+    antreanDokterFail.add(!ok);
+    if (!ok && res.status !== 200) {
+        console.warn(`[FAIL DOKTER JWT] HTTP ${res.status} on ${res.url}: ${res.body}`);
+    }
+    sleep(0.05);
+}
+
+export function antreanApiKeyWorkload(data) {
+    const params = {
+        headers: {
+            "Accept": "application/json",
+            "X-API-Key": data.apiKey || SERVICE_API_KEY,
+        },
+    };
+    const res = requestAntrean(params);
+    antreanApiKeyDuration.add(res.timings.duration);
+    const ok = check(res, {
+        "status 200": (r) => r.status === 200,
+        "success true": (r) => {
+            try { return r.json("success") === true; } catch (_) { return false; }
+        },
+    });
+    antreanApiKeyFail.add(!ok);
+    if (!ok && res.status !== 200) {
+        console.warn(`[FAIL API KEY] HTTP ${res.status} on ${res.url}: ${res.body}`);
+    }
+    sleep(0.05);
+}
+
+export function mixedWorkload(data) {
+    const authHeaders = (AUTH_MODE === "api_key") ? {
+        "Accept": "application/json",
+        "X-API-Key": data.apiKey || SERVICE_API_KEY,
+    } : {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${data.token}`,
+    };
+
+    const params = {
+        headers: authHeaders,
     };
 
     let res;

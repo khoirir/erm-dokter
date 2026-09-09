@@ -160,6 +160,36 @@ func TestDaftarAntreanDokter_Pagination(t *testing.T) {
 	}
 }
 
+func TestDaftarAntreanDokter_EmptyKodeDokter_M2M(t *testing.T) {
+	calledWithDokter := "INIT"
+	repo := &mockRepository{
+		daftarAntreanFunc: func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, int, error) {
+			calledWithDokter = kodeDokter
+			return []rawatjalan.KunjunganRawatJalan{
+				{NoRawat: "001", NamaPasien: "Pasien Umum 1"},
+				{NoRawat: "002", NamaPasien: "Pasien Umum 2"},
+			}, 2, nil
+		},
+	}
+	log := logger.New()
+	svc := rawatjalan.NewService(repo, log)
+
+	filter := rawatjalan.FilterAntreanDokter{Page: 1, Limit: 20}
+	data, meta, err := svc.DaftarAntreanDokter(context.Background(), "", filter)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calledWithDokter != "" {
+		t.Errorf("expected empty kodeDokter passed to repo, got %q", calledWithDokter)
+	}
+	if len(data) != 2 {
+		t.Errorf("expected 2 items, got %d", len(data))
+	}
+	if meta.TotalRecords != 2 {
+		t.Errorf("expected TotalRecords=2, got %d", meta.TotalRecords)
+	}
+}
+
 func TestDetailKunjungan_EmptyNoRawat(t *testing.T) {
 	repo := &mockRepository{}
 	log := logger.New()

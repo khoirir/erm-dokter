@@ -44,6 +44,7 @@ type RouteConfig struct {
 	ResumePasienHandler    *resumepasien.Handler
 	PasienHandler          *pasien.Handler
 	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
+	ServiceAuthMiddleware  func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
 }
 
@@ -66,6 +67,7 @@ func NewRouteConfig(
 	resumePasienHandler *resumepasien.Handler,
 	pasienHandler *pasien.Handler,
 	jwtSecret string,
+	serviceAPIKey string,
 ) *RouteConfig {
 	return &RouteConfig{
 		Mux:                    http.NewServeMux(),
@@ -87,6 +89,7 @@ func NewRouteConfig(
 		ResumePasienHandler:    resumePasienHandler,
 		PasienHandler:          pasienHandler,
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
+		ServiceAuthMiddleware:  middleware.ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
 	}
 }
@@ -99,8 +102,8 @@ func (c *RouteConfig) Setup() {
 	c.AuthHandler.RegisterRoutes(c.Mux, loginRateLimit, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.MasterHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ObatHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
-	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
-	c.RawatInapHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.ServiceAuthMiddleware, c.TimeoutMiddleware)
+	c.RawatInapHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.ServiceAuthMiddleware, c.TimeoutMiddleware)
 	c.PemeriksaanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResepHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RujukanInternalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)

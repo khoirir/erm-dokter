@@ -108,7 +108,7 @@ func TestRawatJalanHandler_DaftarAntreanDokter(t *testing.T) {
 	handler := rawatjalan.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-jalan/antrean?page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
@@ -150,7 +150,7 @@ func TestRawatJalanHandler_DetailKunjungan(t *testing.T) {
 	handler := rawatjalan.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-jalan/"+encKunjungan, nil)
 	rr := httptest.NewRecorder()
@@ -165,7 +165,7 @@ func TestRawatJalanHandler_ReferenceRoutes(t *testing.T) {
 	handler := rawatjalan.NewHandler(&mockRawatJalanService{}, testEncKey)
 	mux := http.NewServeMux()
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
-	handler.RegisterRoutes(mux, noOpMw, noOpMw)
+	handler.RegisterRoutes(mux, noOpMw, noOpMw, noOpMw)
 
 	routes := []string{
 		"/api/v1/rawat-jalan/status-pemeriksaan",
@@ -183,4 +183,67 @@ func TestRawatJalanHandler_ReferenceRoutes(t *testing.T) {
 			t.Errorf("Route %s returned status %d, expected 200", rt, rr.Code)
 		}
 	}
+}
+
+func TestRawatJalanHandler_ServiceRole(t *testing.T) {
+	serviceAuthMw := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), middleware.UserClaimKey, &token.Claims{
+				Role:     middleware.RoleService,
+				NamaUser: "External Service",
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
+	}
+
+	t.Run("Daftar antrean oleh service mengosongkan kode dokter (mengambil semua)", func(t *testing.T) {
+		mockSvc := &mockRawatJalanService{
+			daftarAntreanDokterFn: func(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, shared.PaginationMeta, error) {
+				if kodeDokter != "" {
+					t.Errorf("Expected empty kodeDokter for service, got %s", kodeDokter)
+				}
+				return []rawatjalan.KunjunganRawatJalan{
+					{
+						NoRawat:           "2026/09/03/000001",
+						NoRekamMedis:      "00123456",
+						NamaPasien:        "Pasien Umum",
+						StatusPemeriksaan: rawatjalan.StatusBelum,
+					},
+				}, shared.NewPaginationMeta(1, 1, 20), nil
+			},
+		}
+
+		handler := rawatjalan.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
+		handler.RegisterRoutes(mux, authMwForTest, serviceAuthMw, noOpMw)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-jalan/antrean", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Detail kunjungan TIDAK boleh diakses oleh service (hanya dokter)", func(t *testing.T) {
+		encKunjungan, _ := crypto.Encrypt("2026/09/03/000001", testEncKey)
+		mockSvc := &mockRawatJalanService{}
+
+		handler := rawatjalan.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
+		// RegisterRoutes dengan authMiddleware = serviceAuthMw (tanpa kode dokter)
+		handler.RegisterRoutes(mux, serviceAuthMw, serviceAuthMw, noOpMw)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-jalan/"+encKunjungan, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		// Harus ditolak (401 Unauthorized) karena DetailKunjungan mewajibkan identitas dokter
+		if rr.Code != http.StatusUnauthorized {
+			t.Fatalf("Expected status 401 for service accessing DetailKunjungan, got %d", rr.Code)
+		}
+	})
 }

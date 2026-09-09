@@ -77,6 +77,150 @@ func TestJWTMiddleware(t *testing.T) {
 			t.Errorf("Unexpected body: %s", rr.Body.String())
 		}
 	})
+
+	t.Run("X-API-Key Rejected by JWTMiddleware", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("X-API-Key", "valid-service-api-key")
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401 when X-API-Key is sent to JWTMiddleware, got %d", rr.Code)
+		}
+	})
+}
+
+func TestAuthMiddleware_APIKey(t *testing.T) {
+	const serviceKey = "valid-service-api-key"
+	authMw := middleware.AuthMiddleware(testSecret, serviceKey)
+
+	dummyHandler := func(w http.ResponseWriter, r *http.Request) {
+		kodeDokter, isService, err := middleware.GetKodeDokterOrEmpty(r.Context())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		if isService {
+			w.Write([]byte("SERVICE_OK"))
+			return
+		}
+		w.Write([]byte("DOKTER_OK: " + kodeDokter))
+	}
+
+	wrapped := authMw(dummyHandler)
+
+	t.Run("Valid X-API-Key Header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("X-API-Key", serviceKey)
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", rr.Code)
+		}
+		if rr.Body.String() != "SERVICE_OK" {
+			t.Errorf("Unexpected body: %s", rr.Body.String())
+		}
+	})
+
+	t.Run("Invalid X-API-Key Header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("X-API-Key", "wrong-key")
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Valid Bearer Token via AuthMiddleware", func(t *testing.T) {
+		validToken, err := token.GenerateToken("DR002", "dr. Budi", testSecret, 1*time.Hour)
+		if err != nil {
+			t.Fatalf("Failed to generate token: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("Authorization", "Bearer "+validToken)
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", rr.Code)
+		}
+		if rr.Body.String() != "DOKTER_OK: DR002" {
+			t.Errorf("Unexpected body: %s", rr.Body.String())
+		}
+	})
+
+	t.Run("Missing Both Headers", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401, got %d", rr.Code)
+		}
+	})
+}
+
+func TestGetKodeDokterOrEmpty(t *testing.T) {
+	t.Run("Service Context", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
+			Role: middleware.RoleService,
+		})
+		kode, isService, err := middleware.GetKodeDokterOrEmpty(ctx)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if !isService {
+			t.Errorf("Expected isService true, got false")
+		}
+		if kode != "" {
+			t.Errorf("Expected empty kode, got %s", kode)
+		}
+		if !middleware.IsService(ctx) {
+			t.Errorf("Expected IsService true")
+		}
+	})
+
+	t.Run("Dokter Context Valid", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
+			Role:       middleware.RoleDokter,
+			KodeDokter: "DR001",
+		})
+		kode, isService, err := middleware.GetKodeDokterOrEmpty(ctx)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if isService {
+			t.Errorf("Expected isService false, got true")
+		}
+		if kode != "DR001" {
+			t.Errorf("Expected DR001, got %s", kode)
+		}
+		if middleware.IsService(ctx) {
+			t.Errorf("Expected IsService false")
+		}
+	})
+
+	t.Run("Dokter Context Empty Kode", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
+			Role:       middleware.RoleDokter,
+			KodeDokter: "   ",
+		})
+		_, _, err := middleware.GetKodeDokterOrEmpty(ctx)
+		if err == nil {
+			t.Errorf("Expected error for empty doctor code, got nil")
+		}
+	})
+
+	t.Run("Nil Claims Context", func(t *testing.T) {
+		_, _, err := middleware.GetKodeDokterOrEmpty(context.Background())
+		if err == nil {
+			t.Errorf("Expected error for nil claims, got nil")
+		}
+	})
 }
 
 func TestGetKodeDokter_NoClaims(t *testing.T) {

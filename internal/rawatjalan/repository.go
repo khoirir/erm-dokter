@@ -339,6 +339,69 @@ func (r *repository) scanAntreanRows(ctx context.Context, query string, args []a
 	return result, nil
 }
 
+func (r *repository) enrichRujukanInternal(ctx context.Context, daftarAntrean []KunjunganRawatJalan) error {
+	if len(daftarAntrean) == 0 {
+		return nil
+	}
+
+	noRawats := make([]any, len(daftarAntrean))
+	placeholders := make([]string, len(daftarAntrean))
+	for i, k := range daftarAntrean {
+		noRawats[i] = k.NoRawat
+		placeholders[i] = "?"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 
+			rip.no_rawat,
+			rip.kd_poli AS kode_poli_rujukan,
+			pol.nm_poli AS nama_poli_rujukan,
+			rip.kd_dokter AS kode_dokter_rujukan,
+			d.nm_dokter AS nama_dokter_rujukan
+		FROM rujukan_internal_poli rip
+		INNER JOIN poliklinik pol ON rip.kd_poli = pol.kd_poli
+		INNER JOIN dokter d ON rip.kd_dokter = d.kd_dokter
+		WHERE rip.no_rawat IN (%s)
+	`, strings.Join(placeholders, ", "))
+
+	rows, err := r.db.QueryContext(ctx, query, noRawats...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	type rujukanData struct {
+		kdPoli   string
+		nmPoli   string
+		kdDokter string
+		nmDokter string
+	}
+	rujukanMap := make(map[string]rujukanData)
+	for rows.Next() {
+		var noRawat string
+		var rd rujukanData
+		if err := rows.Scan(&noRawat, &rd.kdPoli, &rd.nmPoli, &rd.kdDokter, &rd.nmDokter); err == nil {
+			rujukanMap[noRawat] = rd
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range daftarAntrean {
+		if rd, ok := rujukanMap[daftarAntrean[i].NoRawat]; ok {
+			daftarAntrean[i].KodePoliRujukan = rd.kdPoli
+			daftarAntrean[i].NamaPoliRujukan = rd.nmPoli
+			daftarAntrean[i].KodeDokterRujukan = rd.kdDokter
+			daftarAntrean[i].NamaDokterRujukan = rd.nmDokter
+			daftarAntrean[i].JenisAntrean = JenisAntreanRujukan
+		}
+	}
+
+	return nil
+}
+
 func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter FilterAntreanDokter) ([]KunjunganRawatJalan, int, error) {
 	innerBuilder, exists := orderByMapping[filter.OrderBy]
 	if !exists {
@@ -382,14 +445,69 @@ func (r *repository) DaftarAntreanDokter(ctx context.Context, kodeDokter string,
 		return daftarAntrean, totalData, nil
 
 	default:
+		if kodeDokter == "" {
+			totalData, err := r.countBukanRujukan(ctx, "", filter)
+			if err != nil {
+				return nil, 0, fmt.Errorf("gagal menghitung total antrean: %w", err)
+			}
+			if totalData == 0 {
+				return make([]KunjunganRawatJalan, 0), 0, nil
+			}
+
+			where, args := buildBranchConditions("r.kd_dokter", "", filter)
+			pageQuery := "SELECT r.no_rawat FROM reg_periksa r"
+			if filter.Keyword != "" {
+				pageQuery += " INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis"
+			}
+			pageQuery += where + innerOrder + " LIMIT ? OFFSET ?"
+			pageArgs := append(append([]any(nil), args...), filter.Limit, filter.Offset())
+
+			idRows, err := r.db.QueryContext(ctx, pageQuery, pageArgs...)
+			if err != nil {
+				return nil, 0, fmt.Errorf("gagal query halaman antrean: %w", err)
+			}
+			defer idRows.Close()
+
+			var pageNoRawats []string
+			for idRows.Next() {
+				var nr string
+				if err := idRows.Scan(&nr); err == nil {
+					pageNoRawats = append(pageNoRawats, nr)
+				}
+			}
+			if err := idRows.Err(); err != nil {
+				return nil, 0, fmt.Errorf("gagal membaca baris halaman antrean: %w", err)
+			}
+
+			if len(pageNoRawats) == 0 {
+				return make([]KunjunganRawatJalan, 0), totalData, nil
+			}
+
+			placeholders := make([]string, len(pageNoRawats))
+			idArgs := make([]any, len(pageNoRawats))
+			for i, nr := range pageNoRawats {
+				placeholders[i] = "?"
+				idArgs[i] = nr
+			}
+			detailQuery := selectKunjunganBukanRujukan + fmt.Sprintf(" WHERE r.no_rawat IN (%s) ", strings.Join(placeholders, ", ")) + innerOrder
+			daftarAntrean, err := r.scanAntreanRows(ctx, detailQuery, idArgs)
+			if err != nil {
+				return nil, 0, err
+			}
+
+			return daftarAntrean, totalData, nil
+		}
+
 		countNonRujukan, err := r.countBukanRujukan(ctx, kodeDokter, filter)
 		if err != nil {
 			return nil, 0, fmt.Errorf("gagal menghitung antrean bukan rujukan: %w", err)
 		}
+
 		countRujukan, err := r.countRujukan(ctx, kodeDokter, filter)
 		if err != nil {
 			return nil, 0, fmt.Errorf("gagal menghitung antrean rujukan: %w", err)
 		}
+
 		totalData := countNonRujukan + countRujukan
 		if totalData == 0 {
 			return make([]KunjunganRawatJalan, 0), 0, nil
@@ -507,17 +625,16 @@ func (r *repository) RiwayatKunjunganPasien(ctx context.Context, noRekamMedis st
 	return listKunjungan, nil
 }
 
-const selectWaktuRegistrasi = `
-	SELECT 
-		DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
-		jam_reg
-	FROM reg_periksa
-	WHERE no_rawat = ?
-`
-
 func (r *repository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (string, string, bool, error) {
+	query := `
+		SELECT 
+			DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
+			jam_reg
+		FROM reg_periksa
+		WHERE no_rawat = ?
+	`
 	var tanggalRegistrasi, jamRegistrasi string
-	err := r.db.QueryRowContext(ctx, selectWaktuRegistrasi, noRawat).Scan(&tanggalRegistrasi, &jamRegistrasi)
+	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&tanggalRegistrasi, &jamRegistrasi)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", false, nil
 	}
@@ -527,19 +644,18 @@ func (r *repository) GetWaktuRegistrasi(ctx context.Context, noRawat string) (st
 	return tanggalRegistrasi, jamRegistrasi, true, nil
 }
 
-const selectInfoRegistrasi = `
-	SELECT 
-		DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
-		jam_reg,
-		kd_pj,
-		status_bayar
-	FROM reg_periksa
-	WHERE no_rawat = ?
-`
-
 func (r *repository) GetInfoRegistrasi(ctx context.Context, noRawat string) (*InfoRegistrasiPasien, error) {
+	query := `
+		SELECT 
+			DATE_FORMAT(tgl_registrasi, '%Y-%m-%d') AS tgl_registrasi,
+			jam_reg,
+			kd_pj,
+			status_bayar
+		FROM reg_periksa
+		WHERE no_rawat = ?
+	`
 	var info InfoRegistrasiPasien
-	err := r.db.QueryRowContext(ctx, selectInfoRegistrasi, noRawat).Scan(
+	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(
 		&info.TanggalRegistrasi,
 		&info.JamRegistrasi,
 		&info.KodePenjamin,

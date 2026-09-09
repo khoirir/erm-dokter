@@ -23,13 +23,18 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
+func (h *Handler) RegisterRoutes(
+	mux *http.ServeMux,
+	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
+	serviceAuthMiddleware func(http.HandlerFunc) http.HandlerFunc,
+	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
+) {
 	mux.HandleFunc("GET /api/v1/rawat-jalan/status-pemeriksaan", authMiddleware(timeoutMiddleware(h.DaftarStatusPemeriksaan)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/status-lanjut", authMiddleware(timeoutMiddleware(h.DaftarStatusLanjut)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/status-bayar", authMiddleware(timeoutMiddleware(h.DaftarStatusBayar)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/jenis-antrean", authMiddleware(timeoutMiddleware(h.DaftarJenisAntrean)))
 
-	mux.HandleFunc("GET /api/v1/rawat-jalan/antrean", authMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
+	mux.HandleFunc("GET /api/v1/rawat-jalan/antrean", serviceAuthMiddleware(timeoutMiddleware(h.DaftarAntreanDokter)))
 	mux.HandleFunc("GET /api/v1/rawat-jalan/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DetailKunjungan)))
 }
 
@@ -58,7 +63,7 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	kodeDokter, _, err := middleware.GetKodeDokterOrEmpty(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return

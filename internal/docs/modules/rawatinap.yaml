@@ -29,6 +29,7 @@ paths:
                 Mengambil daftar pasien rawat inap terpaginasi dengan 7 kriteria filter (belum_krs, rentang tanggal_mrs, tanggal_krs, bangsal, kelas, penjamin, dokter dpjp/registrasi) dan pencarian multi-kolom (nama, no RM, alamat, no rawat).
             security:
                 - BearerAuth: []
+                - ApiKeyAuth: []
             parameters:
                 - name: bangsal
                   in: query

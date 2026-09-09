@@ -93,6 +93,7 @@ paths:
                 - Kosongkan parameter filter (status, jenis antrean, dll) untuk menampilkan semua data.
             security:
                 - BearerAuth: []
+                - ApiKeyAuth: []
             parameters:
                 - name: tanggal
                   in: query

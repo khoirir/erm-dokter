@@ -45,6 +45,7 @@ func TestRouteConfig_SetupAndBuildHandler(t *testing.T) {
 		resumepasien.NewHandler(nil, "key"),
 		pasien.NewHandler(nil, "key"),
 		"test-jwt-secret",
+		"test-service-api-key",
 	)
 
 	// Must not panic

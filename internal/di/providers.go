@@ -31,5 +31,6 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		provideResumePasien(db, cfg, log),
 		providePasien(db, cfg, log),
 		cfg.JWTSecret,
+		cfg.ServiceAPIKey,
 	)
 }

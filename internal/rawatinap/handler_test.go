@@ -91,7 +91,7 @@ func TestRawatInapHandler_DaftarPasienRawatInap_Success(t *testing.T) {
 
 	handler := rawatinap.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/pasien?bangsal=B01&page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
@@ -149,7 +149,7 @@ func TestRawatInapHandler_DaftarPasienRawatInap_ValidationError(t *testing.T) {
 	mockSvc := &mockRawatInapService{}
 	handler := rawatinap.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/pasien?sort_order=INVALID", nil)
 	rr := httptest.NewRecorder()
@@ -168,7 +168,7 @@ func TestRawatInapHandler_DaftarPasienRawatInap_ServiceError(t *testing.T) {
 	}
 	handler := rawatinap.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/pasien", nil)
 	rr := httptest.NewRecorder()
@@ -190,7 +190,7 @@ func TestRawatInapHandler_DaftarStatusPulang(t *testing.T) {
 	}
 	handler := rawatinap.NewHandler(mockSvc, testEncKey)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+	handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/status-pulang", nil)
 	rr := httptest.NewRecorder()
@@ -241,7 +241,7 @@ func TestRawatInapHandler_DetailPasienRawatInap(t *testing.T) {
 
 		handler := rawatinap.NewHandler(mockSvc, testEncKey)
 		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+		handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 		encId, err := crypto.Encrypt("2026/09/01/000001~2026-09-01~10:00:00", testEncKey)
 		if err != nil {
@@ -292,7 +292,7 @@ func TestRawatInapHandler_DetailPasienRawatInap(t *testing.T) {
 	t.Run("Invalid token format returns 400", func(t *testing.T) {
 		handler := rawatinap.NewHandler(&mockRawatInapService{}, testEncKey)
 		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+		handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 		// Encrypt single noRawat without ~ composite delimiter
 		encInvalid, _ := crypto.Encrypt("2026/09/01/000001", testEncKey)
@@ -308,7 +308,7 @@ func TestRawatInapHandler_DetailPasienRawatInap(t *testing.T) {
 	t.Run("Bad encrypted token returns 400", func(t *testing.T) {
 		handler := rawatinap.NewHandler(&mockRawatInapService{}, testEncKey)
 		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+		handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/invalid-token-123", nil)
 		rr := httptest.NewRecorder()
@@ -328,7 +328,7 @@ func TestRawatInapHandler_DetailPasienRawatInap(t *testing.T) {
 
 		handler := rawatinap.NewHandler(mockSvc, testEncKey)
 		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, authMwForTest, noOpMw)
+		handler.RegisterRoutes(mux, authMwForTest, authMwForTest, noOpMw)
 
 		encId, _ := crypto.Encrypt("2026/09/01/000001~2026-09-01~10:00:00", testEncKey)
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/"+encId, nil)
@@ -337,6 +337,53 @@ func TestRawatInapHandler_DetailPasienRawatInap(t *testing.T) {
 
 		if rr.Code != http.StatusNotFound {
 			t.Fatalf("expected status 404, got %d", rr.Code)
+		}
+	})
+}
+
+func TestRawatInapHandler_ServiceRole(t *testing.T) {
+	serviceAuthMw := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), middleware.UserClaimKey, &token.Claims{
+				Role:     middleware.RoleService,
+				NamaUser: "External Service",
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
+	}
+	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
+
+	t.Run("Service role default scope_dpjp menjadi semua dan kodeDokter kosong", func(t *testing.T) {
+		mockSvc := &mockRawatInapService{
+			daftarPasienRawatInapFn: func(ctx context.Context, kodeDokterLogin string, filter rawatinap.FilterPasienRawatInap) ([]rawatinap.KunjunganRawatInap, shared.PaginationMeta, error) {
+				if kodeDokterLogin != "" {
+					t.Errorf("expected empty kodeDokterLogin for service, got %s", kodeDokterLogin)
+				}
+				if filter.ScopeDPJP != rawatinap.ScopeDPJPSemua {
+					t.Errorf("expected ScopeDPJP to default to 'semua', got %s", filter.ScopeDPJP)
+				}
+				return []rawatinap.KunjunganRawatInap{
+					{
+						NoRawat:      "2026/09/01/000001",
+						NoRekamMedis: "00123456",
+						NamaPasien:   "Pasien Ranap",
+						TanggalMasuk: "2026-09-01",
+						JamMasuk:     "10:00:00",
+					},
+				}, shared.NewPaginationMeta(1, 1, 20), nil
+			},
+		}
+
+		handler := rawatinap.NewHandler(mockSvc, testEncKey)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, authMwForTest, serviceAuthMw, noOpMw)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/rawat-inap/pasien", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", rr.Code)
 		}
 	})
 }

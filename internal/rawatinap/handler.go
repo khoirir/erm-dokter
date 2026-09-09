@@ -24,9 +24,14 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
+func (h *Handler) RegisterRoutes(
+	mux *http.ServeMux,
+	authMiddleware func(http.HandlerFunc) http.HandlerFunc,
+	serviceAuthMiddleware func(http.HandlerFunc) http.HandlerFunc,
+	timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc,
+) {
 	mux.HandleFunc("GET /api/v1/rawat-inap/status-pulang", authMiddleware(timeoutMiddleware(h.DaftarStatusPulang)))
-	mux.HandleFunc("GET /api/v1/rawat-inap/pasien", authMiddleware(timeoutMiddleware(h.DaftarPasienRawatInap)))
+	mux.HandleFunc("GET /api/v1/rawat-inap/pasien", serviceAuthMiddleware(timeoutMiddleware(h.DaftarPasienRawatInap)))
 	mux.HandleFunc("GET /api/v1/rawat-inap/{id}", authMiddleware(timeoutMiddleware(h.DetailPasienRawatInap)))
 }
 
@@ -62,10 +67,14 @@ func (h *Handler) DaftarPasienRawatInap(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	kodeDokter, err := middleware.GetKodeDokter(r.Context())
+	kodeDokter, isService, err := middleware.GetKodeDokterOrEmpty(r.Context())
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
+	}
+
+	if isService && filter.ScopeDPJP == "" {
+		filter.ScopeDPJP = ScopeDPJPSemua
 	}
 
 	daftar, meta, err := h.rawatInapService.DaftarPasienRawatInap(r.Context(), kodeDokter, filter)

@@ -10,6 +10,7 @@ import (
 type Claims struct {
 	KodeDokter string `json:"kode_dokter"`
 	NamaUser   string `json:"nama_user"`
+	Role       string `json:"role,omitempty"`
 	jwt.RegisteredClaims
 }
 
