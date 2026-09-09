@@ -1,0 +1,199 @@
+paths:
+    /api/v1/pasien/{id_pasien}/riwayat-kunjungan:
+        get:
+            tags: [Pasien]
+            summary: Riwayat Kunjungan Pasien (Cross Ralan & Ranap)
+            description: |
+                Mengambil riwayat kunjungan pasien secara terpadu lintas rawat jalan dan rawat inap (Visit Timeline Index).
+                - Identifier pasien dikirim melalui path `{id_pasien}` (bisa berupa token terenkripsi AES-GCM atau plaintext nomor rekam medis).
+                - Secara default menampilkan **3 riwayat kunjungan terakhir** (`limit=3`), diurutkan dari yang paling baru.
+                - Setiap item mengembalikan `id_kunjungan` terenkripsi sehingga frontend dapat langsung memanggil detail klinis spesifik kunjungan tersebut (resep, lab, radiologi, SOAP/CPPT).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi nomor rekam medis atau nomor rekam medis (plaintext)
+                  schema:
+                      type: string
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal registrasi (format YYYY-MM-DD,YYYY-MM-DD)
+                  example: "2026-01-01,2026-06-30"
+                  schema:
+                      type: string
+                - name: page
+                  in: query
+                  description: Nomor halaman
+                  example: 1
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  description: Jumlah data per halaman (default 3, maksimal 50)
+                  example: 3
+                  schema:
+                      type: integer
+                      default: 3
+            responses:
+                "200":
+                    description: Riwayat kunjungan pasien berhasil diambil
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/RiwayatKunjungan"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    $ref: "#/components/responses/BadRequestResponse"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedResponse"
+                "404":
+                    description: Kunjungan atau pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+    schemas:
+        RiwayatKunjungan:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi AES-GCM nomor rawat (kunci untuk endpoint modul lain)
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_pasien:
+                    type: string
+                    description: Token terenkripsi AES-GCM nomor rekam medis
+                    example: "FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG"
+                no_rawat:
+                    type: string
+                    example: "2026/04/22/036934"
+                no_registrasi:
+                    type: string
+                    example: "001"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-04-22"
+                jam_registrasi:
+                    type: string
+                    example: "08:30:00"
+                no_rekam_medis:
+                    type: string
+                    example: "123456"
+                nama_pasien:
+                    type: string
+                    example: "NY. SITI AMINAH"
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: "Ralan"
+                status_bayar:
+                    type: string
+                    example: "Sudah Bayar"
+                kode_penjamin:
+                    type: string
+                    example: "BPJ"
+                nama_penjamin:
+                    type: string
+                    example: "BPJS Kesehatan"
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    description: Nama dokter registrasi (Ralan) atau DPJP (Ranap)
+                    example: "dr. Handi, Sp.PD"
+                kode_poli:
+                    type: string
+                    example: "U0001"
+                nama_poli:
+                    type: string
+                    example: "Poli Penyakit Dalam"
+                rujukan_internal:
+                    type: array
+                    description: Daftar rujukan internal antar-poliklinik dalam kunjungan rawat jalan ini
+                    items:
+                        $ref: "#/components/schemas/RiwayatRujukanInternal"
+                status_periksa:
+                    type: string
+                    example: "Sudah"
+                kamar_inap:
+                    $ref: "#/components/schemas/RiwayatRawatInap"
+        RiwayatRujukanInternal:
+            type: object
+            properties:
+                kode_poli:
+                    type: string
+                    example: "U0005"
+                nama_poli:
+                    type: string
+                    example: "Poli Jantung"
+                kode_dokter:
+                    type: string
+                    example: "DR008"
+                nama_dokter:
+                    type: string
+                    example: "dr. Anita, Sp.JP"
+        RiwayatRawatInap:
+            type: object
+            description: Informasi rawat inap mencakup dokter penanggung jawab dan riwayat perpindahan kamar
+            properties:
+                dpjp:
+                    type: array
+                    description: Daftar Dokter Penanggung Jawab Pelayanan (DPJP) selama rawat inap
+                    items:
+                        type: string
+                    example: ["dr. Handi, Sp.PD"]
+                kamar:
+                    type: array
+                    description: Riwayat seluruh perpindahan kamar inap dalam kunjungan ini, berurutan dari tanggal masuk pertama
+                    items:
+                        $ref: "#/components/schemas/RiwayatKamarInap"
+        RiwayatKamarInap:
+            type: object
+            properties:
+                kode_kamar:
+                    type: string
+                    example: "K01"
+                nama_bangsal:
+                    type: string
+                    example: "Bangsal Melati"
+                kelas:
+                    type: string
+                    example: "Kelas 1"
+                tanggal_masuk:
+                    type: string
+                    example: "2026-04-22"
+                jam_masuk:
+                    type: string
+                    example: "10:00:00"
+                tanggal_keluar:
+                    type: string
+                    example: "2026-04-25"
+                jam_keluar:
+                    type: string
+                    example: "14:00:00"
+                status_pulang:
+                    type: string
+                    example: "Membaik"
+                lama_inap:
+                    type: integer
+                    example: 3
+                diagnosa_awal:
+                    type: string
+                    example: "Demam Berdarah"
+                diagnosa_akhir:
+                    type: string
+                    example: "DHF Grade II"

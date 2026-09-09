@@ -36,6 +36,14 @@ type KunjunganRawatJalan struct {
 	StatusLanjut      shared.StatusLanjut `json:"status_lanjut"`
 	StatusBayar       StatusBayar         `json:"status_bayar"`
 	JenisAntrean      JenisAntrean        `json:"jenis_antrean"`
+	GolonganDarah           string              `json:"golongan_darah"`
+	Agama                   string              `json:"agama"`
+	NoTelepon               string              `json:"no_telepon"`
+	NoPeserta               string              `json:"no_peserta"`
+	NoKTP                   string              `json:"no_ktp"`
+	PenanggungJawab         string              `json:"penanggung_jawab"`
+	HubunganPenanggungJawab string              `json:"hubungan_penanggung_jawab"`
+	AlamatPenanggungJawab   string              `json:"alamat_penanggung_jawab"`
 }
 
 func (k *KunjunganRawatJalan) FormatJenisKelamin() string {

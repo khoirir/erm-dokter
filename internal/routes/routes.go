@@ -12,9 +12,11 @@ import (
 	"erm-dokter/internal/master"
 	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/obat"
+	"erm-dokter/internal/pasien"
 	"erm-dokter/internal/pemeriksaan"
 	"erm-dokter/internal/penilaianmedis"
 	"erm-dokter/internal/radiologi"
+	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
 	"erm-dokter/internal/resep"
 	"erm-dokter/internal/resumepasien"
@@ -30,6 +32,7 @@ type RouteConfig struct {
 	MasterHandler          *master.Handler
 	ObatHandler            *obat.Handler
 	RawatJalanHandler      *rawatjalan.Handler
+	RawatInapHandler       *rawatinap.Handler
 	PemeriksaanHandler     *pemeriksaan.Handler
 	ResepHandler           *resep.Handler
 	RujukanInternalHandler *rujukaninternal.Handler
@@ -39,6 +42,7 @@ type RouteConfig struct {
 	RadiologiHandler       *radiologi.Handler
 	BerkasDigitalHandler   *berkasdigital.Handler
 	ResumePasienHandler    *resumepasien.Handler
+	PasienHandler          *pasien.Handler
 	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
 }
@@ -50,6 +54,7 @@ func NewRouteConfig(
 	masterHandler *master.Handler,
 	obatHandler *obat.Handler,
 	rawatJalanHandler *rawatjalan.Handler,
+	rawatInapHandler *rawatinap.Handler,
 	pemeriksaanHandler *pemeriksaan.Handler,
 	resepHandler *resep.Handler,
 	rujukanInternalHandler *rujukaninternal.Handler,
@@ -59,6 +64,7 @@ func NewRouteConfig(
 	radiologiHandler *radiologi.Handler,
 	berkasDigitalHandler *berkasdigital.Handler,
 	resumePasienHandler *resumepasien.Handler,
+	pasienHandler *pasien.Handler,
 	jwtSecret string,
 ) *RouteConfig {
 	return &RouteConfig{
@@ -69,6 +75,7 @@ func NewRouteConfig(
 		MasterHandler:          masterHandler,
 		ObatHandler:            obatHandler,
 		RawatJalanHandler:      rawatJalanHandler,
+		RawatInapHandler:       rawatInapHandler,
 		PemeriksaanHandler:     pemeriksaanHandler,
 		ResepHandler:           resepHandler,
 		RujukanInternalHandler: rujukanInternalHandler,
@@ -78,6 +85,7 @@ func NewRouteConfig(
 		RadiologiHandler:       radiologiHandler,
 		BerkasDigitalHandler:   berkasDigitalHandler,
 		ResumePasienHandler:    resumePasienHandler,
+		PasienHandler:          pasienHandler,
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
 	}
@@ -92,6 +100,7 @@ func (c *RouteConfig) Setup() {
 	c.MasterHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ObatHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RawatJalanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.RawatInapHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.PemeriksaanHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResepHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.RujukanInternalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
@@ -101,6 +110,7 @@ func (c *RouteConfig) Setup() {
 	c.RadiologiHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.BerkasDigitalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResumePasienHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.PasienHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {

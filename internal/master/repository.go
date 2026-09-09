@@ -12,6 +12,8 @@ type Repository interface {
 	DaftarPenjamin(ctx context.Context) ([]Penjamin, error)
 	DaftarDepo(ctx context.Context) ([]Depo, error)
 	DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
+	DaftarBangsal(ctx context.Context) ([]Bangsal, error)
+	DaftarKelas(ctx context.Context) ([]KelasKamar, error)
 }
 
 type repository struct {
@@ -90,6 +92,66 @@ func (r *repository) DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
 			return nil, err
 		}
 		list = append(list, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (r *repository) DaftarBangsal(ctx context.Context) ([]Bangsal, error) {
+	query := `
+		SELECT DISTINCT b.kd_bangsal AS kode, b.nm_bangsal AS nama 
+		FROM bangsal b 
+		INNER JOIN kamar k ON b.kd_bangsal = k.kd_bangsal 
+		WHERE b.status = '1' AND k.statusdata = '1' 
+		ORDER BY b.nm_bangsal ASC
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]Bangsal, 0)
+	for rows.Next() {
+		var b Bangsal
+		if err := rows.Scan(&b.Kode, &b.Nama); err != nil {
+			return nil, err
+		}
+		list = append(list, b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (r *repository) DaftarKelas(ctx context.Context) ([]KelasKamar, error) {
+	query := `
+		SELECT DISTINCT k.kelas AS kode, k.kelas AS nama 
+		FROM kamar k 
+		INNER JOIN bangsal b ON k.kd_bangsal = b.kd_bangsal 
+		WHERE k.statusdata = '1' AND b.status = '1' AND k.kelas <> '' 
+		ORDER BY k.kelas ASC
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]KelasKamar, 0)
+	for rows.Next() {
+		var k KelasKamar
+		if err := rows.Scan(&k.Kode, &k.Nama); err != nil {
+			return nil, err
+		}
+		list = append(list, k)
 	}
 
 	if err := rows.Err(); err != nil {

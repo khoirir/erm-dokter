@@ -215,7 +215,7 @@ components:
         KunjunganRawatJalan:
             type: object
             properties:
-                id_kunjungan:
+                id:
                     type: string
                     description: Encrypted No Rawat (URL-Safe Token)
                     example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
@@ -281,6 +281,35 @@ components:
                 jenis_antrean:
                     type: string
                     example: Bukan Rujukan
+                golongan_darah:
+                    type: string
+                    example: "O"
+                agama:
+                    type: string
+                    example: "Islam"
+                no_telepon:
+                    type: string
+                    example: "08123456789"
+                no_peserta:
+                    type: string
+                    description: Nomor kartu BPJS / Asuransi pasien
+                    example: "0001234567890"
+                no_ktp:
+                    type: string
+                    description: Nomor Induk Kependudukan (NIK)
+                    example: "3201234567890001"
+                penanggung_jawab:
+                    type: string
+                    description: Nama penanggung jawab pasien
+                    example: "Siti Aminah"
+                hubungan_penanggung_jawab:
+                    type: string
+                    description: Hubungan penanggung jawab dengan pasien
+                    example: "Istri"
+                alamat_penanggung_jawab:
+                    type: string
+                    description: Alamat penanggung jawab pasien
+                    example: "Jl. Sudirman No. 10"
         ReferensiFilterRawatJalan:
             type: object
             properties:

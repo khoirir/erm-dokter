@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"erm-dokter/internal/shared/formatter"
 )
 
 type Repository interface {
@@ -51,7 +53,15 @@ const selectKunjunganBukanRujukan = `
 		r.stts AS status_pemeriksaan,
 		r.status_lanjut,
 		r.status_bayar,
-		'Bukan Rujukan' AS jenis_antrean
+		'Bukan Rujukan' AS jenis_antrean,
+		COALESCE(p.gol_darah, '-') AS golongan_darah,
+		COALESCE(p.agama, '-') AS agama,
+		COALESCE(p.no_tlp, '-') AS no_telepon,
+		COALESCE(p.no_peserta, '-') AS no_peserta,
+		COALESCE(p.no_ktp, '-') AS no_ktp,
+		COALESCE(r.p_jawab, '-') AS penanggung_jawab,
+		COALESCE(r.hubunganpj, '-') AS hubungan_penanggung_jawab,
+		COALESCE(r.almt_pj, '-') AS alamat_penanggung_jawab
 	FROM reg_periksa r
 	INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
 	INNER JOIN poliklinik pol ON r.kd_poli = pol.kd_poli
@@ -83,7 +93,15 @@ const selectKunjunganRujukan = `
 		r.stts AS status_pemeriksaan,
 		r.status_lanjut,
 		r.status_bayar,
-		'Rujukan' AS jenis_antrean
+		'Rujukan' AS jenis_antrean,
+		COALESCE(p.gol_darah, '-') AS golongan_darah,
+		COALESCE(p.agama, '-') AS agama,
+		COALESCE(p.no_tlp, '-') AS no_telepon,
+		COALESCE(p.no_peserta, '-') AS no_peserta,
+		COALESCE(p.no_ktp, '-') AS no_ktp,
+		COALESCE(r.p_jawab, '-') AS penanggung_jawab,
+		COALESCE(r.hubunganpj, '-') AS hubungan_penanggung_jawab,
+		COALESCE(r.almt_pj, '-') AS alamat_penanggung_jawab
 	FROM rujukan_internal_poli rip
 	INNER JOIN reg_periksa r ON rip.no_rawat = r.no_rawat
 	INNER JOIN pasien p ON r.no_rkm_medis = p.no_rkm_medis
@@ -166,6 +184,14 @@ func scanKunjungan(s scanner) (*KunjunganRawatJalan, error) {
 		&k.StatusLanjut,
 		&k.StatusBayar,
 		&k.JenisAntrean,
+		&k.GolonganDarah,
+		&k.Agama,
+		&k.NoTelepon,
+		&k.NoPeserta,
+		&k.NoKTP,
+		&k.PenanggungJawab,
+		&k.HubunganPenanggungJawab,
+		&k.AlamatPenanggungJawab,
 	)
 	if err != nil {
 		return nil, err
@@ -185,11 +211,11 @@ func buildBranchConditions(dokterCol string, kodeDokter string, filter FilterAnt
 	}
 
 	if filter.Tanggal != "" {
-		tglParts := strings.Split(filter.Tanggal, ",")
-		tglAwal := strings.TrimSpace(tglParts[0])
-		tglAkhir := strings.TrimSpace(tglParts[1])
-		conditions = append(conditions, "r.tgl_registrasi BETWEEN ? AND ?")
-		args = append(args, tglAwal, tglAkhir)
+		tglAwal, tglAkhir := formatter.ParseRentangTanggal(filter.Tanggal)
+		if tglAwal != "" && tglAkhir != "" {
+			conditions = append(conditions, "r.tgl_registrasi BETWEEN ? AND ?")
+			args = append(args, tglAwal, tglAkhir)
+		}
 	}
 
 	if filter.Penjamin != "" {

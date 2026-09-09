@@ -10,6 +10,8 @@ type Service interface {
 	DaftarPenjamin(ctx context.Context) ([]Penjamin, error)
 	DaftarDepo(ctx context.Context) ([]Depo, error)
 	DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
+	DaftarBangsal(ctx context.Context) ([]Bangsal, error)
+	DaftarKelas(ctx context.Context) ([]KelasKamar, error)
 }
 
 type service struct {
@@ -46,6 +48,24 @@ func (s *service) DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error) {
 	data, err := s.repo.DaftarPoliklinik(ctx)
 	if err != nil {
 		s.log.Error("Gagal mengambil daftar poliklinik: %v", err)
+		return nil, err
+	}
+	return data, nil
+}
+
+func (s *service) DaftarBangsal(ctx context.Context) ([]Bangsal, error) {
+	data, err := s.repo.DaftarBangsal(ctx)
+	if err != nil {
+		s.log.Error("Gagal mengambil daftar bangsal: %v", err)
+		return nil, err
+	}
+	return data, nil
+}
+
+func (s *service) DaftarKelas(ctx context.Context) ([]KelasKamar, error) {
+	data, err := s.repo.DaftarKelas(ctx)
+	if err != nil {
+		s.log.Error("Gagal mengambil daftar kelas kamar: %v", err)
 		return nil, err
 	}
 	return data, nil

@@ -2,10 +2,10 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Rate, Trend } from "k6/metrics";
 
-const BASE_URL = __ENV.BASE_URL || "http://192.168.30.153:8082/api/v1";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:8082/api/v1";
 const USERNAME = __ENV.API_USERNAME || __ENV.DOKTER_USERNAME || "DRHANDI";
 const PASSWORD = __ENV.API_PASSWORD || __ENV.DOKTER_PASSWORD || "1";
-const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | all
+const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | rawat_inap | riwayat_pasien | rawatinap_riwayat | all
 
 const errorRate = new Rate("errors");
 const obatDuration = new Trend("obat_duration");
@@ -21,6 +21,8 @@ const laboratoriumPasienDuration = new Trend("laboratorium_pasien_duration");
 const permintaanLabKunjunganDuration = new Trend("permintaan_lab_kunjungan_duration");
 const permintaanLabPasienDuration = new Trend("permintaan_lab_pasien_duration");
 const permintaanLabDetailDuration = new Trend("permintaan_lab_detail_duration");
+const rawatInapDuration = new Trend("rawat_inap_duration");
+const riwayatPasienDuration = new Trend("riwayat_pasien_duration");
 
 export const options = {
     scenarios: {
@@ -125,31 +127,63 @@ export function setup() {
 
     // Fetch sample tindakan lab per kategori untuk detail endpoint test
     const tindakanLabSamples = {};
-    for (const kat of kategoriLabList) {
-        const labRes = http.get(`${BASE_URL}/tindakan/lab/${kat}?page=1&limit=10`, authHeaders);
-        if (labRes.status === 200) {
-            const items = labRes.json("data") || [];
-            tindakanLabSamples[kat] = items.map((i) => i.id).filter(Boolean);
-        } else {
-            tindakanLabSamples[kat] = [];
+    if (ENDPOINT === "all" || ENDPOINT.includes("lab") || ENDPOINT.includes("tindakan")) {
+        for (const kat of kategoriLabList) {
+            const labRes = http.get(`${BASE_URL}/tindakan/lab/${kat}?page=1&limit=10`, authHeaders);
+            if (labRes.status === 200) {
+                const items = labRes.json("data") || [];
+                tindakanLabSamples[kat] = items.map((i) => i.id).filter(Boolean);
+            } else {
+                tindakanLabSamples[kat] = [];
+            }
         }
     }
 
     // Fetch sample permintaan lab PK jika ada
     const permintaanLabSamples = [];
-    for (const idKunj of kunjungans.slice(0, 10)) {
-        const pRes = http.get(`${BASE_URL}/laboratorium/pk/permintaan/${idKunj}/Semua`, authHeaders);
-        if (pRes.status === 200) {
-            const items = pRes.json("data") || [];
-            for (const item of items) {
-                if (item.id) {
-                    permintaanLabSamples.push({ id_kunjungan: idKunj, id_permintaan: item.id });
+    if (ENDPOINT === "all" || ENDPOINT.includes("lab") || ENDPOINT.includes("permintaan")) {
+        for (const idKunj of kunjungans.slice(0, 10)) {
+            const pRes = http.get(`${BASE_URL}/laboratorium/pk/permintaan/${idKunj}/Semua`, authHeaders);
+            if (pRes.status === 200) {
+                const items = pRes.json("data") || [];
+                for (const item of items) {
+                    if (item.id) {
+                        permintaanLabSamples.push({ id_kunjungan: idKunj, id_permintaan: item.id });
+                    }
                 }
             }
         }
     }
 
+    // Fetch sample pasien dari rawat inap
+    const ranapRes = http.get(`${BASE_URL}/rawat-inap/pasien?status=mrs&page=1&limit=20`, authHeaders);
+    if (ranapRes.status === 200) {
+        const items = ranapRes.json("data") || [];
+        for (const item of items) {
+            if (item.id_pasien && !pasiens.includes(item.id_pasien)) {
+                pasiens.push(item.id_pasien);
+            }
+        }
+    }
+
+    // Fetch master bangsal untuk variasi filter rawat inap
+    let bangsalList = [];
+    const bangsalRes = http.get(`${BASE_URL}/master/bangsal`, authHeaders);
+    if (bangsalRes.status === 200) {
+        const items = bangsalRes.json("data") || [];
+        bangsalList = items.map((b) => b.kode).filter(Boolean);
+    }
+
+    // Fetch master kelas kamar untuk variasi filter rawat inap
+    let kelasList = [];
+    const kelasRes = http.get(`${BASE_URL}/master/kelas`, authHeaders);
+    if (kelasRes.status === 200) {
+        const items = kelasRes.json("data") || [];
+        kelasList = items.map((k) => k.kode).filter(Boolean);
+    }
+
     console.log(`[SETUP] Berhasil mengambil ${kunjungans.length} sampel ID kunjungan & ${pasiens.length} ID pasien.`);
+    console.log(`[SETUP] Master Bangsal: ${bangsalList.length}, Kelas Kamar: ${kelasList.length}`);
     console.log(`[SETUP] Sampel Tindakan Lab: PK=${(tindakanLabSamples.pk || []).length}, PA=${(tindakanLabSamples.pa || []).length}, MB=${(tindakanLabSamples.mb || []).length}`);
     console.log(`[SETUP] Sampel Permintaan Lab PK: ${permintaanLabSamples.length}`);
     console.log(`[SETUP] Target Endpoint: ${ENDPOINT}`);
@@ -158,6 +192,8 @@ export function setup() {
         token: token,
         kunjungans: kunjungans,
         pasiens: pasiens,
+        bangsalList: bangsalList,
+        kelasList: kelasList,
         tindakanLabSamples: tindakanLabSamples,
         permintaanLabSamples: permintaanLabSamples,
     };
@@ -422,6 +458,57 @@ function requestPermintaanLabDetail(params, data) {
     return res;
 }
 
+function requestRawatInap(params, data) {
+    const scenario = Math.random();
+    let url = "";
+
+    if (scenario < 0.35) {
+        url = `${BASE_URL}/rawat-inap/pasien?status=mrs&page=1&limit=20`;
+    } else if (scenario < 0.50 && data && data.bangsalList && data.bangsalList.length > 0) {
+        const kdBangsal = data.bangsalList[Math.floor(Math.random() * data.bangsalList.length)];
+        url = `${BASE_URL}/rawat-inap/pasien?status=mrs&kode_bangsal=${encodeURIComponent(kdBangsal)}&page=1&limit=20`;
+    } else if (scenario < 0.65 && data && data.kelasList && data.kelasList.length > 0) {
+        const kelas = data.kelasList[Math.floor(Math.random() * data.kelasList.length)];
+        url = `${BASE_URL}/rawat-inap/pasien?status=mrs&kelas_kamar=${encodeURIComponent(kelas)}&page=1&limit=20`;
+    } else if (scenario < 0.75) {
+        const penjamin = penjaminList[Math.floor(Math.random() * penjaminList.length)];
+        url = `${BASE_URL}/rawat-inap/pasien?status=mrs&kode_penjamin=${penjamin}&page=1&limit=20`;
+    } else if (scenario < 0.85) {
+        url = `${BASE_URL}/rawat-inap/pasien?status=krs&tanggal=${today}&page=1&limit=20`;
+    } else if (scenario < 0.93) {
+        const kw = antreanKeywords[Math.floor(Math.random() * antreanKeywords.length)];
+        url = `${BASE_URL}/rawat-inap/pasien?keyword=${encodeURIComponent(kw)}&page=1&limit=20`;
+    } else {
+        url = `${BASE_URL}/rawat-inap/pasien?status=mrs&page=2&limit=20`;
+    }
+
+    const res = http.get(url, params);
+    rawatInapDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestRiwayatPasien(params, data) {
+    if (!data.pasiens || data.pasiens.length === 0) {
+        return requestAntrean(params);
+    }
+
+    const idPasien = data.pasiens[Math.floor(Math.random() * data.pasiens.length)];
+    const scenario = Math.random();
+    let url = "";
+
+    if (scenario < 0.65) {
+        url = `${BASE_URL}/pasien/${idPasien}/riwayat-kunjungan`;
+    } else if (scenario < 0.85) {
+        url = `${BASE_URL}/pasien/${idPasien}/riwayat-kunjungan?tanggal=${today}&page=1&limit=5`;
+    } else {
+        url = `${BASE_URL}/pasien/${idPasien}/riwayat-kunjungan?page=2&limit=5`;
+    }
+
+    const res = http.get(url, params);
+    riwayatPasienDuration.add(res.timings.duration);
+    return res;
+}
+
 export default function (data) {
     mixedWorkload(data);
 }
@@ -489,29 +576,35 @@ export function mixedWorkload(data) {
         } else {
             res = requestPermintaanLabDetail(params, data);
         }
+    } else if (ENDPOINT === "rawat_inap") {
+        res = requestRawatInap(params, data);
+    } else if (ENDPOINT === "riwayat_pasien") {
+        res = requestRiwayatPasien(params, data);
+    } else if (ENDPOINT === "rawatinap_riwayat") {
+        res = Math.random() < 0.5 ? requestRawatInap(params, data) : requestRiwayatPasien(params, data);
     } else {
-        // Mode 'all': bagi beban ke seluruh modul
+        // Mode 'all': bagi beban ke seluruh modul backend
         const rand = Math.random();
-        if (rand < 0.12) {
+        if (rand < 0.10) {
             res = requestAntrean(params);
-        } else if (rand < 0.24) {
+        } else if (rand < 0.20) {
             res = requestObat(params);
-        } else if (rand < 0.36) {
+        } else if (rand < 0.30) {
             res = requestPemeriksaanKunjungan(params, data);
-        } else if (rand < 0.48) {
+        } else if (rand < 0.40) {
             res = requestPemeriksaanPasien(params, data);
-        } else if (rand < 0.58) {
+        } else if (rand < 0.50) {
             res = requestResepKunjungan(params, data);
-        } else if (rand < 0.68) {
+        } else if (rand < 0.60) {
             res = requestResepPasien(params, data);
-        } else if (rand < 0.76) {
-            res = requestTindakanLab(params);
-        } else if (rand < 0.84) {
+        } else if (rand < 0.70) {
             res = requestLaboratoriumKunjungan(params, data);
-        } else if (rand < 0.92) {
-            res = requestLaboratoriumPasien(params, data);
-        } else {
+        } else if (rand < 0.80) {
             res = requestPermintaanLabKunjungan(params, data);
+        } else if (rand < 0.90) {
+            res = requestRawatInap(params, data);
+        } else {
+            res = requestRiwayatPasien(params, data);
         }
     }
 
@@ -543,6 +636,15 @@ export function teardown() {
 }
 
 // Cara menjalankan pengujian k6:
+// # Test khusus modul Daftar Pasien Rawat Inap:
+// k6 run -e ENDPOINT=rawat_inap k6-script.js
+//
+// # Test khusus modul Riwayat Kunjungan Pasien (Timeline Index):
+// k6 run -e ENDPOINT=riwayat_pasien k6-script.js
+//
+// # Test gabungan Rawat Inap & Riwayat Pasien (50:50):
+// k6 run -e ENDPOINT=rawatinap_riwayat k6-script.js
+//
 // # Test seluruh endpoint riwayat laboratorium (kunjungan + pasien):
 // k6 run -e ENDPOINT=laboratorium k6-script.js
 //

@@ -17,10 +17,10 @@ func InitMySQL(host, port, user, password, dbname string) (*sql.DB, error) {
 		return nil, fmt.Errorf("gagal membuka koneksi database: %w", err)
 	}
 
-	db.SetMaxOpenConns(100)
-	db.SetMaxIdleConns(25)
+	db.SetMaxOpenConns(40)
+	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(10 * time.Minute)
-	db.SetConnMaxIdleTime(3 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("gagal ping ke database MySQL: %w", err)
 	}

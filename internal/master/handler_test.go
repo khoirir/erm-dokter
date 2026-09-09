@@ -14,6 +14,8 @@ type mockMasterService struct {
 	daftarPenjaminFn   func(ctx context.Context) ([]master.Penjamin, error)
 	daftarDepoFn       func(ctx context.Context) ([]master.Depo, error)
 	daftarPoliklinikFn func(ctx context.Context) ([]master.Poliklinik, error)
+	daftarBangsalFn    func(ctx context.Context) ([]master.Bangsal, error)
+	daftarKelasFn      func(ctx context.Context) ([]master.KelasKamar, error)
 }
 
 func (m *mockMasterService) DaftarPenjamin(ctx context.Context) ([]master.Penjamin, error) {
@@ -37,6 +39,20 @@ func (m *mockMasterService) DaftarPoliklinik(ctx context.Context) ([]master.Poli
 	return nil, nil
 }
 
+func (m *mockMasterService) DaftarBangsal(ctx context.Context) ([]master.Bangsal, error) {
+	if m.daftarBangsalFn != nil {
+		return m.daftarBangsalFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockMasterService) DaftarKelas(ctx context.Context) ([]master.KelasKamar, error) {
+	if m.daftarKelasFn != nil {
+		return m.daftarKelasFn(ctx)
+	}
+	return nil, nil
+}
+
 func TestMasterHandler(t *testing.T) {
 	mockSvc := &mockMasterService{
 		daftarPenjaminFn: func(ctx context.Context) ([]master.Penjamin, error) {
@@ -47,6 +63,12 @@ func TestMasterHandler(t *testing.T) {
 		},
 		daftarPoliklinikFn: func(ctx context.Context) ([]master.Poliklinik, error) {
 			return []master.Poliklinik{{ItemMaster: master.ItemMaster{Kode: "INT", Nama: "Poli Penyakit Dalam"}}}, nil
+		},
+		daftarBangsalFn: func(ctx context.Context) ([]master.Bangsal, error) {
+			return []master.Bangsal{{ItemMaster: master.ItemMaster{Kode: "B01", Nama: "Melati"}}}, nil
+		},
+		daftarKelasFn: func(ctx context.Context) ([]master.KelasKamar, error) {
+			return []master.KelasKamar{{ItemMaster: master.ItemMaster{Kode: "Kelas 1", Nama: "Kelas 1"}}}, nil
 		},
 	}
 
@@ -85,11 +107,49 @@ func TestMasterHandler(t *testing.T) {
 		}
 
 		var resp struct {
-			Success bool               `json:"success"`
+			Success bool                `json:"success"`
 			Data    []master.Poliklinik `json:"data"`
 		}
 		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
 		if len(resp.Data) != 1 || resp.Data[0].Kode != "INT" {
+			t.Errorf("Unexpected data: %+v", resp.Data)
+		}
+	})
+
+	t.Run("DaftarBangsal", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/master/bangsal", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", rr.Code)
+		}
+
+		var resp struct {
+			Success bool             `json:"success"`
+			Data    []master.Bangsal `json:"data"`
+		}
+		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+		if len(resp.Data) != 1 || resp.Data[0].Kode != "B01" || resp.Data[0].Nama != "Melati" {
+			t.Errorf("Unexpected data: %+v", resp.Data)
+		}
+	})
+
+	t.Run("DaftarKelas", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/master/kelas", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", rr.Code)
+		}
+
+		var resp struct {
+			Success bool                `json:"success"`
+			Data    []master.KelasKamar `json:"data"`
+		}
+		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+		if len(resp.Data) != 1 || resp.Data[0].Kode != "Kelas 1" || resp.Data[0].Nama != "Kelas 1" {
 			t.Errorf("Unexpected data: %+v", resp.Data)
 		}
 	})

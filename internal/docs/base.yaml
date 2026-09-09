@@ -49,6 +49,10 @@ tags:
       description: Berkas Digital Universal Perawatan Pasien
     - name: Resume
       description: Resume Medis Pasien Rawat Jalan (Ralan)
+    - name: Rawat Inap
+      description: Daftar Pasien, Referensi & Status Kamar Pasien Rawat Inap
+    - name: Pasien
+      description: Data & Riwayat Kunjungan Pasien (Cross Ralan & Ranap)
 components:
     securitySchemes:
         BearerAuth:

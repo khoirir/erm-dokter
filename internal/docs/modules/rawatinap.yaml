@@ -1,0 +1,298 @@
+paths:
+    /api/v1/rawat-inap/status-pulang:
+        get:
+            tags: [Rawat Inap]
+            summary: Referensi Status Pulang Pasien Rawat Inap
+            description: Mengambil daftar opsi status pulang pasien rawat inap untuk dropdown dan filter.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi status pulang
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/OpsiReferensi"
+
+    /api/v1/rawat-inap/pasien:
+        get:
+            tags: [Rawat Inap]
+            summary: Daftar Pasien Rawat Inap (Kamar Inap)
+            description: |
+                Mengambil daftar pasien rawat inap terpaginasi dengan 7 kriteria filter (belum_krs, rentang tanggal_mrs, tanggal_krs, bangsal, kelas, penjamin, dokter dpjp/registrasi) dan pencarian multi-kolom (nama, no RM, alamat, no rawat).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: bangsal
+                  in: query
+                  description: Filter berdasarkan kode bangsal
+                  schema:
+                      type: string
+                - name: kelas
+                  in: query
+                  description: Filter berdasarkan kelas kamar (misal Kelas 1, Kelas 2, VIP)
+                  schema:
+                      type: string
+                - name: penjamin
+                  in: query
+                  description: Filter berdasarkan kode penjamin (misal BPJ)
+                  schema:
+                      type: string
+                - name: scope_dpjp
+                  in: query
+                  description: Cakupan DPJP (dpjp, semua)
+                  schema:
+                      type: string
+                      enum: [dpjp, semua]
+                      default: semua
+                - name: status_kunjungan
+                  in: query
+                  description: Status kunjungan (belum_krs, tanggal_mrs, tanggal_krs)
+                  schema:
+                      type: string
+                      enum: [belum_krs, tanggal_mrs, tanggal_krs]
+                      default: belum_krs
+                - name: status_pulang
+                  in: query
+                  description: Status pulang spesifik ('Sehat','Rujuk','APS','+','Meninggal','Sembuh','Membaik','Pulang Paksa','-','Pindah Kamar', dll)
+                  schema:
+                      type: string
+                - name: tanggal
+                  in: query
+                  description: Rentang tanggal (format YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                      type: string
+                - name: keyword
+                  in: query
+                  description: Kata kunci pencarian (nama pasien, no RM, alamat, no rawat) minimal 3 karakter
+                  schema:
+                      type: string
+                - name: order_by
+                  in: query
+                  description: Kolom pengurutan
+                  schema:
+                      type: string
+                      enum: [waktu_mrs, waktu_krs, nama_pasien, kamar, kelas, bangsal, penjamin, status_pulang]
+                      default: waktu_mrs
+                - name: sort_order
+                  in: query
+                  description: Arah pengurutan
+                  schema:
+                      type: string
+                      enum: [ASC, DESC]
+                      default: DESC
+                - name: page
+                  in: query
+                  description: Halaman data
+                  schema:
+                      type: integer
+                      default: 1
+                - name: limit
+                  in: query
+                  description: Jumlah data per halaman (maks 100)
+                  schema:
+                      type: integer
+                      default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: "#/components/schemas/KunjunganRawatInap"
+                                          meta:
+                                              $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    $ref: "#/components/responses/BadRequestResponse"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedResponse"
+    /api/v1/rawat-inap/{id}:
+        get:
+            tags: [Rawat Inap]
+            summary: Detail Pasien Rawat Inap
+            description: Mengambil data detail pasien rawat inap berdasarkan token terenkripsi AES-GCM spesifik kamar inap (`id` komposit no_rawat~tgl_masuk~jam_masuk).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  description: Encrypted ID Komposit Kamar Rawat Inap
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: Detail pasien rawat inap ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: "#/components/schemas/KunjunganRawatInap"
+                "400":
+                    $ref: "#/components/responses/BadRequestResponse"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedResponse"
+                "404":
+                    description: Detail pasien rawat inap tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+    schemas:
+        KunjunganRawatInap:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Token terenkripsi AES-GCM komposit (no_rawat~tgl_masuk~jam_masuk)
+                    example: "U2FsdGVkX1..."
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi AES-GCM nomor rawat (kompatibel lintas modul ERM)
+                    example: "U2FsdGVkX0..."
+                id_pasien:
+                    type: string
+                    description: Token terenkripsi AES-GCM nomor rekam medis
+                    example: "U2FsdGVkX2..."
+                no_rawat:
+                    type: string
+                    example: "2026/09/01/000001"
+                no_registrasi:
+                    type: string
+                    example: "001"
+                tanggal_registrasi:
+                    type: string
+                    example: "2026-09-01"
+                jam_registrasi:
+                    type: string
+                    example: "08:00:00"
+                no_rekam_medis:
+                    type: string
+                    example: "123456"
+                nama_pasien:
+                    type: string
+                    example: "Budi Santoso"
+                jenis_kelamin:
+                    type: string
+                    example: "L"
+                tanggal_lahir:
+                    type: string
+                    example: "1990-05-15"
+                umur:
+                    type: string
+                    example: "36 Th"
+                alamat:
+                    type: string
+                    example: "Jl. Sudirman No. 10"
+                kode_kamar:
+                    type: string
+                    example: "K01"
+                kelas:
+                    type: string
+                    example: "Kelas 1"
+                kode_bangsal:
+                    type: string
+                    example: "B01"
+                nama_bangsal:
+                    type: string
+                    example: "Bangsal Melati"
+                tanggal_masuk:
+                    type: string
+                    example: "2026-09-01"
+                jam_masuk:
+                    type: string
+                    example: "09:00:00"
+                tanggal_keluar:
+                    type: string
+                    example: "2026-09-05"
+                jam_keluar:
+                    type: string
+                    example: "14:00:00"
+                status_pulang:
+                    type: string
+                    example: "Membaik"
+                lama_inap:
+                    type: integer
+                    example: 4
+                kode_penjamin:
+                    type: string
+                    example: "BPJ"
+                nama_penjamin:
+                    type: string
+                    example: "BPJS Kesehatan"
+                status_bayar:
+                    type: string
+                    example: "Sudah Bayar"
+                status_lanjut:
+                    type: string
+                    example: "Ranap"
+                kode_dokter_rawat_jalan:
+                    type: string
+                    example: "DR01"
+                dokter_rawat_jalan:
+                    type: string
+                    description: Dokter Rawat Jalan (diambil dari reg_periksa)
+                    example: "dr. Hendra"
+                dokter_rawat_inap:
+                    type: array
+                    description: Dokter Rawat Inap / DPJP (diambil dari dpjp_ranap, bisa multiple)
+                    items:
+                        type: string
+                    example: ["dr. Ahmad, Sp.PD", "dr. Budi, Sp.A"]
+                diagnosa_awal:
+                    type: string
+                    description: Diagnosa awal saat masuk kamar rawat inap
+                    example: "Febris H-3 ec susp DHF"
+                diagnosa_akhir:
+                    type: string
+                    description: Diagnosa akhir saat keluar kamar rawat inap
+                    example: "Dengue Haemorrhagic Fever Grade II"
+                golongan_darah:
+                    type: string
+                    example: "O"
+                agama:
+                    type: string
+                    example: "Islam"
+                no_telepon:
+                    type: string
+                    example: "08123456789"
+                no_peserta:
+                    type: string
+                    description: Nomor kartu BPJS / Asuransi pasien
+                    example: "0001234567890"
+                no_ktp:
+                    type: string
+                    description: Nomor Induk Kependudukan (NIK)
+                    example: "3201234567890001"
+                penanggung_jawab:
+                    type: string
+                    description: Nama penanggung jawab pasien
+                    example: "Siti Aminah"
+                hubungan_penanggung_jawab:
+                    type: string
+                    description: Hubungan penanggung jawab dengan pasien
+                    example: "Istri"
+                alamat_penanggung_jawab:
+                    type: string
+                    description: Alamat penanggung jawab pasien
+                    example: "Jl. Sudirman No. 10"

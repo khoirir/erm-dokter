@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/shared"
+	"erm-dokter/internal/shared/formatter"
 )
 
 type Repository interface {
@@ -44,15 +45,8 @@ func (r *repository) DaftarResepByRM(ctx context.Context, noRM string, statusLan
 }
 
 func (r *repository) queryResep(ctx context.Context, whereClause string, paramValue string, statusLanjut shared.StatusLanjut, filter FilterDaftarResep) ([]Resep, int, error) {
-	var tglAwal, tglAkhir string
-	useTglFilter := false
-
-	tglParts := strings.Split(filter.Tanggal, ",")
-	if len(tglParts) == 2 {
-		tglAwal = strings.TrimSpace(tglParts[0])
-		tglAkhir = strings.TrimSpace(tglParts[1])
-		useTglFilter = true
-	}
+	tglAwal, tglAkhir := formatter.ParseRentangTanggal(filter.Tanggal)
+	useTglFilter := tglAwal != "" && tglAkhir != ""
 
 	statusCondition := ""
 	switch statusLanjut {
