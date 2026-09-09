@@ -50,3 +50,65 @@ func TestPasienModelFormatters(t *testing.T) {
 		t.Errorf("Expected non-empty format umur")
 	}
 }
+
+func TestFilterRiwayatKunjungan_SanitizeAndValidate(t *testing.T) {
+	t.Run("Sanitize default values and limits", func(t *testing.T) {
+		f := pasien.FilterRiwayatKunjungan{
+			Tanggal: "  2026-01-01,2026-01-31  ",
+			Page:    0,
+			Limit:   0,
+		}
+		f.Sanitize()
+
+		if f.Tanggal != "2026-01-01,2026-01-31" {
+			t.Errorf("expected trimmed Tanggal, got %s", f.Tanggal)
+		}
+		if f.Page != 1 {
+			t.Errorf("expected default page 1, got %d", f.Page)
+		}
+		if f.Limit != 3 {
+			t.Errorf("expected default limit 3, got %d", f.Limit)
+		}
+
+		fMax := pasien.FilterRiwayatKunjungan{Limit: 100}
+		fMax.Sanitize()
+		if fMax.Limit != 50 {
+			t.Errorf("expected capped limit 50, got %d", fMax.Limit)
+		}
+
+		if f.Offset() != 0 {
+			t.Errorf("expected offset 0, got %d", f.Offset())
+		}
+	})
+
+	t.Run("Validation rejects invalid tanggal", func(t *testing.T) {
+		f := pasien.FilterRiwayatKunjungan{
+			Tanggal: "not-a-date",
+		}
+		f.Sanitize()
+		errs := f.Validate()
+		if errs == nil {
+			t.Fatal("expected validation error for invalid tanggal")
+		}
+	})
+
+	t.Run("Validation passes with valid parameters", func(t *testing.T) {
+		f := pasien.FilterRiwayatKunjungan{
+			Tanggal: "2026-01-01,2026-01-31",
+		}
+		f.Sanitize()
+		errs := f.Validate()
+		if errs != nil {
+			t.Fatalf("unexpected validation error: %v", errs)
+		}
+	})
+
+	t.Run("Validation passes with empty filter", func(t *testing.T) {
+		f := pasien.FilterRiwayatKunjungan{}
+		f.Sanitize()
+		errs := f.Validate()
+		if errs != nil {
+			t.Fatalf("unexpected validation error: %v", errs)
+		}
+	})
+}

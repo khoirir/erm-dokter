@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"erm-dokter/internal/shared"
+	"erm-dokter/internal/shared/formatter"
 )
 
 type Repository interface {
@@ -144,15 +144,8 @@ const insertPemeriksaanRanap = `
 `
 
 func buildBaseQuery(listNoRawat []string, statusLanjut shared.StatusLanjut, filter FilterDaftarPemeriksaan) (string, []any) {
-	var tglAwal, tglAkhir string
-	useTglFilter := false
-
-	tglParts := strings.Split(filter.Tanggal, ",")
-	if len(tglParts) == 2 {
-		tglAwal = strings.TrimSpace(tglParts[0])
-		tglAkhir = strings.TrimSpace(tglParts[1])
-		useTglFilter = true
-	}
+	tglAwal, tglAkhir := formatter.ParseRentangTanggal(filter.Tanggal)
+	useTglFilter := tglAwal != "" && tglAkhir != ""
 
 	inClause := shared.CreateInPlaceholders(len(listNoRawat))
 	sqlRalan := fmt.Sprintf(selectPemeriksaanRalan, inClause)

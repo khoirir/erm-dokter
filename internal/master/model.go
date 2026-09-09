@@ -17,3 +17,11 @@ type Poliklinik struct {
 	ItemMaster
 }
 
+type Bangsal struct {
+	ItemMaster
+}
+
+type KelasKamar struct {
+	ItemMaster
+}
+

@@ -68,6 +68,52 @@ paths:
                                                 $ref: "#/components/schemas/Poliklinik"
                 "401":
                     description: Token tidak ada atau kadaluarsa
+    /api/v1/master/bangsal:
+        get:
+            tags: [Master]
+            summary: Daftar Master Bangsal Rawat Inap
+            description: Mengambil daftar bangsal rawat inap yang aktif dan memiliki kamar aktif.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar bangsal
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/Bangsal"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
+    /api/v1/master/kelas:
+        get:
+            tags: [Master]
+            summary: Daftar Master Kelas Kamar Rawat Inap
+            description: Mengambil daftar kelas kamar rawat inap yang aktif pada bangsal aktif.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar kelas kamar
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: "#/components/schemas/BaseResponse"
+                                    - type: object
+                                      properties:
+                                        data:
+                                            type: array
+                                            items:
+                                                $ref: "#/components/schemas/KelasKamar"
+                "401":
+                    description: Token tidak ada atau kadaluarsa
 components:
     schemas:
         Penjamin:
@@ -97,3 +143,21 @@ components:
                 nama:
                     type: string
                     example: Penyakit Dalam
+        Bangsal:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: B01
+                nama:
+                    type: string
+                    example: Bangsal Melati
+        KelasKamar:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: Kelas 1
+                nama:
+                    type: string
+                    example: Kelas 1

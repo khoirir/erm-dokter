@@ -393,4 +393,40 @@ GET {{baseUrl}}/api/v1/radiologi/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuG
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
+### 37. Rawat Inap - Daftar Pasien Rawat Inap (MRS / Kamar Aktif)
+GET {{baseUrl}}/api/v1/rawat-inap/pasien?status=mrs&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 37a. Rawat Inap - Daftar Pasien Pulang (KRS)
+GET {{baseUrl}}/api/v1/rawat-inap/pasien?status=krs&tanggal=2026-01-01,2026-12-31&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 37b. Rawat Inap - Filter Penjamin & Pencarian Keyword
+GET {{baseUrl}}/api/v1/rawat-inap/pasien?status=mrs&kode_penjamin=BPJ&keyword=Budi&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 37c. Master - Daftar Bangsal Rawat Inap Aktif
+GET {{baseUrl}}/api/v1/master/bangsal
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 37d. Master - Daftar Kelas Kamar Rawat Inap Aktif
+GET {{baseUrl}}/api/v1/master/kelas
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 38. Pasien - Riwayat Kunjungan Pasien (Default 3 Terakhir)
+GET {{baseUrl}}/api/v1/pasien/00123456/riwayat-kunjungan
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+### 38a. Pasien - Riwayat Kunjungan Pasien (Dengan Rentang Tanggal)
+GET {{baseUrl}}/api/v1/pasien/00123456/riwayat-kunjungan?tanggal=2026-01-01,2026-12-31&page=1&limit=10
+Authorization: Bearer {{login.response.body.data.token}}
+Accept: application/json
+
+
 

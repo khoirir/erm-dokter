@@ -13,6 +13,8 @@ type mockRepository struct {
 	penjaminData   []master.Penjamin
 	depoData       []master.Depo
 	poliklinikData []master.Poliklinik
+	bangsalData    []master.Bangsal
+	kelasData      []master.KelasKamar
 	err            error
 }
 
@@ -35,6 +37,20 @@ func (m *mockRepository) DaftarPoliklinik(ctx context.Context) ([]master.Polikli
 		return nil, m.err
 	}
 	return m.poliklinikData, nil
+}
+
+func (m *mockRepository) DaftarBangsal(ctx context.Context) ([]master.Bangsal, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.bangsalData, nil
+}
+
+func (m *mockRepository) DaftarKelas(ctx context.Context) ([]master.KelasKamar, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.kelasData, nil
 }
 
 func TestMasterService_DaftarPenjamin(t *testing.T) {
@@ -101,6 +117,52 @@ func TestMasterService_DaftarPoliklinik(t *testing.T) {
 
 	repo.err = errors.New("db error")
 	_, err = svc.DaftarPoliklinik(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestMasterService_DaftarBangsal(t *testing.T) {
+	repo := &mockRepository{
+		bangsalData: []master.Bangsal{
+			{ItemMaster: master.ItemMaster{Kode: "B01", Nama: "Melati"}},
+		},
+	}
+	svc := master.NewService(repo, logger.New())
+
+	data, err := svc.DaftarBangsal(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(data) != 1 || data[0].Kode != "B01" || data[0].Nama != "Melati" {
+		t.Errorf("unexpected bangsal data: %+v", data)
+	}
+
+	repo.err = errors.New("db error")
+	_, err = svc.DaftarBangsal(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestMasterService_DaftarKelas(t *testing.T) {
+	repo := &mockRepository{
+		kelasData: []master.KelasKamar{
+			{ItemMaster: master.ItemMaster{Kode: "Kelas 1", Nama: "Kelas 1"}},
+		},
+	}
+	svc := master.NewService(repo, logger.New())
+
+	data, err := svc.DaftarKelas(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(data) != 1 || data[0].Kode != "Kelas 1" || data[0].Nama != "Kelas 1" {
+		t.Errorf("unexpected kelas data: %+v", data)
+	}
+
+	repo.err = errors.New("db error")
+	_, err = svc.DaftarKelas(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/shared"
+	"erm-dokter/internal/shared/formatter"
 )
 
 func (r *repository) DaftarHasilLabPK(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]HasilLaboratorium, int, error) {
@@ -37,13 +38,10 @@ func (r *repository) queryRiwayatLabPK(ctx context.Context, whereClause string, 
 	}
 
 	if filter.Tanggal != "" {
-		tglParts := strings.Split(filter.Tanggal, ",")
-		if len(tglParts) == 2 {
+		tglAwal, tglAkhir := formatter.ParseRentangTanggal(filter.Tanggal)
+		if tglAwal != "" && tglAkhir != "" {
 			conditions = append(conditions, "pl.tgl_periksa BETWEEN ? AND ?")
-			args = append(args, strings.TrimSpace(tglParts[0]), strings.TrimSpace(tglParts[1]))
-		} else {
-			conditions = append(conditions, "pl.tgl_periksa = ?")
-			args = append(args, strings.TrimSpace(tglParts[0]))
+			args = append(args, tglAwal, tglAkhir)
 		}
 	}
 
@@ -443,13 +441,10 @@ func (r *repository) DaftarPermintaanLabPKByRM(ctx context.Context, noRkmMedis s
 	}
 
 	if filter.Tanggal != "" {
-		tglParts := strings.Split(filter.Tanggal, ",")
-		if len(tglParts) == 2 {
+		tglAwal, tglAkhir := formatter.ParseRentangTanggal(filter.Tanggal)
+		if tglAwal != "" && tglAkhir != "" {
 			conditions = append(conditions, "pl.tgl_permintaan BETWEEN ? AND ?")
-			args = append(args, strings.TrimSpace(tglParts[0]), strings.TrimSpace(tglParts[1]))
-		} else {
-			conditions = append(conditions, "pl.tgl_permintaan = ?")
-			args = append(args, strings.TrimSpace(tglParts[0]))
+			args = append(args, tglAwal, tglAkhir)
 		}
 	}
 
