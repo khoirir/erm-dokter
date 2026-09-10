@@ -2,24 +2,48 @@ package middleware
 
 import (
 	"bufio"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
+	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/pkg/token"
 )
 
 type statusResponseWriter struct {
 	http.ResponseWriter
-	statusCode int
+	statusCode  int
+	errorDetail string
+	message     string
+	user        string
 }
 
 func (sw *statusResponseWriter) WriteHeader(code int) {
 	sw.statusCode = code
+	if errDetail := sw.ResponseWriter.Header().Get("X-Error-Detail"); errDetail != "" {
+		sw.errorDetail = errDetail
+		sw.ResponseWriter.Header().Del("X-Error-Detail")
+	}
+	if logMsg := sw.ResponseWriter.Header().Get("X-Log-Message"); logMsg != "" {
+		sw.message = logMsg
+		sw.ResponseWriter.Header().Del("X-Log-Message")
+	}
+	if u := sw.ResponseWriter.Header().Get("X-User-ID"); u != "" {
+		sw.user = u
+		sw.ResponseWriter.Header().Del("X-User-ID")
+	}
+	sw.ResponseWriter.Header().Del("X-Logging-Middleware")
+	sw.ResponseWriter.Header().Del("X-Request-Method")
+	sw.ResponseWriter.Header().Del("X-Request-Path")
 	sw.ResponseWriter.WriteHeader(code)
+}
+
+func (sw *statusResponseWriter) Write(b []byte) (int, error) {
+	if sw.statusCode == 0 {
+		sw.WriteHeader(http.StatusOK)
+	}
+	return sw.ResponseWriter.Write(b)
 }
 
 func (sw *statusResponseWriter) Flush() {
@@ -40,41 +64,91 @@ func (sw *statusResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func LoggingMiddleware(next http.Handler) http.Handler {
-	logger := log.New(os.Stdout, "[HTTP]\t", log.Ldate|log.Ltime)
+	return LoggingMiddlewareWithLogger(logger.New())(next)
+}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions {
-			next.ServeHTTP(w, r)
-			return
-		}
+func LoggingMiddlewareWithLogger(log *logger.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		start := time.Now()
+			start := time.Now()
 
-		sw := &statusResponseWriter{
-			ResponseWriter: w,
-			statusCode:     http.StatusOK,
-		}
+			sw := &statusResponseWriter{
+				ResponseWriter: w,
+				statusCode:     http.StatusOK,
+			}
+			sw.ResponseWriter.Header().Set("X-Logging-Middleware", "true")
 
-		user := extractUserFromRequest(r)
+			user := extractUserFromRequest(r)
 
-		next.ServeHTTP(sw, r)
+			next.ServeHTTP(sw, r)
 
-		duration := time.Since(start)
+			sw.ResponseWriter.Header().Del("X-Logging-Middleware")
+			sw.ResponseWriter.Header().Del("X-Error-Detail")
+			sw.ResponseWriter.Header().Del("X-Log-Message")
+			sw.ResponseWriter.Header().Del("X-User-ID")
+			sw.ResponseWriter.Header().Del("X-Request-Method")
+			sw.ResponseWriter.Header().Del("X-Request-Path")
 
-		clientIP := r.RemoteAddr
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			clientIP = forwarded
-		}
+			if sw.user != "" && (user == "-" || user == "") {
+				user = sw.user
+			}
 
-		logger.Printf("[%s] %s %s %d %v %s",
-			user,
-			r.Method,
-			r.URL.Path,
-			sw.statusCode,
-			duration,
-			clientIP,
-		)
-	})
+			duration := time.Since(start)
+			durationMs := float64(duration.Microseconds()) / 1000.0
+
+			clientIP := r.RemoteAddr
+			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+				clientIP = strings.TrimSpace(strings.Split(forwarded, ",")[0])
+			} else if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+				clientIP = strings.TrimSpace(realIP)
+			}
+
+			requestID := logger.GetRequestID(r.Context())
+			if requestID == "" {
+				requestID = sw.Header().Get("X-Request-ID")
+			}
+
+			attrs := []any{
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", sw.statusCode,
+				"duration_ms", durationMs,
+				"client_ip", clientIP,
+				"user", user,
+			}
+			if requestID != "" {
+				attrs = append(attrs, "request_id", requestID)
+			}
+
+			if r.URL.RawQuery != "" {
+				attrs = append(attrs, "query", r.URL.RawQuery)
+			}
+			if ua := r.UserAgent(); ua != "" {
+				attrs = append(attrs, "user_agent", ua)
+			}
+
+			msg := "HTTP Request"
+			if sw.errorDetail != "" {
+				msg = sw.errorDetail
+			} else if sw.message != "" {
+				msg = sw.message
+			}
+
+			switch {
+			case sw.statusCode >= 500:
+				log.ErrorContext(r.Context(), msg, attrs...)
+			case sw.statusCode >= 400:
+				log.WarnContext(r.Context(), msg, attrs...)
+			default:
+				log.InfoContext(r.Context(), msg, attrs...)
+			}
+		})
+	}
 }
 
 func extractUserFromRequest(r *http.Request) string {

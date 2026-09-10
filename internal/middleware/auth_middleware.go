@@ -44,16 +44,16 @@ func JWTMiddleware(jwtSecret string) func(http.HandlerFunc) http.HandlerFunc {
 				claims.Role = RoleDokter
 			}
 
+			if claims.KodeDokter != "" {
+				w.Header().Set("X-User-ID", claims.KodeDokter)
+			}
+
 			ctx := context.WithValue(r.Context(), UserClaimKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	}
 }
 
-// ServiceOrJWTMiddleware mengizinkan akses melalui X-API-Key ATAU Bearer Token JWT.
-// Digunakan KHUSUS untuk endpoint yang diizinkan untuk integrasi aplikasi luar:
-// 1. GET /api/v1/rawat-jalan/antrean
-// 2. GET /api/v1/rawat-inap/pasien
 func ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey string) func(http.HandlerFunc) http.HandlerFunc {
 	cleanServiceKey := strings.TrimSpace(serviceAPIKey)
 
@@ -71,12 +71,12 @@ func ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey string) func(http.HandlerFu
 					NamaUser:   "External Service",
 					Role:       RoleService,
 				}
+				w.Header().Set("X-User-ID", "service")
 				ctx := context.WithValue(r.Context(), UserClaimKey, serviceClaims)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 
-			// Jika tidak menggunakan X-API-Key, fallback ke validasi Bearer JWT dokter
 			JWTMiddleware(jwtSecret)(next).ServeHTTP(w, r)
 		}
 	}
@@ -86,10 +86,18 @@ func AuthMiddleware(jwtSecret, serviceAPIKey string) func(http.HandlerFunc) http
 	return ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey)
 }
 
-func GetKodeDokter(ctx context.Context) (string, error) {
+func GetKodeDokter(ctx context.Context, allowService ...bool) (string, error) {
 	claims, ok := ctx.Value(UserClaimKey).(*token.Claims)
 	if !ok || claims == nil {
 		return "", apperror.NewUnauthorizedError("Kredensial login tidak ditemukan")
+	}
+
+	canService := len(allowService) > 0 && allowService[0]
+	if claims.Role == RoleService {
+		if canService {
+			return "", nil
+		}
+		return "", apperror.NewUnauthorizedError("Identitas dokter pada akun ini tidak valid")
 	}
 
 	if strings.TrimSpace(claims.KodeDokter) == "" {
@@ -97,23 +105,6 @@ func GetKodeDokter(ctx context.Context) (string, error) {
 	}
 
 	return claims.KodeDokter, nil
-}
-
-func GetKodeDokterOrEmpty(ctx context.Context) (kodeDokter string, isService bool, err error) {
-	claims, ok := ctx.Value(UserClaimKey).(*token.Claims)
-	if !ok || claims == nil {
-		return "", false, apperror.NewUnauthorizedError("Kredensial login tidak ditemukan")
-	}
-
-	if claims.Role == RoleService {
-		return "", true, nil
-	}
-
-	if strings.TrimSpace(claims.KodeDokter) == "" {
-		return "", false, apperror.NewUnauthorizedError("Identitas dokter pada akun ini tidak valid")
-	}
-
-	return claims.KodeDokter, false, nil
 }
 
 func IsService(ctx context.Context) bool {

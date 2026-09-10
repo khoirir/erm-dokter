@@ -7,7 +7,9 @@
 bin/
 dist/
 tmp/
+logs/
 *.log
+monitoring/grafana-data/
 
 # Test binary
 *.test

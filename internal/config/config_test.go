@@ -34,4 +34,13 @@ func TestConfigLoad(t *testing.T) {
 	if len(cfg.KodeBerkasLabPK) != 2 || cfg.KodeBerkasLabPK[0] != "005" || cfg.KodeBerkasLabPK[1] != "006" {
 		t.Errorf("Unexpected KodeBerkasLabPK: %v", cfg.KodeBerkasLabPK)
 	}
+	if cfg.LogFormat != "json" {
+		t.Errorf("Expected default LogFormat 'json', got '%s'", cfg.LogFormat)
+	}
+	if cfg.LogLevel != "info" {
+		t.Errorf("Expected default LogLevel 'info', got '%s'", cfg.LogLevel)
+	}
+	if cfg.LogFilePath != "logs/app.log" {
+		t.Errorf("Expected default LogFilePath 'logs/app.log', got '%s'", cfg.LogFilePath)
+	}
 }

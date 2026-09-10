@@ -118,7 +118,8 @@ func (c *RouteConfig) Setup() {
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {
 	var h http.Handler = c.Mux
-	h = middleware.CORSMiddleware(corsOrigin)(h)
 	h = middleware.LoggingMiddleware(h)
+	h = middleware.RequestIDMiddleware(h)
+	h = middleware.CORSMiddleware(corsOrigin)(h)
 	return h
 }

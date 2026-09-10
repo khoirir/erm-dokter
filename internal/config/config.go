@@ -30,6 +30,9 @@ type Config struct {
 	KodeBerkasLabPK      []string
 	KodeBerkasLabPA      []string
 	KodeBerkasLabMB      []string
+	LogFormat            string
+	LogLevel             string
+	LogFilePath          string
 }
 
 func Load() *Config {
@@ -75,6 +78,9 @@ func Load() *Config {
 		KodeBerkasLabPK:      parseKodeSlice("KODE_BERKAS_LAB_PK"),
 		KodeBerkasLabPA:      parseKodeSlice("KODE_BERKAS_LAB_PA"),
 		KodeBerkasLabMB:      parseKodeSlice("KODE_BERKAS_LAB_MB"),
+		LogFormat:            getEnvOrDefault("LOG_FORMAT", "json"),
+		LogLevel:             getEnvOrDefault("LOG_LEVEL", "info"),
+		LogFilePath:          getEnvOrDefault("LOG_FILE_PATH", "logs/app.log"),
 	}
 	return cfg
 }

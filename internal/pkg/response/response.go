@@ -15,6 +15,10 @@ type Response struct {
 
 func JSON(w http.ResponseWriter, code int, success bool, message string, data any, meta any, err any) {
 	w.Header().Set("Content-Type", "application/json")
+	if message != "" {
+		w.Header().Set("X-Log-Message", message)
+	}
+
 	w.WriteHeader(code)
 
 	resp := Response{

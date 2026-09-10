@@ -67,13 +67,13 @@ func (h *Handler) DaftarPasienRawatInap(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	kodeDokter, isService, err := middleware.GetKodeDokterOrEmpty(r.Context())
+	kodeDokter, err := middleware.GetKodeDokter(r.Context(), true)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return
 	}
 
-	if isService && filter.ScopeDPJP == "" {
+	if middleware.IsService(r.Context()) && filter.ScopeDPJP == "" {
 		filter.ScopeDPJP = ScopeDPJPSemua
 	}
 

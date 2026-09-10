@@ -95,12 +95,12 @@ func TestAuthMiddleware_APIKey(t *testing.T) {
 	authMw := middleware.AuthMiddleware(testSecret, serviceKey)
 
 	dummyHandler := func(w http.ResponseWriter, r *http.Request) {
-		kodeDokter, isService, err := middleware.GetKodeDokterOrEmpty(r.Context())
+		kodeDokter, err := middleware.GetKodeDokter(r.Context(), true)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		if isService {
+		if middleware.IsService(r.Context()) {
 			w.Write([]byte("SERVICE_OK"))
 			return
 		}
@@ -164,17 +164,14 @@ func TestAuthMiddleware_APIKey(t *testing.T) {
 	})
 }
 
-func TestGetKodeDokterOrEmpty(t *testing.T) {
-	t.Run("Service Context", func(t *testing.T) {
+func TestGetKodeDokter(t *testing.T) {
+	t.Run("Service Context with allowService=true", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
 			Role: middleware.RoleService,
 		})
-		kode, isService, err := middleware.GetKodeDokterOrEmpty(ctx)
+		kode, err := middleware.GetKodeDokter(ctx, true)
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
-		}
-		if !isService {
-			t.Errorf("Expected isService true, got false")
 		}
 		if kode != "" {
 			t.Errorf("Expected empty kode, got %s", kode)
@@ -184,17 +181,24 @@ func TestGetKodeDokterOrEmpty(t *testing.T) {
 		}
 	})
 
+	t.Run("Service Context with default allowService=false (Rejected)", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
+			Role: middleware.RoleService,
+		})
+		_, err := middleware.GetKodeDokter(ctx)
+		if err == nil {
+			t.Errorf("Expected error when service calls doctor-only endpoint, got nil")
+		}
+	})
+
 	t.Run("Dokter Context Valid", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
 			Role:       middleware.RoleDokter,
 			KodeDokter: "DR001",
 		})
-		kode, isService, err := middleware.GetKodeDokterOrEmpty(ctx)
+		kode, err := middleware.GetKodeDokter(ctx)
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
-		}
-		if isService {
-			t.Errorf("Expected isService false, got true")
 		}
 		if kode != "DR001" {
 			t.Errorf("Expected DR001, got %s", kode)
@@ -209,33 +213,18 @@ func TestGetKodeDokterOrEmpty(t *testing.T) {
 			Role:       middleware.RoleDokter,
 			KodeDokter: "   ",
 		})
-		_, _, err := middleware.GetKodeDokterOrEmpty(ctx)
+		_, err := middleware.GetKodeDokter(ctx)
 		if err == nil {
 			t.Errorf("Expected error for empty doctor code, got nil")
 		}
 	})
 
 	t.Run("Nil Claims Context", func(t *testing.T) {
-		_, _, err := middleware.GetKodeDokterOrEmpty(context.Background())
+		_, err := middleware.GetKodeDokter(context.Background())
 		if err == nil {
 			t.Errorf("Expected error for nil claims, got nil")
 		}
 	})
-}
-
-func TestGetKodeDokter_NoClaims(t *testing.T) {
-	_, err := middleware.GetKodeDokter(context.Background())
-	if err == nil {
-		t.Error("Expected error when context has no claims, got nil")
-	}
-
-	ctxWithEmptyDoc := context.WithValue(context.Background(), middleware.UserClaimKey, &token.Claims{
-		KodeDokter: "   ",
-	})
-	_, errEmpty := middleware.GetKodeDokter(ctxWithEmptyDoc)
-	if errEmpty == nil {
-		t.Error("Expected error when KodeDokter is empty, got nil")
-	}
 }
 
 func TestCORSMiddleware(t *testing.T) {

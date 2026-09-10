@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"erm-dokter/internal/auth"
@@ -15,8 +16,7 @@ import (
 )
 
 type mockAuthService struct {
-	loginFn  func(ctx context.Context, req auth.LoginRequest) (*auth.LoginResponse, error)
-	logoutFn func(ctx context.Context, kodeDokter string)
+	loginFn func(ctx context.Context, req auth.LoginRequest) (*auth.LoginResponse, error)
 }
 
 func (m *mockAuthService) Login(ctx context.Context, req auth.LoginRequest) (*auth.LoginResponse, error) {
@@ -24,12 +24,6 @@ func (m *mockAuthService) Login(ctx context.Context, req auth.LoginRequest) (*au
 		return m.loginFn(ctx, req)
 	}
 	return nil, nil
-}
-
-func (m *mockAuthService) Logout(ctx context.Context, kodeDokter string) {
-	if m.logoutFn != nil {
-		m.logoutFn(ctx, kodeDokter)
-	}
 }
 
 func TestAuthHandler_Login_Success(t *testing.T) {
@@ -89,6 +83,45 @@ func TestAuthHandler_Login_ValidationAndWrongPassword(t *testing.T) {
 	mux := http.NewServeMux()
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, noOpMw, noOpMw, noOpMw)
+
+	t.Run("Invalid JSON Payload", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader([]byte("{invalid-json")))
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("Expected status 400 for invalid json, got %d", rr.Code)
+		}
+
+		var resp struct {
+			Success bool   `json:"success"`
+			Message string `json:"message"`
+		}
+		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
+		if resp.Message != "Data login tidak valid" {
+			t.Errorf("Expected message 'Data login tidak valid', got '%s'", resp.Message)
+		}
+	})
+
+	t.Run("Invalid JSON Payload with Password Masking", func(t *testing.T) {
+		rawBody := `{"username":"DR01","password":"supersecretpassword",}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader([]byte(rawBody)))
+		rr := httptest.NewRecorder()
+		rr.Header().Set("X-Logging-Middleware", "true")
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("Expected status 400 for invalid json, got %d", rr.Code)
+		}
+
+		errDetail := rr.Header().Get("X-Error-Detail")
+		if strings.Contains(errDetail, "supersecretpassword") {
+			t.Errorf("Password was NOT masked in error detail! Got: %s", errDetail)
+		}
+		if !strings.Contains(errDetail, `"password":"***"`) {
+			t.Errorf("Expected masked password in error detail, got: %s", errDetail)
+		}
+	})
 
 	t.Run("Validation Error", func(t *testing.T) {
 		body, _ := json.Marshal(auth.LoginRequest{Username: "", Password: ""})

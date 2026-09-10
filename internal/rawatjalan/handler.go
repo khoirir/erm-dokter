@@ -63,7 +63,7 @@ func (h *Handler) DaftarAntreanDokter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kodeDokter, _, err := middleware.GetKodeDokterOrEmpty(r.Context())
+	kodeDokter, err := middleware.GetKodeDokter(r.Context(), true)
 	if err != nil {
 		apperror.HandleError(w, err)
 		return

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"erm-dokter/internal/pkg/logger"
@@ -11,7 +12,6 @@ import (
 
 type Service interface {
 	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
-	Logout(ctx context.Context, kodeDokter string)
 }
 
 type service struct {
@@ -31,13 +31,15 @@ func NewService(repo Repository, jwtSecret string, log *logger.Logger) Service {
 func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	user, err := s.repo.VerifikasiLogin(ctx, req.Username, req.Password)
 	if err != nil {
-		s.log.Error("Gagal memverifikasi login: %v", err)
+		s.log.Error("Gagal login: %v", err)
 		return nil, err
 	}
 
 	if user == nil {
-		s.log.Warn("Login gagal untuk username: %s", req.Username)
-		return nil, apperror.NewUnauthorizedError("Username atau password salah")
+		return nil, apperror.NewUnauthorizedError(
+			"Username atau password salah",
+			fmt.Sprintf("Kredensial login tidak cocok untuk username '%s'", req.Username),
+		)
 	}
 
 	tkn, err := token.GenerateToken(user.IDUser, user.NamaUser, s.jwtSecret, 24*time.Hour)
@@ -46,19 +48,10 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 		return nil, err
 	}
 
-	s.log.Info("Login berhasil untuk dokter: %s", user.IDUser)
 	return &LoginResponse{
 		Token:      tkn,
 		KodeDokter: user.IDUser,
 		NamaDokter: user.NamaUser,
 	}, nil
-}
-
-func (s *service) Logout(ctx context.Context, kodeDokter string) {
-	if kodeDokter != "" {
-		s.log.Info("Dokter %s berhasil logout", kodeDokter)
-	} else {
-		s.log.Info("Pengguna berhasil logout")
-	}
 }
 

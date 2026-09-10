@@ -84,6 +84,14 @@ func TestLogin_WrongCredentials(t *testing.T) {
 	if !errors.As(err, &unauthorizedErr) {
 		t.Fatalf("expected *apperror.UnauthorizedError, got %T", err)
 	}
+
+	if unauthorizedErr.Message != "Username atau password salah" {
+		t.Errorf("expected client message 'Username atau password salah', got '%s'", unauthorizedErr.Message)
+	}
+	expectedLogDetail := "Kredensial login tidak cocok untuk username 'dokter1'"
+	if unauthorizedErr.LogDetail != expectedLogDetail {
+		t.Errorf("expected log detail '%s', got '%s'", expectedLogDetail, unauthorizedErr.LogDetail)
+	}
 }
 
 func TestLogin_Success(t *testing.T) {
@@ -131,12 +139,5 @@ func TestLogin_DatabaseError(t *testing.T) {
 	if errors.As(err, &unauthorizedErr) {
 		t.Error("database error should NOT be an UnauthorizedError")
 	}
-}
-
-func TestLogout(t *testing.T) {
-	log := logger.New()
-	uc := auth.NewService(&mockAuthRepository{}, "test-secret", log)
-	uc.Logout(context.Background(), "DK001")
-	uc.Logout(context.Background(), "")
 }
 

@@ -1,11 +1,10 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pkg/response"
+	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
 
@@ -31,8 +30,7 @@ func (h *Handler) RegisterRoutes(
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+	if !shared.DecodeJSON(w, r, &req, "Data login tidak valid") {
 		return
 	}
 
@@ -41,6 +39,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		apperror.HandleError(w, errs)
 		return
 	}
+
+	w.Header().Set("X-User-ID", req.Username)
 
 	resp, err := h.authService.Login(r.Context(), req)
 	if err != nil {
@@ -52,8 +52,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	kodeDokter, _ := middleware.GetKodeDokter(r.Context())
-	h.authService.Logout(r.Context(), kodeDokter)
 	response.Success(w, "Logout berhasil", nil)
 }
 

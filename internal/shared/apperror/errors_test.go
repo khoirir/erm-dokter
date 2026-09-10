@@ -1,8 +1,10 @@
 package apperror_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -88,5 +90,44 @@ func TestAppErrors(t *testing.T) {
 				t.Errorf("Expected message '%s', got '%s'", tc.checkMsg, resp.Message)
 			}
 		})
+	}
+}
+
+func TestHandleError_WithContextMetadata(t *testing.T) {
+	var buf bytes.Buffer
+	testLogger := logger.NewWithOptions(&buf, "json", slog.LevelDebug, "erm-dokter")
+	apperror.SetLogger(testLogger)
+
+	rr := httptest.NewRecorder()
+	rr.Header().Set("X-Request-ID", "test-req-12345678")
+	rr.Header().Set("X-User-ID", "DRHANDI")
+	rr.Header().Set("X-Request-Method", "GET")
+	rr.Header().Set("X-Request-Path", "/api/v1/penilaian-medis/ralan/test")
+
+	apperror.HandleError(rr, apperror.NewNotFoundError("Data penilaian awal medis rawat jalan tidak ditemukan"))
+
+	var logEntry map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &logEntry); err != nil {
+		t.Fatalf("Failed to parse log JSON: %v, raw: %s", err, buf.String())
+	}
+
+	if logEntry["request_id"] != "test-req-12345678" {
+		t.Errorf("Expected request_id 'test-req-12345678', got '%v'", logEntry["request_id"])
+	}
+	if logEntry["user"] != "DRHANDI" {
+		t.Errorf("Expected user 'DRHANDI', got '%v'", logEntry["user"])
+	}
+	if logEntry["method"] != "GET" {
+		t.Errorf("Expected method 'GET', got '%v'", logEntry["method"])
+	}
+	if logEntry["path"] != "/api/v1/penilaian-medis/ralan/test" {
+		t.Errorf("Expected path '/api/v1/penilaian-medis/ralan/test', got '%v'", logEntry["path"])
+	}
+
+	if rr.Header().Get("X-User-ID") != "" {
+		t.Errorf("Expected X-User-ID to be cleaned from response headers")
+	}
+	if rr.Header().Get("X-Request-Method") != "" {
+		t.Errorf("Expected X-Request-Method to be cleaned from response headers")
 	}
 }
