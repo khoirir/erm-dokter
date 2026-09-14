@@ -3,21 +3,28 @@ info:
     title: ERM Dokter API
     version: 1.0.0
     description: |
-        API Elektronik Rekam Medis (ERM) Dokter untuk Rumah Sakit & Klinik berbasis database Khanza.
+        Dokumentasi API Elektronik Rekam Medis (ERM) Dokter untuk Rumah Sakit dan Fasilitas Pelayanan Kesehatan.
 
         ### Fitur Utama:
-        - **Authentication**: JWT Bearer Token dengan enkripsi password AES.
-        - **Rawat Jalan**: Antrean pasien dokter, pencarian & filter, detail kunjungan pasien.
-        - **Pemeriksaan Medis (SOAP & TTV)**: Riwayat pemeriksaan, pencatatan SOAP (Subjective, Objective, Assessment, Plan) baru, update pemeriksaan, dan penghapusan catatan dengan proteksi kepemilikan dokter & batas waktu edit rekam medis (48 jam).
-        - **Resep Obat**: Riwayat peresepan obat pasien per kunjungan dan riwayat peresepan seluruh kunjungan berdasarkan No. RM (mendukung filter Ralan, Ranap, Semua, dan rentang tanggal).
-        - **Security & Privacy**: Enkripsi identifier URL (`id_kunjungan`, `id_pasien`, `id_pemeriksaan`, `id_obat`) menggunakan AES-GCM URL-safe token untuk mencegah ID enumeration / scraping.
+        - **Autentikasi & Sesi**: Otentikasi dokter berbasis token JWT untuk pengamanan akses layanan klinis.
+        - **Pelayanan Rawat Jalan**: Pemantauan antrean pasien, status pemeriksaan poliklinik, dan detail data kunjungan rawat jalan.
+        - **Pelayanan Rawat Inap**: Manajemen dan pemantauan daftar pasien kamar inap beserta status perawatan aktif.
+        - **Pemeriksaan Klinis (SOAP & TTV)**: Pencatatan rekam medis harian (Subjective, Objective, Assessment, Plan), pemantauan tanda-tanda vital, dan riwayat pemeriksaan fisik pasien.
+        - **Penilaian Awal Medis**: Formulir asesmen awal medis lengkap untuk unit Rawat Jalan, Instalasi Gawat Darurat (IGD), dan Rawat Inap (termasuk spesialisasi kebidanan dan kandungan).
+        - **Peresepan Obat**: Pengelolaan resep obat dokter (non-racikan dan racikan), katalog master obat, ketersediaan stok depo farmasi, aturan pakai, dan metode peracikan.
+        - **Layanan Penunjang Medis**: Permintaan order dan riwayat hasil pengujian laboratorium (Patologi Klinik, Patologi Anatomi, Mikrobiologi) serta hasil pembacaan ekspertise dan dokumen radiologi.
+        - **Rujukan Internal**: Konsultasi dan delegasi perawatan pasien antar-poliklinik maupun antar-dokter spesialis di lingkungan rumah sakit.
+        - **Resume Medis Pasien**: Penyusunan resume medis pasien rawat jalan dan ringkasan kepulangan pasien rawat inap (discharge summary).
+        - **Berkas Digital Rekam Medis**: Integrasi dan akses berkas dokumen pendukung rekam medis pasien.
+        - **Master Data**: Referensi penjamin/asuransi, poliklinik rawat jalan, depo farmasi, bangsal, dan kelas perawatan.
+        - **Keamanan Data**: Penggunaan identifier publik yang aman dan terproteksi untuk perlindungan privasi data pasien dan rekam medis.
     contact:
         name: Tim Pengembang ERM Dokter
 servers:
-    - url: http://192.168.30.153:8082
-      description: Development Server (LAN / 192.168.30.153)
     - url: http://localhost:8082
-      description: Development Server (Localhost)
+      description: Local Development Server
+    - url: /
+      description: Current Host Server
 security:
     - BearerAuth: []
 tags:
@@ -26,33 +33,35 @@ tags:
     - name: Auth
       description: Autentikasi Dokter & Manajemen Sesi
     - name: Master
-      description: Master Data Database (Penjamin, Depo Farmasi, Poliklinik)
+      description: Master Data Referensi (Penjamin, Depo Farmasi, Poliklinik, Bangsal, Kelas)
     - name: Obat
-      description: Katalog Obat, Ketersediaan Stok per Depo & Master Klasifikasi Obat
+      description: Katalog Obat & Ketersediaan Stok Depo Farmasi
     - name: Rawat Jalan
       description: Antrean Pasien & Detail Kunjungan Rawat Jalan
     - name: Pemeriksaan
-      description: Rekam Medis Pasien (SOAP & Tanda-Tanda Vital)
+      description: Rekam Medis Klinis Pasien (SOAP & Tanda-Tanda Vital)
     - name: Resep
-      description: Riwayat Peresepan Obat Pasien (Non-Racikan & Racikan)
+      description: Pelayanan Resep Obat Pasien (Non-Racikan & Racikan)
     - name: Rujukan Internal
-      description: Konsul & Rujukan Pasien Antar Poliklinik / Dokter Internal RS
+      description: Konsultasi & Rujukan Antar Poliklinik / Dokter Internal RS
     - name: Penilaian Medis
-      description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan / Ralan, Ranap, IGD)
+      description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan, IGD, Rawat Inap)
     - name: Tindakan
-      description: Master Data & Katalog Tindakan Medis / Laboratorium
+      description: Katalog Tindakan Medis & Tarif Pengujian Penunjang
     - name: Laboratorium
-      description: Hasil & Permintaan Pemeriksaan Laboratorium Pasien (PK, PA, MB)
+      description: Permintaan Order & Hasil Pengujian Laboratorium Pasien (PK, PA, MB)
     - name: Radiologi
-      description: Hasil Ekspertise & Link Gambar PACS Radiologi Pasien
+      description: Permintaan Order & Hasil Ekspertise Radiologi Pasien
     - name: Berkas Digital
-      description: Berkas Digital Universal Perawatan Pasien
-    - name: Resume
+      description: Berkas Dokumen Digital Perawatan Pasien
+    - name: Resume Rawat Jalan
       description: Resume Medis Pasien Rawat Jalan (Ralan)
+    - name: Resume Rawat Inap
+      description: Resume Medis Pasien Rawat Inap (Ranap / Discharge Summary)
     - name: Rawat Inap
-      description: Daftar Pasien, Referensi & Status Kamar Pasien Rawat Inap
+      description: Daftar Pasien & Informasi Kamar Rawat Inap
     - name: Pasien
-      description: Data & Riwayat Kunjungan Pasien (Cross Ralan & Ranap)
+      description: Riwayat Kunjungan & Profil Pasien
 components:
     securitySchemes:
         BearerAuth:
@@ -69,34 +78,27 @@ components:
         BaseResponse:
             type: object
             properties:
-                code:
-                    type: integer
-                    example: 200
-                status:
-                    type: string
-                    example: OK
+                success:
+                    type: boolean
+                    example: true
                 message:
                     type: string
                     example: Berhasil memproses data
         ErrorResponse:
             type: object
             properties:
-                code:
-                    type: integer
-                    example: 400
-                status:
-                    type: string
-                    example: Bad Request
+                success:
+                    type: boolean
+                    example: false
                 message:
                     type: string
                     example: Terjadi kesalahan validasi atau bisnis
-                errors:
+                error:
                     type: object
                     additionalProperties:
                         type: string
                     example:
-                        keluhan: "Keluhan wajib diisi (Subjective)"
-                        tensi: "Nilai sistolik harus lebih besar dari diastolik (120/80)"
+                        field: "Keterangan pesan kesalahan validasi"
         PaginationMeta:
             type: object
             properties:

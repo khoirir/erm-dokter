@@ -13,30 +13,97 @@ paths:
                             $ref: "#/components/schemas/LoginRequest"
             responses:
                 "200":
-                    description: Login Berhasil
+                    description: Login berhasil
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/LoginData"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Login berhasil
+                                    data:
+                                        $ref: "#/components/schemas/LoginData"
                 "400":
-                    description: Format request JSON tidak valid atau validasi input gagal
+                    description: Validasi input gagal atau payload JSON tidak valid
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            username:
+                                                type: string
+                                                example: Username wajib diisi
+                                            password:
+                                                type: string
+                                                example: Password wajib diisi
                 "401":
-                    description: Username atau password salah
+                    description: Kredensial login tidak valid (username atau password salah)
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Username atau password salah
                 "429":
                     description: Terlalu banyak percobaan login (Rate limit 10 req/menit)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terlalu banyak percobaan. Silakan coba lagi nanti.
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/auth/logout:
         post:
             tags: [Auth]
@@ -47,13 +114,53 @@ paths:
                 - BearerAuth: []
             responses:
                 "200":
-                    description: Logout Berhasil
+                    description: Logout berhasil
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Logout berhasil
                 "401":
-                    description: Token tidak ada atau sudah kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         LoginRequest:
@@ -65,13 +172,17 @@ components:
                 username:
                     type: string
                     description: Username / ID Dokter di Khanza
-                    example: DRHANDI
+                    example: DR001
                 password:
                     type: string
                     description: Password akun dokter
-                    example: "1"
+                    example: "123456"
         LoginData:
             type: object
+            required:
+                - token
+                - kode_dokter
+                - nama_dokter
             properties:
                 token:
                     type: string

@@ -4,6 +4,8 @@ paths:
             tags: [Radiologi]
             summary: Riwayat Hasil Radiologi per Kunjungan
             description: Mengambil seluruh riwayat hasil pemeriksaan radiologi dan link PACS DICOM pasien untuk 1 kunjungan tertentu.
+            security:
+                - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
@@ -36,6 +38,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat hasil radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil radiologi kunjungan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     description: Parameter tidak valid
                 "401":
@@ -45,6 +64,8 @@ paths:
             tags: [Radiologi]
             summary: Riwayat Hasil Radiologi Pasien (Lintas Kunjungan)
             description: Mengambil riwayat hasil pemeriksaan radiologi dan link PACS pasien di seluruh kunjungan berdasarkan No. Rekam Medis.
+            security:
+                - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
@@ -75,6 +96,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat hasil radiologi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil radiologi pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     description: Parameter tidak valid
                 "401":
@@ -84,6 +122,8 @@ paths:
             tags: [Radiologi]
             summary: Detail Hasil Pemeriksaan Radiologi
             description: Mengambil detail 1 pemeriksaan radiologi, hasil teks ekspertise, dan daftar link gambar PACS DICOM.
+            security:
+                - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
@@ -108,6 +148,19 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil detail hasil radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail hasil radiologi
+                                    data:
+                                        $ref: "#/components/schemas/HasilRadiologi"
                 "400":
                     description: Parameter atau token tidak valid
                 "401":
@@ -186,6 +239,21 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil daftar permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar permintaan radiologi
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/DetailPermintaanRadiologi"
                 "401":
                     description: Token JWT tidak valid atau kedaluwarsa
     /api/v1/radiologi/pasien/{id_pasien}/permintaan/{status_lanjut}:
@@ -227,6 +295,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat permintaan radiologi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan radiologi pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "401":
                     description: Token JWT tidak valid atau kedaluwarsa
     /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
@@ -360,6 +445,17 @@ paths:
             responses:
                 "200":
                     description: Berhasil membatalkan permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan radiologi
                 "400":
                     description: Permintaan sudah diproses petugas radiologi
                 "401":

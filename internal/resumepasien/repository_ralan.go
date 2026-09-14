@@ -47,8 +47,8 @@ func scanResumePasienRalan(scanner interface{ Scan(dest ...any) error }) (*Resum
 		&item.NamaDokter,
 		&item.KeluhanUtama,
 		&item.JalannyaPenyakit,
-		&item.PemeriksaanPenunjang,
-		&item.HasilLaborat,
+		&item.HasilPemeriksaanRadiologi,
+		&item.HasilPemeriksaanLaboratorium,
 		&item.DiagnosaUtama,
 		&item.KodeDiagnosaUtama,
 		&item.DiagnosaSekunder,
@@ -67,8 +67,8 @@ func scanResumePasienRalan(scanner interface{ Scan(dest ...any) error }) (*Resum
 		&item.KodeProsedurSekunder2,
 		&item.ProsedurSekunder3,
 		&item.KodeProsedurSekunder3,
-		&item.KondisiPulang,
-		&item.ObatPulang,
+		&item.KeadaanPulang,
+		&item.ObatAtauInstruksi,
 	)
 	if err != nil {
 		return nil, err
@@ -160,8 +160,8 @@ func (r *repository) SimpanResumePasienRalan(ctx context.Context, noRawat, kodeD
 		kodeDokter,
 		req.KeluhanUtama,
 		req.JalannyaPenyakit,
-		req.PemeriksaanPenunjang,
-		req.HasilLaborat,
+		req.HasilPemeriksaanRadiologi,
+		req.HasilPemeriksaanLaboratorium,
 		req.DiagnosaUtama,
 		req.KodeDiagnosaUtama,
 		req.DiagnosaSekunder,
@@ -180,8 +180,8 @@ func (r *repository) SimpanResumePasienRalan(ctx context.Context, noRawat, kodeD
 		req.KodeProsedurSekunder2,
 		req.ProsedurSekunder3,
 		req.KodeProsedurSekunder3,
-		string(req.KondisiPulang),
-		req.ObatPulang,
+		string(req.KeadaanPulang),
+		req.ObatAtauInstruksi,
 	)
 	if err != nil {
 		return nil, err
@@ -223,8 +223,8 @@ func (r *repository) UpdateResumePasienRalan(ctx context.Context, noRawat string
 	_, err := r.db.ExecContext(ctx, query,
 		req.KeluhanUtama,
 		req.JalannyaPenyakit,
-		req.PemeriksaanPenunjang,
-		req.HasilLaborat,
+		req.HasilPemeriksaanRadiologi,
+		req.HasilPemeriksaanLaboratorium,
 		req.DiagnosaUtama,
 		req.KodeDiagnosaUtama,
 		req.DiagnosaSekunder,
@@ -243,8 +243,8 @@ func (r *repository) UpdateResumePasienRalan(ctx context.Context, noRawat string
 		req.KodeProsedurSekunder2,
 		req.ProsedurSekunder3,
 		req.KodeProsedurSekunder3,
-		string(req.KondisiPulang),
-		req.ObatPulang,
+		string(req.KeadaanPulang),
+		req.ObatAtauInstruksi,
 		noRawat,
 	)
 	if err != nil {

@@ -158,7 +158,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus penilaian awal medis rawat jalan
                 "403":
                     description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
                 "404":
@@ -331,7 +338,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus penilaian awal medis IGD
                 "403":
                     description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
                 "404":
@@ -510,7 +524,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus penilaian awal medis rawat inap
                 "400":
                     description: Pasien sudah checkout dari kamar inap
                 "401":
@@ -699,7 +720,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus penilaian awal medis rawat jalan kandungan
                 "400":
                     description: ID kunjungan tidak valid
                 "401":
@@ -886,7 +914,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus penilaian awal medis rawat inap kandungan
                 "400":
                     description: ID kunjungan tidak valid atau pasien sudah checkout dari kamar inap
                 "401":

@@ -12,14 +12,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi status pemeriksaan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
     /api/v1/rawat-jalan/status-lanjut:
         get:
             tags: [Rawat Jalan]
@@ -33,14 +37,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi status lanjut
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
     /api/v1/rawat-jalan/status-bayar:
         get:
             tags: [Rawat Jalan]
@@ -54,14 +62,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi status bayar
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
     /api/v1/rawat-jalan/jenis-antrean:
         get:
             tags: [Rawat Jalan]
@@ -75,14 +87,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi jenis antrean
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
     /api/v1/rawat-jalan/antrean:
         get:
             tags: [Rawat Jalan]
@@ -167,20 +183,24 @@ paths:
                     default: 20
             responses:
                 "200":
-                    description: Berhasil mengambil daftar antrean
+                    description: Berhasil mengambil daftar antrean dokter
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/KunjunganRawatJalan"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar antrean dokter
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/KunjunganRawatJalan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     description: Parameter filter tidak valid
                 "401":
@@ -201,16 +221,20 @@ paths:
                     type: string
             responses:
                 "200":
-                    description: Detail kunjungan ditemukan
+                    description: Berhasil mengambil detail kunjungan pasien
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/KunjunganRawatJalan"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail kunjungan pasien
+                                    data:
+                                        $ref: "#/components/schemas/KunjunganRawatJalan"
 components:
     schemas:
         KunjunganRawatJalan:

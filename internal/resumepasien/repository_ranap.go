@@ -83,14 +83,14 @@ func scanResumePasienRanap(scanner interface{ Scan(dest ...any) error }) (*Resum
 		&item.KodeDokter,
 		&item.NamaDokter,
 		&item.DiagnosaAwal,
-		&item.Alasan,
+		&item.AlasanRawat,
 		&item.KeluhanUtama,
 		&item.PemeriksaanFisik,
 		&item.JalannyaPenyakit,
-		&item.PemeriksaanPenunjang,
-		&item.HasilLaborat,
-		&item.TindakanDanOperasi,
-		&item.ObatDiRS,
+		&item.HasilPemeriksaanRadiologi,
+		&item.HasilPemeriksaanLaboratorium,
+		&item.TindakanAtauOperasi,
+		&item.ObatSelamaPerawatan,
 		&item.DiagnosaUtama,
 		&item.KdDiagnosaUtama,
 		&item.DiagnosaSekunder,
@@ -111,15 +111,15 @@ func scanResumePasienRanap(scanner interface{ Scan(dest ...any) error }) (*Resum
 		&item.KdProsedurSekunder3,
 		&item.Alergi,
 		&item.Diet,
-		&item.LabBelum,
-		&item.Edukasi,
+		&item.HasilLaboratoriumPending,
+		&item.InstruksiAtauEdukasi,
 		&caraKeluar,
-		&item.KetKeluar,
+		&item.KeteranganKeluar,
 		&keadaan,
-		&item.KetKeadaan,
+		&item.KeteranganKeadaanPulang,
 		&dilanjutkan,
-		&item.KetDilanjutkan,
-		&item.Kontrol,
+		&item.KeteranganDilanjutkan,
+		&item.WaktuKontrol,
 		&item.ObatPulang,
 		&item.TanggalMasuk,
 		&item.JamMasuk,
@@ -131,7 +131,7 @@ func scanResumePasienRanap(scanner interface{ Scan(dest ...any) error }) (*Resum
 	}
 
 	item.CaraKeluar = CaraKeluar(caraKeluar)
-	item.Keadaan = KeadaanPulang(keadaan)
+	item.KeadaanPulang = KeadaanPulang(keadaan)
 	item.Dilanjutkan = Dilanjutkan(dilanjutkan)
 
 	if tglKeluar != "0000-00-00" {
@@ -220,27 +220,20 @@ func (r *repository) SimpanResumePasienRanap(ctx context.Context, noRawat, kodeD
 			?, ?
 		)
 	`
-	var kontrolValue any
-	if req.Kontrol != "" && req.Kontrol != "0000-00-00 00:00:00" {
-		kontrolValue = req.Kontrol
-	} else {
-		kontrolValue = nil
-	}
-
 	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		noRawat,
 		kodeDokter,
 		req.DiagnosaAwal,
-		req.Alasan,
+		req.AlasanRawat,
 		req.KeluhanUtama,
 		req.PemeriksaanFisik,
 		req.JalannyaPenyakit,
-		req.PemeriksaanPenunjang,
-		req.HasilLaborat,
-		req.TindakanDanOperasi,
-		req.ObatDiRS,
+		req.HasilPemeriksaanRadiologi,
+		req.HasilPemeriksaanLaboratorium,
+		req.TindakanAtauOperasi,
+		req.ObatSelamaPerawatan,
 		req.DiagnosaUtama,
 		req.KdDiagnosaUtama,
 		req.DiagnosaSekunder,
@@ -261,15 +254,15 @@ func (r *repository) SimpanResumePasienRanap(ctx context.Context, noRawat, kodeD
 		req.KdProsedurSekunder3,
 		req.Alergi,
 		req.Diet,
-		req.LabBelum,
-		req.Edukasi,
+		req.HasilLaboratoriumPending,
+		req.InstruksiAtauEdukasi,
 		string(req.CaraKeluar),
-		req.KetKeluar,
-		string(req.Keadaan),
-		req.KetKeadaan,
+		req.KeteranganKeluar,
+		string(req.KeadaanPulang),
+		req.KeteranganKeadaanPulang,
 		string(req.Dilanjutkan),
-		req.KetDilanjutkan,
-		kontrolValue,
+		req.KeteranganDilanjutkan,
+		req.WaktuKontrol,
 		req.ObatPulang,
 	)
 	if err != nil {
@@ -293,25 +286,18 @@ func (r *repository) UpdateResumePasienRanap(ctx context.Context, noRawat string
 			kontrol = ?, obat_pulang = ?
 		WHERE no_rawat = ?
 	`
-	var kontrolValue any
-	if req.Kontrol != "" && req.Kontrol != "0000-00-00 00:00:00" {
-		kontrolValue = req.Kontrol
-	} else {
-		kontrolValue = nil
-	}
-
 	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		req.DiagnosaAwal,
-		req.Alasan,
+		req.AlasanRawat,
 		req.KeluhanUtama,
 		req.PemeriksaanFisik,
 		req.JalannyaPenyakit,
-		req.PemeriksaanPenunjang,
-		req.HasilLaborat,
-		req.TindakanDanOperasi,
-		req.ObatDiRS,
+		req.HasilPemeriksaanRadiologi,
+		req.HasilPemeriksaanLaboratorium,
+		req.TindakanAtauOperasi,
+		req.ObatSelamaPerawatan,
 		req.DiagnosaUtama,
 		req.KdDiagnosaUtama,
 		req.DiagnosaSekunder,
@@ -332,15 +318,15 @@ func (r *repository) UpdateResumePasienRanap(ctx context.Context, noRawat string
 		req.KdProsedurSekunder3,
 		req.Alergi,
 		req.Diet,
-		req.LabBelum,
-		req.Edukasi,
+		req.HasilLaboratoriumPending,
+		req.InstruksiAtauEdukasi,
 		string(req.CaraKeluar),
-		req.KetKeluar,
-		string(req.Keadaan),
-		req.KetKeadaan,
+		req.KeteranganKeluar,
+		string(req.KeadaanPulang),
+		req.KeteranganKeadaanPulang,
 		string(req.Dilanjutkan),
-		req.KetDilanjutkan,
-		kontrolValue,
+		req.KeteranganDilanjutkan,
+		req.WaktuKontrol,
 		req.ObatPulang,
 		noRawat,
 	)

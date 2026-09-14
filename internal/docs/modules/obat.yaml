@@ -4,45 +4,48 @@ paths:
             tags: [Obat]
             summary: Daftar Katalog Obat & Stok Farmasi
             description: |
-                Mengambil daftar katalog obat dan ketersediaan stok di depo farmasi.
-                - Mendukung pencarian teks (`keyword` pada nama obat, kode obat, atau komposisi).
-                - Mendukung filter berdasarkan `kode_depo` / `depo`, `kode_jenis` / `jenis`, `kode_golongan` / `golongan`, `kode_kategori` / `kategori`.
-                - Mendukung pengurutan (`order_by`: `nama_obat`, `kode_obat`, `harga`, `stok`, `nama_depo`, `nama_jenis`, `nama_golongan`, `nama_kategori`) dan `sort_order` (`ASC`, `DESC`).
+                Mengambil daftar katalog obat dan ketersediaan stok di depo farmasi aktif.
+                - Mendukung pencarian teks (`keyword` pada nama obat, kode obat, atau komposisi, minimal 3 karakter).
+                - Mendukung filter berdasarkan `depo` (kode depo farmasi, cth: `DPRJ`, `DPRI`, `DPIGD`), `jenis`, `golongan`, dan `kategori`.
+                - Mendukung pengurutan (`order_by`: `nama_obat`, `stok`, `nama_depo`, `nama_jenis`, `nama_golongan`, `nama_kategori`) dan `sort_order` (`ASC`, `DESC`).
                 - Mendukung pagination (`page`, `limit`).
             security:
                 - BearerAuth: []
             parameters:
                 - name: depo
                   in: query
-                  description: Filter kode depo farmasi (contoh DPRJ, DPHD, DPIGD, GDF)
+                  description: Filter kode depo farmasi (contoh DPRJ, DPRI, DPIGD, DPOK, DPHD, GDF)
                   schema:
                     type: string
+                    example: "DPRJ"
                 - name: jenis
                   in: query
-                  description: Filter kode jenis obat
+                  description: Filter kode jenis obat (tabel `kodesatuan`)
                   schema:
                     type: string
                 - name: golongan
                   in: query
-                  description: Filter kode golongan obat
+                  description: Filter kode golongan obat (tabel `golongan_barang`)
                   schema:
                     type: string
                 - name: kategori
                   in: query
-                  description: Filter kode kategori obat
+                  description: Filter kode kategori obat (tabel `kategori_barang`)
                   schema:
                     type: string
                 - name: keyword
                   in: query
-                  description: Pencarian nama obat atau komposisi (minimal 3 karakter)
+                  description: Pencarian nama obat atau komposisi (minimal 3 karakter jika diisi)
                   schema:
                     type: string
                     minLength: 3
+                    example: "paracetamol"
                 - name: order_by
                   in: query
                   description: Kolom pengurutan data
                   schema:
                     type: string
+                    enum: [nama_obat, stok, nama_depo, nama_jenis, nama_golongan, nama_kategori]
                     default: "nama_obat"
                 - name: sort_order
                   in: query
@@ -53,11 +56,13 @@ paths:
                     default: "ASC"
                 - name: page
                   in: query
+                  description: Nomor halaman data
                   schema:
                     type: integer
                     default: 1
                 - name: limit
                   in: query
+                  description: Jumlah data per halaman (maksimal 100)
                   schema:
                     type: integer
                     default: 20
@@ -67,52 +72,189 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Obat"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar obat
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Obat"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Parameter filter pencarian atau pengurutan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            keyword:
+                                                type: string
+                                                example: Kata kunci pencarian minimal 3 karakter
+                                            order_by:
+                                                type: string
+                                                example: Kolom pengurutan tidak valid
+                                            sort_order:
+                                                type: string
+                                                example: "Arah pengurutan tidak valid (pilihan: ASC, DESC)"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/obat/{id_obat}:
         get:
             tags: [Obat]
             summary: Detail Obat & Rincian Stok per Depo
-            description: Mengambil informasi detail satu obat beserta breakdown ketersediaan stok di seluruh depo farmasi.
+            description: Mengambil informasi detail satu obat beserta rincian ketersediaan stok di seluruh depo farmasi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_obat
                   in: path
                   required: true
-                  description: Encrypted ID kode obat
+                  description: Token terenkripsi ID kode obat
                   schema:
                     type: string
-                  example: "2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI"
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
             responses:
                 "200":
                     description: Berhasil mengambil detail obat
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Obat"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail obat
+                                    data:
+                                        $ref: "#/components/schemas/Obat"
                 "400":
-                    description: ID obat tidak valid
+                    description: Format ID obat tidak valid atau gagal didekripsi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID obat tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
                     description: Data obat tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data obat tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/obat/jenis:
         get:
             tags: [Obat]
             summary: Daftar Jenis Obat
-            description: Mengambil daftar jenis obat.
+            description: Mengambil seluruh master jenis kemasan / sediaan obat aktif (tabel `kodesatuan`).
             security:
                 - BearerAuth: []
             responses:
@@ -121,19 +263,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/JenisObat"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar jenis obat
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/JenisObat"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/obat/golongan:
         get:
             tags: [Obat]
             summary: Daftar Golongan Obat
-            description: Mengambil daftar golongan obat.
+            description: Mengambil seluruh master golongan obat aktif (tabel `golongan_barang`).
             security:
                 - BearerAuth: []
             responses:
@@ -142,19 +324,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/GolonganObat"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar golongan obat
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/GolonganObat"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/obat/kategori:
         get:
             tags: [Obat]
             summary: Daftar Kategori Obat
-            description: Mengambil daftar kategori obat.
+            description: Mengambil seluruh master kategori obat aktif (tabel `kategori_barang`).
             security:
                 - BearerAuth: []
             responses:
@@ -163,111 +385,203 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/KategoriObat"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar kategori obat
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/KategoriObat"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         JenisObat:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
-                    example: J01
+                    description: Kode satuan / jenis sediaan obat
+                    example: "TAB"
                 nama:
                     type: string
-                    example: Tablet
+                    description: Nama satuan / jenis sediaan obat
+                    example: "Tablet"
         GolonganObat:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
-                    example: G01
+                    description: Kode golongan obat
+                    example: "G01"
                 nama:
                     type: string
-                    example: Obat Bebas
+                    description: Nama golongan obat
+                    example: "Obat Bebas"
         KategoriObat:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
-                    example: K01
+                    description: Kode kategori obat
+                    example: "K01"
                 nama:
                     type: string
-                    example: Antibiotik
+                    description: Nama kategori obat
+                    example: "Antibiotik"
         Obat:
             type: object
+            required:
+                - id
+                - kode_obat
+                - nama_obat
+                - harga
+                - satuan
+                - stok
+                - kapasitas
+                - kode_jenis
+                - nama_jenis
+                - kode_golongan
+                - nama_golongan
+                - kode_kategori
+                - nama_kategori
             properties:
                 id:
                     type: string
-                    description: Encrypted ID Kode Obat
-                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                    description: Token ID kode obat terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
                 kode_obat:
                     type: string
+                    description: Kode obat internal Khanza (tabel `databarang`)
                     example: "B00001"
                 nama_obat:
                     type: string
+                    description: Nama lengkap barang / obat
                     example: "PARACETAMOL 500MG TABLET"
                 komposisi:
                     type: string
+                    description: Komposisi / kandungan zat aktif obat
                     example: "Paracetamol 500 mg"
                 harga:
                     type: string
+                    description: Format rupiah harga obat
                     example: "Rp 1.500"
                 satuan:
                     type: string
+                    description: Satuan kemasan obat
                     example: "TAB"
                 stok:
                     type: number
                     format: double
+                    description: Jumlah stok tersedia (sesuai depo filter atau total keseluruhan)
                     example: 250.00
                 kapasitas:
                     type: number
                     format: double
+                    description: Kapasitas per kemasan
                     example: 1.00
                 kode_depo:
                     type: string
+                    description: Kode depo farmasi (hanya terisi jika parameter depo disertakan)
                     example: "DPRJ"
                 nama_depo:
                     type: string
+                    description: Nama depo farmasi (hanya terisi jika parameter depo disertakan)
                     example: "Depo Rawat Jalan"
                 kode_jenis:
                     type: string
-                    example: "J01"
+                    description: Kode jenis sediaan obat
+                    example: "TAB"
                 nama_jenis:
                     type: string
+                    description: Nama jenis sediaan obat
                     example: "Tablet"
                 kode_golongan:
                     type: string
+                    description: Kode golongan obat
                     example: "G01"
                 nama_golongan:
                     type: string
+                    description: Nama golongan obat
                     example: "Obat Bebas"
                 kode_kategori:
                     type: string
+                    description: Kode kategori obat
                     example: "K01"
                 nama_kategori:
                     type: string
+                    description: Nama kategori obat
                     example: "Analgetik Antipiretik"
                 stok_depo:
                     type: array
+                    description: Rincian ketersediaan stok di seluruh depo farmasi (hanya pada detail obat)
                     items:
                         $ref: "#/components/schemas/StokDepo"
         StokDepo:
             type: object
+            required:
+                - kode_depo
+                - nama_depo
+                - stok
             properties:
                 kode_depo:
                     type: string
-                    example: DPRJ
+                    description: Kode depo farmasi
+                    example: "DPRJ"
                 nama_depo:
                     type: string
-                    example: Depo Rawat Jalan
+                    description: Nama depo farmasi
+                    example: "Depo Rawat Jalan"
                 stok:
                     type: number
                     format: double
+                    description: Jumlah stok di depo tersebut
                     example: 120.00

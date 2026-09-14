@@ -15,12 +15,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil master berkas digital

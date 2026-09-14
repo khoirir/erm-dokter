@@ -53,12 +53,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil riwayat hasil laboratorium
@@ -122,12 +119,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil riwayat hasil laboratorium pasien
@@ -180,12 +174,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil detail hasil laboratorium
@@ -280,6 +271,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium PK
                                     data:
                                         type: array
                                         items:
@@ -325,6 +317,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat permintaan laboratorium PK pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium PK pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPK"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
     /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
         get:
             summary: Detail Permintaan Laboratorium PK
@@ -365,6 +374,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium PK
                                     data:
                                         $ref: "#/components/schemas/DetailPermintaanLabPK"
                 "404":
@@ -460,6 +470,17 @@ paths:
             responses:
                 "200":
                     description: Berhasil membatalkan permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium PK
                 "400":
                     description: Permintaan sudah diproses laboratorium
                 "403":
@@ -551,6 +572,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium PA
                                     data:
                                         type: array
                                         items:
@@ -596,6 +618,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat permintaan laboratorium PA pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium PA pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPA"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
     /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
         get:
             summary: Detail Permintaan Laboratorium PA
@@ -636,6 +675,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium PA
                                     data:
                                         $ref: "#/components/schemas/DetailPermintaanLabPA"
                 "404":
@@ -731,6 +771,17 @@ paths:
             responses:
                 "200":
                     description: Berhasil membatalkan permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium PA
                 "400":
                     description: Permintaan sudah diproses laboratorium
                 "403":
@@ -822,6 +873,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium MB
                                     data:
                                         type: array
                                         items:
@@ -867,6 +919,23 @@ paths:
             responses:
                 "200":
                     description: Berhasil mengambil riwayat permintaan laboratorium MB pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium MB pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabMB"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
     /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}:
         get:
             summary: Detail Permintaan Laboratorium MB
@@ -907,6 +976,7 @@ paths:
                                         example: true
                                     message:
                                         type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium MB
                                     data:
                                         $ref: "#/components/schemas/DetailPermintaanLabMB"
                 "404":
@@ -1002,6 +1072,17 @@ paths:
             responses:
                 "200":
                     description: Berhasil membatalkan permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium MB
                 "400":
                     description: Permintaan sudah diproses laboratorium
                 "403":

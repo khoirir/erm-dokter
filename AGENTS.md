@@ -35,9 +35,12 @@ internal/
 ├── resep/          # Resep obat dokter (non-racikan, racikan), master aturan & metode
 ├── rujukaninternal/# Rujukan internal antar-poli/dokter dalam satu kunjungan
 ├── penilaianmedis/ # Asesmen awal medis dokter per unit (ralan, igd, ranap)
+├── resumepasien/   # Resume medis pasien (Ralan & Ranap / discharge summary)
 ├── tindakan/       # Master tindakan medis & tarif laboratorium (PK, PA, MB)
 ├── laboratorium/   # Hasil lab pasien, order permintaan lab dokter (PK, PA, MB)
+├── radiologi/      # Hasil ekspertise & integrasi gambar PACS radiologi pasien
 ├── berkasdigital/  # Streamer reverse proxy berkas digital rekam medis universal
+├── pasien/         # Data profil & riwayat kunjungan pasien (cross ralan & ranap)
 ├── middleware/     # Auth JWT Middleware (Bearer), Timeout Middleware
 ├── routes/         # Centralized HTTP route multiplexer
 ├── di/             # Manual Dependency Injection (providers)

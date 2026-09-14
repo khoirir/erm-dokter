@@ -12,14 +12,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              type: array
-                                              items:
-                                                  $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi status pulang
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
 
     /api/v1/rawat-inap/pasien:
         get:
@@ -107,16 +111,20 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              type: array
-                                              items:
-                                                  $ref: "#/components/schemas/KunjunganRawatInap"
-                                          meta:
-                                              $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar pasien rawat inap
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/KunjunganRawatInap"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     $ref: "#/components/responses/BadRequestResponse"
                 "401":
@@ -137,16 +145,20 @@ paths:
                       type: string
             responses:
                 "200":
-                    description: Detail pasien rawat inap ditemukan
+                    description: Berhasil mengambil detail pasien rawat inap
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              $ref: "#/components/schemas/KunjunganRawatInap"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail pasien rawat inap
+                                    data:
+                                        $ref: "#/components/schemas/KunjunganRawatInap"
                 "400":
                     $ref: "#/components/responses/BadRequestResponse"
                 "401":

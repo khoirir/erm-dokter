@@ -43,9 +43,10 @@ type RouteConfig struct {
 	BerkasDigitalHandler   *berkasdigital.Handler
 	ResumePasienHandler    *resumepasien.Handler
 	PasienHandler          *pasien.Handler
-	AuthMiddleware         func(http.HandlerFunc) http.HandlerFunc
-	ServiceAuthMiddleware  func(http.HandlerFunc) http.HandlerFunc
-	TimeoutMiddleware      func(http.HandlerFunc) http.HandlerFunc
+	AuthMiddleware           func(http.HandlerFunc) http.HandlerFunc
+	ServiceAuthMiddleware    func(http.HandlerFunc) http.HandlerFunc
+	TimeoutMiddleware        func(http.HandlerFunc) http.HandlerFunc
+	LoginRateLimitMiddleware func(http.HandlerFunc) http.HandlerFunc
 }
 
 func NewRouteConfig(
@@ -70,7 +71,7 @@ func NewRouteConfig(
 	serviceAPIKey string,
 ) *RouteConfig {
 	return &RouteConfig{
-		Mux:                    http.NewServeMux(),
+		Mux:                      http.NewServeMux(),
 		HealthHandler:          healthHandler,
 		DocsHandler:            docsHandler,
 		AuthHandler:            authHandler,
@@ -91,11 +92,15 @@ func NewRouteConfig(
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
 		ServiceAuthMiddleware:  middleware.ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
+		LoginRateLimitMiddleware: middleware.LoginRateLimitMiddleware(10, 1*time.Minute, true),
 	}
 }
 
 func (c *RouteConfig) Setup() {
-	loginRateLimit := middleware.RateLimitMiddleware(10, 1*time.Minute)
+	loginRateLimit := c.LoginRateLimitMiddleware
+	if loginRateLimit == nil {
+		loginRateLimit = middleware.LoginRateLimitMiddleware(10, 1*time.Minute, true)
+	}
 
 	c.HealthHandler.RegisterRoutes(c.Mux)
 	c.DocsHandler.RegisterRoutes(c.Mux)

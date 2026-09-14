@@ -1,15 +1,37 @@
 package resumepasien
 
-type KondisiPulang string
+type KeadaanPulang string
 
 const (
-	KondisiPulangHidup     KondisiPulang = "Hidup"
-	KondisiPulangMeninggal KondisiPulang = "Meninggal"
+	KeadaanPulangHidup KeadaanPulang = "Hidup"
+	KeadaanPulangMembaik       KeadaanPulang = "Membaik"
+	KeadaanPulangSembuh        KeadaanPulang = "Sembuh"
+	KeadaanPulangRujuk         KeadaanPulang = "Rujuk"
+	KeadaanPulangKeadaanKhusus KeadaanPulang = "Keadaan Khusus"
+	KeadaanPulangMeninggal KeadaanPulang = "Meninggal"
 )
 
-func (k KondisiPulang) IsValid() bool {
+func (k KeadaanPulang) IsValid() bool {
 	switch k {
-	case KondisiPulangHidup, KondisiPulangMeninggal:
+	case KeadaanPulangHidup, KeadaanPulangMembaik, KeadaanPulangSembuh, KeadaanPulangRujuk, KeadaanPulangKeadaanKhusus, KeadaanPulangMeninggal:
+		return true
+	default:
+		return false
+	}
+}
+
+func (k KeadaanPulang) IsValidRalan() bool {
+	switch k {
+	case KeadaanPulangHidup, KeadaanPulangMeninggal:
+		return true
+	default:
+		return false
+	}
+}
+
+func (k KeadaanPulang) IsValidRanap() bool {
+	switch k {
+	case KeadaanPulangMembaik, KeadaanPulangSembuh, KeadaanPulangRujuk, KeadaanPulangKeadaanKhusus, KeadaanPulangMeninggal:
 		return true
 	default:
 		return false
@@ -28,25 +50,6 @@ const (
 func (c CaraKeluar) IsValid() bool {
 	switch c {
 	case CaraKeluarAtasIzinDokter, CaraKeluarPindahRS, CaraKeluarPulangSendiri, CaraKeluarLainnya:
-		return true
-	default:
-		return false
-	}
-}
-
-type KeadaanPulang string
-
-const (
-	KeadaanPulangMembaik       KeadaanPulang = "Membaik"
-	KeadaanPulangSembuh        KeadaanPulang = "Sembuh"
-	KeadaanPulangRujuk         KeadaanPulang = "Rujuk"
-	KeadaanPulangKeadaanKhusus KeadaanPulang = "Keadaan Khusus"
-	KeadaanPulangMeninggal     KeadaanPulang = "Meninggal"
-)
-
-func (k KeadaanPulang) IsValid() bool {
-	switch k {
-	case KeadaanPulangMembaik, KeadaanPulangSembuh, KeadaanPulangRujuk, KeadaanPulangKeadaanKhusus, KeadaanPulangMeninggal:
 		return true
 	default:
 		return false
@@ -78,7 +81,7 @@ type OpsiReferensi struct {
 }
 
 type ReferensiResumeRalan struct {
-	KondisiPulang []OpsiReferensi `json:"kondisi_pulang"`
+	KeadaanPulang []OpsiReferensi `json:"keadaan_pulang"`
 }
 
 type ReferensiResumeRanap struct {
@@ -87,11 +90,25 @@ type ReferensiResumeRanap struct {
 	Dilanjutkan   []OpsiReferensi `json:"dilanjutkan"`
 }
 
-func DaftarOpsiKondisiPulang() []OpsiReferensi {
+func DaftarOpsiKeadaanPulangRalan() []OpsiReferensi {
 	return []OpsiReferensi{
-		{Value: string(KondisiPulangHidup), Label: "Hidup"},
-		{Value: string(KondisiPulangMeninggal), Label: "Meninggal"},
+		{Value: string(KeadaanPulangHidup), Label: "Hidup"},
+		{Value: string(KeadaanPulangMeninggal), Label: "Meninggal"},
 	}
+}
+
+func DaftarOpsiKeadaanPulangRanap() []OpsiReferensi {
+	return []OpsiReferensi{
+		{Value: string(KeadaanPulangMembaik), Label: "Membaik"},
+		{Value: string(KeadaanPulangSembuh), Label: "Sembuh"},
+		{Value: string(KeadaanPulangRujuk), Label: "Rujuk"},
+		{Value: string(KeadaanPulangKeadaanKhusus), Label: "Keadaan Khusus"},
+		{Value: string(KeadaanPulangMeninggal), Label: "Meninggal"},
+	}
+}
+
+func DaftarOpsiKeadaanPulang() []OpsiReferensi {
+	return DaftarOpsiKeadaanPulangRanap()
 }
 
 func DaftarOpsiCaraKeluar() []OpsiReferensi {
@@ -100,16 +117,6 @@ func DaftarOpsiCaraKeluar() []OpsiReferensi {
 		{Value: string(CaraKeluarPindahRS), Label: "Pindah RS"},
 		{Value: string(CaraKeluarPulangSendiri), Label: "Pulang Atas Permintaan Sendiri"},
 		{Value: string(CaraKeluarLainnya), Label: "Lainnya"},
-	}
-}
-
-func DaftarOpsiKeadaanPulang() []OpsiReferensi {
-	return []OpsiReferensi{
-		{Value: string(KeadaanPulangMembaik), Label: "Membaik"},
-		{Value: string(KeadaanPulangSembuh), Label: "Sembuh"},
-		{Value: string(KeadaanPulangRujuk), Label: "Rujuk"},
-		{Value: string(KeadaanPulangKeadaanKhusus), Label: "Keadaan Khusus"},
-		{Value: string(KeadaanPulangMeninggal), Label: "Meninggal"},
 	}
 }
 

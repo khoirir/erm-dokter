@@ -121,7 +121,7 @@ func (m *mockResumePasienService) ReferensiRalan(ctx context.Context) resumepasi
 		return m.referensiRalanFn(ctx)
 	}
 	return resumepasien.ReferensiResumeRalan{
-		KondisiPulang: resumepasien.DaftarOpsiKondisiPulang(),
+		KeadaanPulang: resumepasien.DaftarOpsiKeadaanPulangRalan(),
 	}
 }
 
@@ -158,7 +158,7 @@ func TestResumePasienHandler(t *testing.T) {
 					DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 						KeluhanUtama:  "Batuk",
 						DiagnosaUtama: "ISPA",
-						KondisiPulang: resumepasien.KondisiPulangHidup,
+						KeadaanPulang: resumepasien.KeadaanPulangHidup,
 					},
 				}, nil
 			},
@@ -168,26 +168,12 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/Ralan", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ralan/"+encNoRawat, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
-		}
-	})
-
-	t.Run("GET DetailResumePasien Status Tidak Valid (400)", func(t *testing.T) {
-		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
-		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
-
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/InvalidStatus", nil)
-		w := httptest.NewRecorder()
-		mux.ServeHTTP(w, req)
-
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("expected status 400 for invalid status, got %d", w.Code)
 		}
 	})
 
@@ -210,7 +196,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/pasien/"+encNoRM+"/Ralan", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ralan/pasien/"+encNoRM, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -234,17 +220,17 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		payload := resumepasien.SimpanResumePasienRequest{
+		payload := resumepasien.SimpanResumePasienRalanRequest{
 			NoRawat: rawNoRawat,
 			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam 3 hari",
 				DiagnosaUtama: "Febris suspect DHF",
-				KondisiPulang: resumepasien.KondisiPulangHidup,
+				KeadaanPulang: resumepasien.KeadaanPulangHidup,
 			},
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ralan", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/ralan/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -259,7 +245,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		payload := resumepasien.SimpanResumePasienRequest{
+		payload := resumepasien.SimpanResumePasienRalanRequest{
 			NoRawat: "DIFFERENT_NO_RAWAT",
 			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam",
@@ -268,7 +254,7 @@ func TestResumePasienHandler(t *testing.T) {
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ralan", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/ralan/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -293,16 +279,16 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		payload := resumepasien.UpdateResumePasienRequest{
+		payload := resumepasien.UpdateResumePasienRalanRequest{
 			DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 				KeluhanUtama:  "Demam membaik",
 				DiagnosaUtama: "DHF Grade 1",
-				KondisiPulang: resumepasien.KondisiPulangHidup,
+				KeadaanPulang: resumepasien.KeadaanPulangHidup,
 			},
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPut, "/api/v1/resume/"+encNoRawat+"/Ralan", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/resume/ralan/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -323,7 +309,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/resume/"+encNoRawat+"/Ralan", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/resume/ralan/"+encNoRawat, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -345,7 +331,7 @@ func TestResumePasienHandler(t *testing.T) {
 						KeluhanUtama:  "Nyeri dada",
 						DiagnosaUtama: "STEMI",
 						CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-						Keadaan:       resumepasien.KeadaanPulangMembaik,
+						KeadaanPulang: resumepasien.KeadaanPulangMembaik,
 						Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
 					},
 				}, nil
@@ -356,7 +342,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/"+encNoRawat+"/Ranap", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ranap/"+encNoRawat, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -383,7 +369,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/pasien/"+encNoRM+"/Ranap", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ranap/pasien/"+encNoRM, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -411,17 +397,18 @@ func TestResumePasienHandler(t *testing.T) {
 			NoRawat: rawNoRawat,
 			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
 				DiagnosaAwal:  "Chest Pain",
-				Alasan:        "Evaluasi nyeri dada",
+				AlasanRawat:   "Evaluasi nyeri dada",
 				KeluhanUtama:  "Nyeri dada kiri menjalar",
 				DiagnosaUtama: "STEMI Anterior",
 				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-				Keadaan:       resumepasien.KeadaanPulangMembaik,
+				KeadaanPulang: resumepasien.KeadaanPulangMembaik,
 				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+				WaktuKontrol:  "2026-09-12 09:00:00",
 			},
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/ranap/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -440,17 +427,18 @@ func TestResumePasienHandler(t *testing.T) {
 			NoRawat: "DIFFERENT_NO_RAWAT",
 			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
 				DiagnosaAwal:  "Chest Pain",
-				Alasan:        "Evaluasi nyeri dada",
+				AlasanRawat:   "Evaluasi nyeri dada",
 				KeluhanUtama:  "Nyeri dada",
 				DiagnosaUtama: "STEMI",
 				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-				Keadaan:       resumepasien.KeadaanPulangMembaik,
+				KeadaanPulang: resumepasien.KeadaanPulangMembaik,
 				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+				WaktuKontrol:  "2026-09-12 09:00:00",
 			},
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/resume/ranap/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -478,17 +466,18 @@ func TestResumePasienHandler(t *testing.T) {
 		payload := resumepasien.UpdateResumePasienRanapRequest{
 			DataResumePasienRanap: resumepasien.DataResumePasienRanap{
 				DiagnosaAwal:  "Chest Pain",
-				Alasan:        "Evaluasi nyeri dada",
+				AlasanRawat:   "Evaluasi nyeri dada",
 				KeluhanUtama:  "Nyeri dada berkurang",
 				DiagnosaUtama: "STEMI Anterior Resolving",
 				CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-				Keadaan:       resumepasien.KeadaanPulangSembuh,
+				KeadaanPulang: resumepasien.KeadaanPulangSembuh,
 				Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+				WaktuKontrol:  "2026-09-12 09:00:00",
 			},
 		}
 		bodyBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest(http.MethodPut, "/api/v1/resume/"+encNoRawat+"/Ranap", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/resume/ranap/"+encNoRawat, bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
@@ -509,7 +498,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/resume/"+encNoRawat+"/Ranap", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/resume/ranap/"+encNoRawat, nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -525,7 +514,7 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/Ralan", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ralan/referensi", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -539,26 +528,12 @@ func TestResumePasienHandler(t *testing.T) {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/Ranap", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/ranap/referensi", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
-		}
-	})
-
-	t.Run("GET Referensi Status Tidak Valid (400)", func(t *testing.T) {
-		handler := resumepasien.NewHandler(&mockResumePasienService{}, testEncKey)
-		mux := http.NewServeMux()
-		handler.RegisterRoutes(mux, dummyAuthMiddleware, dummyTimeoutMiddleware)
-
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/resume/referensi/InvalidStatus", nil)
-		w := httptest.NewRecorder()
-		mux.ServeHTTP(w, req)
-
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("expected status 400, got %d", w.Code)
 		}
 	})
 }

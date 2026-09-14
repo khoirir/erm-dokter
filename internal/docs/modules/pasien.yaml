@@ -39,20 +39,24 @@ paths:
                       default: 3
             responses:
                 "200":
-                    description: Riwayat kunjungan pasien berhasil diambil
+                    description: Berhasil mengambil riwayat kunjungan pasien
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                          data:
-                                              type: array
-                                              items:
-                                                  $ref: "#/components/schemas/RiwayatKunjungan"
-                                          meta:
-                                              $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat kunjungan pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/RiwayatKunjungan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     $ref: "#/components/responses/BadRequestResponse"
                 "401":

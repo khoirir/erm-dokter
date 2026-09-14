@@ -150,6 +150,6 @@ func (s *service) HapusResumePasienRalan(ctx context.Context, kodeDokterLogin, n
 
 func (s *service) ReferensiRalan(ctx context.Context) ReferensiResumeRalan {
 	return ReferensiResumeRalan{
-		KondisiPulang: DaftarOpsiKondisiPulang(),
+		KeadaanPulang: DaftarOpsiKeadaanPulangRalan(),
 	}
 }

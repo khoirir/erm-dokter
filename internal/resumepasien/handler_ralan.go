@@ -10,6 +10,11 @@ import (
 	"erm-dokter/internal/shared/apperror"
 )
 
+func (h *Handler) ReferensiRalan(w http.ResponseWriter, r *http.Request) {
+	ref := h.service.ReferensiRalan(r.Context())
+	response.Success(w, "Berhasil mengambil opsi referensi resume ralan", ref)
+}
+
 func (h *Handler) DetailResumePasienRalan(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := r.PathValue("id_kunjungan")
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)

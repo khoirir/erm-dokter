@@ -13,12 +13,18 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
-                                        example: Server is healthy
+                                        example: Service is up and running
+                                    data:
+                                        type: object
+                                        properties:
+                                            status:
+                                                type: string
+                                                example: healthy
+                                            service:
+                                                type: string
+                                                example: erm-dokter

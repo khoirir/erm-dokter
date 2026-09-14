@@ -32,7 +32,10 @@ type Config struct {
 	KodeBerkasLabMB      []string
 	LogFormat            string
 	LogLevel             string
-	LogFilePath          string
+	LogFilePath                 string
+	LoginRateLimitEnabled       bool
+	LoginRateLimitRate          int
+	LoginRateLimitWindowMinutes int
 }
 
 func Load() *Config {
@@ -43,6 +46,23 @@ func Load() *Config {
 	maxEditJam, _ := strconv.Atoi(getEnvOrDefault("MAX_EDIT_REKAM_MEDIS_JAM", "48"))
 	if maxEditJam <= 0 {
 		maxEditJam = 48
+	}
+
+	loginRateLimitEnabled := true
+	if envVal := os.Getenv("LOGIN_RATE_LIMIT_ENABLED"); envVal != "" {
+		if parsed, err := strconv.ParseBool(envVal); err == nil {
+			loginRateLimitEnabled = parsed
+		}
+	}
+
+	loginRateLimitRate, _ := strconv.Atoi(getEnvOrDefault("LOGIN_RATE_LIMIT_RATE", "10"))
+	if loginRateLimitRate <= 0 {
+		loginRateLimitRate = 10
+	}
+
+	loginRateLimitWindow, _ := strconv.Atoi(getEnvOrDefault("LOGIN_RATE_LIMIT_WINDOW_MINUTES", "1"))
+	if loginRateLimitWindow <= 0 {
+		loginRateLimitWindow = 1
 	}
 
 	parseKodeSlice := func(envKey string) []string {
@@ -80,7 +100,10 @@ func Load() *Config {
 		KodeBerkasLabMB:      parseKodeSlice("KODE_BERKAS_LAB_MB"),
 		LogFormat:            getEnvOrDefault("LOG_FORMAT", "json"),
 		LogLevel:             getEnvOrDefault("LOG_LEVEL", "info"),
-		LogFilePath:          getEnvOrDefault("LOG_FILE_PATH", "logs/app.log"),
+		LogFilePath:                 getEnvOrDefault("LOG_FILE_PATH", "logs/app.log"),
+		LoginRateLimitEnabled:       loginRateLimitEnabled,
+		LoginRateLimitRate:          loginRateLimitRate,
+		LoginRateLimitWindowMinutes: loginRateLimitWindow,
 	}
 	return cfg
 }

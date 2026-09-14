@@ -2,8 +2,10 @@ package di
 
 import (
 	"database/sql"
+	"time"
 
 	"erm-dokter/internal/config"
+	"erm-dokter/internal/middleware"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/routes"
 	"erm-dokter/internal/shared/apperror"
@@ -12,7 +14,7 @@ import (
 func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *routes.RouteConfig {
 	apperror.SetLogger(log)
 
-	return routes.NewRouteConfig(
+	rc := routes.NewRouteConfig(
 		provideHealth(),
 		provideDocs(),
 		provideAuth(db, cfg, log),
@@ -33,4 +35,12 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		cfg.JWTSecret,
 		cfg.ServiceAPIKey,
 	)
+
+	rc.LoginRateLimitMiddleware = middleware.LoginRateLimitMiddleware(
+		cfg.LoginRateLimitRate,
+		time.Duration(cfg.LoginRateLimitWindowMinutes)*time.Minute,
+		cfg.LoginRateLimitEnabled,
+	)
+
+	return rc
 }

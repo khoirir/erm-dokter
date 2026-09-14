@@ -23,14 +23,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiPoliDokter"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil opsi dokter dan poliklinik rujukan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiPoliDokter"
                 "401":
                     description: Token tidak ada atau kadaluarsa
     /api/v1/rujukan-internal/{id_kunjungan}:
@@ -53,14 +57,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/RujukanInternal"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar rujukan internal
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/RujukanInternal"
                 "400":
                     description: ID kunjungan tidak valid
                 "401":
@@ -96,12 +104,16 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/RujukanInternal"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan rujukan internal
+                                    data:
+                                        $ref: "#/components/schemas/RujukanInternal"
                 "400":
                     description: ID tujuan tidak valid, format JSON salah, atau duplikasi rujukan
                 "403":
@@ -139,7 +151,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan rujukan internal
                 "400":
                     description: ID kunjungan atau ID rujukan tidak valid
                 "403":

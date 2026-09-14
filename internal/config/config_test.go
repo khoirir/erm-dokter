@@ -43,4 +43,37 @@ func TestConfigLoad(t *testing.T) {
 	if cfg.LogFilePath != "logs/app.log" {
 		t.Errorf("Expected default LogFilePath 'logs/app.log', got '%s'", cfg.LogFilePath)
 	}
+	if !cfg.LoginRateLimitEnabled {
+		t.Errorf("Expected default LoginRateLimitEnabled true, got %v", cfg.LoginRateLimitEnabled)
+	}
+	if cfg.LoginRateLimitRate != 10 {
+		t.Errorf("Expected default LoginRateLimitRate 10, got %d", cfg.LoginRateLimitRate)
+	}
+	if cfg.LoginRateLimitWindowMinutes != 1 {
+		t.Errorf("Expected default LoginRateLimitWindowMinutes 1, got %d", cfg.LoginRateLimitWindowMinutes)
+	}
+}
+
+func TestConfigLoad_CustomRateLimit(t *testing.T) {
+	os.Setenv("LOGIN_RATE_LIMIT_ENABLED", "false")
+	os.Setenv("LOGIN_RATE_LIMIT_RATE", "5")
+	os.Setenv("LOGIN_RATE_LIMIT_WINDOW_MINUTES", "2")
+
+	defer func() {
+		os.Unsetenv("LOGIN_RATE_LIMIT_ENABLED")
+		os.Unsetenv("LOGIN_RATE_LIMIT_RATE")
+		os.Unsetenv("LOGIN_RATE_LIMIT_WINDOW_MINUTES")
+	}()
+
+	cfg := config.Load()
+
+	if cfg.LoginRateLimitEnabled {
+		t.Errorf("Expected LoginRateLimitEnabled false, got %v", cfg.LoginRateLimitEnabled)
+	}
+	if cfg.LoginRateLimitRate != 5 {
+		t.Errorf("Expected LoginRateLimitRate 5, got %d", cfg.LoginRateLimitRate)
+	}
+	if cfg.LoginRateLimitWindowMinutes != 2 {
+		t.Errorf("Expected LoginRateLimitWindowMinutes 2, got %d", cfg.LoginRateLimitWindowMinutes)
+	}
 }

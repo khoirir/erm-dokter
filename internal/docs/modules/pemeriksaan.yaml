@@ -12,14 +12,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/OpsiReferensi"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi tingkat kesadaran
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
     /api/v1/pemeriksaan/pasien/{id_pasien}/{status_lanjut}:
         get:
             tags: [Pemeriksaan]
@@ -62,16 +66,20 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Pemeriksaan"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat pemeriksaan pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
     /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}:
         get:
             tags: [Pemeriksaan]
@@ -110,20 +118,24 @@ paths:
                     default: 20
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat pemeriksaan kunjungan
+                    description: Berhasil mengambil daftar pemeriksaan
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Pemeriksaan"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar pemeriksaan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
         post:
             tags: [Pemeriksaan]
             summary: Simpan Catatan Pemeriksaan Baru
@@ -154,16 +166,20 @@ paths:
                             $ref: "#/components/schemas/SimpanPemeriksaanRequest"
             responses:
                 "201":
-                    description: Pemeriksaan berhasil disimpan
+                    description: Berhasil menyimpan data pemeriksaan
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Pemeriksaan"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan data pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
                 "400":
                     description: Validasi klinis gagal atau duplikasi waktu pemeriksaan
     /api/v1/pemeriksaan/{id_kunjungan}/{status_lanjut}/{id_pemeriksaan}:
@@ -194,16 +210,20 @@ paths:
                     type: string
             responses:
                 "200":
-                    description: Detail pemeriksaan ditemukan
+                    description: Berhasil mengambil detail pemeriksaan
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Pemeriksaan"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
                 "404":
                     description: Data pemeriksaan tidak ditemukan
         put:
@@ -247,12 +267,16 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Pemeriksaan"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui data pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
                 "400":
                     description: Validasi input gagal
                 "403":
@@ -293,7 +317,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus data pemeriksaan
                 "403":
                     description: Ditolak karena bukan dokter pembuat atau melebihi batas waktu 48 jam
                 "404":

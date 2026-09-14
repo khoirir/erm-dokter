@@ -64,4 +64,27 @@ func TestRouteConfig_SetupAndBuildHandler(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status 200 on /health, got %d", rr.Code)
 	}
+
+	// Test login route with custom LoginRateLimitMiddleware
+	rateLimitHit := false
+	routeCfg.LoginRateLimitMiddleware = func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			rateLimitHit = true
+			w.WriteHeader(http.StatusTooManyRequests)
+		}
+	}
+	routeCfg.Mux = http.NewServeMux()
+	routeCfg.Setup()
+	handlerWithRateLimit := routeCfg.BuildHandler("*")
+
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+	loginRR := httptest.NewRecorder()
+	handlerWithRateLimit.ServeHTTP(loginRR, loginReq)
+
+	if !rateLimitHit {
+		t.Errorf("Expected LoginRateLimitMiddleware to be executed on /api/v1/auth/login")
+	}
+	if loginRR.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status 429 on /api/v1/auth/login, got %d", loginRR.Code)
+	}
 }

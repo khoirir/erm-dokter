@@ -16,69 +16,57 @@ type InfoKamarInap struct {
 }
 
 type DataResumePasienRanap struct {
-	// Riwayat Masuk
-	DiagnosaAwal string `json:"diagnosa_awal"`
-	Alasan       string `json:"alasan"`
-
-	// Riwayat & Pemeriksaan Klinis Selama Rawat Inap
-	KeluhanUtama         string `json:"keluhan_utama"`
-	PemeriksaanFisik     string `json:"pemeriksaan_fisik"`
-	JalannyaPenyakit     string `json:"jalannya_penyakit"`
-	PemeriksaanPenunjang string `json:"pemeriksaan_penunjang"`
-	HasilLaborat         string `json:"hasil_laborat"`
-	TindakanDanOperasi   string `json:"tindakan_dan_operasi"`
-	ObatDiRS             string `json:"obat_di_rs"`
-
-	// Diagnosa Akhir & ICD 10
-	DiagnosaUtama       string `json:"diagnosa_utama"`
-	KdDiagnosaUtama     string `json:"kd_diagnosa_utama,omitempty"`
-	DiagnosaSekunder    string `json:"diagnosa_sekunder"`
-	KdDiagnosaSekunder  string `json:"kd_diagnosa_sekunder,omitempty"`
-	DiagnosaSekunder2   string `json:"diagnosa_sekunder2"`
-	KdDiagnosaSekunder2 string `json:"kd_diagnosa_sekunder2,omitempty"`
-	DiagnosaSekunder3   string `json:"diagnosa_sekunder3"`
-	KdDiagnosaSekunder3 string `json:"kd_diagnosa_sekunder3,omitempty"`
-	DiagnosaSekunder4   string `json:"diagnosa_sekunder4"`
-	KdDiagnosaSekunder4 string `json:"kd_diagnosa_sekunder4,omitempty"`
-
-	// Prosedur & ICD 9
-	ProsedurUtama       string `json:"prosedur_utama"`
-	KdProsedurUtama     string `json:"kd_prosedur_utama,omitempty"`
-	ProsedurSekunder    string `json:"prosedur_sekunder"`
-	KdProsedurSekunder  string `json:"kd_prosedur_sekunder,omitempty"`
-	ProsedurSekunder2   string `json:"prosedur_sekunder2"`
-	KdProsedurSekunder2 string `json:"kd_prosedur_sekunder2,omitempty"`
-	ProsedurSekunder3   string `json:"prosedur_sekunder3"`
-	KdProsedurSekunder3 string `json:"kd_prosedur_sekunder3,omitempty"`
-
-	// Kondisi Khusus & Edukasi
-	Alergi   string `json:"alergi"`
-	Diet     string `json:"diet"`
-	LabBelum string `json:"lab_belum"`
-	Edukasi  string `json:"edukasi"`
-
-	// Pemulangan Pasien
-	CaraKeluar     CaraKeluar    `json:"cara_keluar"`
-	KetKeluar      string        `json:"ket_keluar"`
-	Keadaan        KeadaanPulang `json:"keadaan"`
-	KetKeadaan     string        `json:"ket_keadaan"`
-	Dilanjutkan    Dilanjutkan   `json:"dilanjutkan"`
-	KetDilanjutkan string        `json:"ket_dilanjutkan"`
-	Kontrol        string        `json:"kontrol"`
-	ObatPulang     string        `json:"obat_pulang"`
+	DiagnosaAwal                 string        `json:"diagnosa_awal"`
+	AlasanRawat                  string        `json:"alasan_rawat"`
+	KeluhanUtama                 string        `json:"keluhan_utama"`
+	PemeriksaanFisik             string        `json:"pemeriksaan_fisik"`
+	JalannyaPenyakit             string        `json:"jalannya_penyakit"`
+	HasilPemeriksaanRadiologi    string        `json:"hasil_pemeriksaan_radiologi"`
+	HasilPemeriksaanLaboratorium string        `json:"hasil_pemeriksaan_laboratorium"`
+	TindakanAtauOperasi          string        `json:"tindakan_atau_operasi"`
+	ObatSelamaPerawatan          string        `json:"obat_selama_perawatan"`
+	DiagnosaUtama                string        `json:"diagnosa_utama"`
+	KdDiagnosaUtama              string        `json:"kd_diagnosa_utama,omitempty"`
+	DiagnosaSekunder             string        `json:"diagnosa_sekunder"`
+	KdDiagnosaSekunder           string        `json:"kd_diagnosa_sekunder,omitempty"`
+	DiagnosaSekunder2            string        `json:"diagnosa_sekunder2"`
+	KdDiagnosaSekunder2          string        `json:"kd_diagnosa_sekunder2,omitempty"`
+	DiagnosaSekunder3            string        `json:"diagnosa_sekunder3"`
+	KdDiagnosaSekunder3          string        `json:"kd_diagnosa_sekunder3,omitempty"`
+	DiagnosaSekunder4            string        `json:"diagnosa_sekunder4"`
+	KdDiagnosaSekunder4          string        `json:"kd_diagnosa_sekunder4,omitempty"`
+	ProsedurUtama                string        `json:"prosedur_utama"`
+	KdProsedurUtama              string        `json:"kd_prosedur_utama,omitempty"`
+	ProsedurSekunder             string        `json:"prosedur_sekunder"`
+	KdProsedurSekunder           string        `json:"kd_prosedur_sekunder,omitempty"`
+	ProsedurSekunder2            string        `json:"prosedur_sekunder2"`
+	KdProsedurSekunder2          string        `json:"kd_prosedur_sekunder2,omitempty"`
+	ProsedurSekunder3            string        `json:"prosedur_sekunder3"`
+	KdProsedurSekunder3          string        `json:"kd_prosedur_sekunder3,omitempty"`
+	Alergi                       string        `json:"alergi"`
+	Diet                         string        `json:"diet"`
+	HasilLaboratoriumPending     string        `json:"hasil_laboratorium_pending"`
+	InstruksiAtauEdukasi         string        `json:"instruksi_atau_edukasi"`
+	CaraKeluar                   CaraKeluar    `json:"cara_keluar"`
+	KeteranganKeluar             string        `json:"keterangan_keluar"`
+	KeadaanPulang                KeadaanPulang `json:"keadaan_pulang"`
+	KeteranganKeadaanPulang      string        `json:"keterangan_keadaan_pulang"`
+	Dilanjutkan                  Dilanjutkan   `json:"dilanjutkan"`
+	KeteranganDilanjutkan        string        `json:"keterangan_dilanjutkan"`
+	WaktuKontrol                 string        `json:"waktu_kontrol"`
+	ObatPulang                   string        `json:"obat_pulang"`
 }
 
 func (d *DataResumePasienRanap) Sanitize() {
 	d.DiagnosaAwal = strings.TrimSpace(d.DiagnosaAwal)
-	d.Alasan = strings.TrimSpace(d.Alasan)
+	d.AlasanRawat = strings.TrimSpace(d.AlasanRawat)
 	d.KeluhanUtama = strings.TrimSpace(d.KeluhanUtama)
 	d.PemeriksaanFisik = strings.TrimSpace(d.PemeriksaanFisik)
 	d.JalannyaPenyakit = strings.TrimSpace(d.JalannyaPenyakit)
-	d.PemeriksaanPenunjang = strings.TrimSpace(d.PemeriksaanPenunjang)
-	d.HasilLaborat = strings.TrimSpace(d.HasilLaborat)
-	d.TindakanDanOperasi = strings.TrimSpace(d.TindakanDanOperasi)
-	d.ObatDiRS = strings.TrimSpace(d.ObatDiRS)
-
+	d.HasilPemeriksaanRadiologi = strings.TrimSpace(d.HasilPemeriksaanRadiologi)
+	d.HasilPemeriksaanLaboratorium = strings.TrimSpace(d.HasilPemeriksaanLaboratorium)
+	d.TindakanAtauOperasi = strings.TrimSpace(d.TindakanAtauOperasi)
+	d.ObatSelamaPerawatan = strings.TrimSpace(d.ObatSelamaPerawatan)
 	d.DiagnosaUtama = strings.TrimSpace(d.DiagnosaUtama)
 	d.KdDiagnosaUtama = strings.TrimSpace(d.KdDiagnosaUtama)
 	d.DiagnosaSekunder = strings.TrimSpace(d.DiagnosaSekunder)
@@ -89,7 +77,6 @@ func (d *DataResumePasienRanap) Sanitize() {
 	d.KdDiagnosaSekunder3 = strings.TrimSpace(d.KdDiagnosaSekunder3)
 	d.DiagnosaSekunder4 = strings.TrimSpace(d.DiagnosaSekunder4)
 	d.KdDiagnosaSekunder4 = strings.TrimSpace(d.KdDiagnosaSekunder4)
-
 	d.ProsedurUtama = strings.TrimSpace(d.ProsedurUtama)
 	d.KdProsedurUtama = strings.TrimSpace(d.KdProsedurUtama)
 	d.ProsedurSekunder = strings.TrimSpace(d.ProsedurSekunder)
@@ -98,25 +85,26 @@ func (d *DataResumePasienRanap) Sanitize() {
 	d.KdProsedurSekunder2 = strings.TrimSpace(d.KdProsedurSekunder2)
 	d.ProsedurSekunder3 = strings.TrimSpace(d.ProsedurSekunder3)
 	d.KdProsedurSekunder3 = strings.TrimSpace(d.KdProsedurSekunder3)
-
 	d.Alergi = strings.TrimSpace(d.Alergi)
 	d.Diet = strings.TrimSpace(d.Diet)
-	d.LabBelum = strings.TrimSpace(d.LabBelum)
-	d.Edukasi = strings.TrimSpace(d.Edukasi)
-
+	d.HasilLaboratoriumPending = strings.TrimSpace(d.HasilLaboratoriumPending)
+	d.InstruksiAtauEdukasi = strings.TrimSpace(d.InstruksiAtauEdukasi)
 	d.CaraKeluar = CaraKeluar(strings.TrimSpace(string(d.CaraKeluar)))
-	d.KetKeluar = strings.TrimSpace(d.KetKeluar)
-	d.Keadaan = KeadaanPulang(strings.TrimSpace(string(d.Keadaan)))
-	d.KetKeadaan = strings.TrimSpace(d.KetKeadaan)
+	d.KeteranganKeluar = strings.TrimSpace(d.KeteranganKeluar)
+	d.KeadaanPulang = KeadaanPulang(strings.TrimSpace(string(d.KeadaanPulang)))
+	d.KeteranganKeadaanPulang = strings.TrimSpace(d.KeteranganKeadaanPulang)
 	d.Dilanjutkan = Dilanjutkan(strings.TrimSpace(string(d.Dilanjutkan)))
-	d.KetDilanjutkan = strings.TrimSpace(d.KetDilanjutkan)
+	d.KeteranganDilanjutkan = strings.TrimSpace(d.KeteranganDilanjutkan)
 
-	d.Kontrol = strings.TrimSpace(d.Kontrol)
-	if d.Kontrol == "-" {
-		d.Kontrol = ""
+	d.WaktuKontrol = strings.TrimSpace(d.WaktuKontrol)
+	if len(d.WaktuKontrol) == 16 {
+		d.WaktuKontrol += ":00"
 	}
-	if len(d.Kontrol) == 16 { // YYYY-MM-DD HH:mm
-		d.Kontrol += ":00"
+
+	if d.KeadaanPulang == KeadaanPulangMeninggal {
+		d.WaktuKontrol = "0000-00-00 00:00:00"
+	} else if d.KeadaanPulang == KeadaanPulangRujuk && d.WaktuKontrol == "" {
+		d.WaktuKontrol = "0000-00-00 00:00:00"
 	}
 	d.ObatPulang = strings.TrimSpace(d.ObatPulang)
 }
@@ -128,10 +116,10 @@ func (d *DataResumePasienRanap) Validate(errs apperror.ValidationError) {
 		errs["diagnosa_awal"] = "Diagnosa awal masuk maksimal 500 karakter"
 	}
 
-	if d.Alasan == "" {
-		errs["alasan"] = "Alasan masuk dirawat wajib diisi"
-	} else if len(d.Alasan) > 100 {
-		errs["alasan"] = "Alasan masuk dirawat maksimal 100 karakter"
+	if d.AlasanRawat == "" {
+		errs["alasan_rawat"] = "Alasan masuk dirawat wajib diisi"
+	} else if len(d.AlasanRawat) > 100 {
+		errs["alasan_rawat"] = "Alasan masuk dirawat maksimal 100 karakter"
 	}
 
 	if d.KeluhanUtama == "" {
@@ -204,33 +192,42 @@ func (d *DataResumePasienRanap) Validate(errs apperror.ValidationError) {
 	if d.CaraKeluar == "" {
 		errs["cara_keluar"] = "Cara keluar wajib diisi"
 	} else if !d.CaraKeluar.IsValid() {
-		errs["cara_keluar"] = "Cara keluar tidak valid (pilihan: Atas Izin Dokter, Pindah RS, Pulang Atas Permintaan Sendiri, Lainnya)"
+		errs["cara_keluar"] = "Cara keluar tidak valid"
 	}
-	if len(d.KetKeluar) > 50 {
-		errs["ket_keluar"] = "Keterangan cara keluar maksimal 50 karakter"
+	if len(d.KeteranganKeluar) > 50 {
+		errs["keterangan_keluar"] = "Keterangan cara keluar maksimal 50 karakter"
 	}
 
-	if d.Keadaan == "" {
-		errs["keadaan"] = "Keadaan pulang wajib diisi"
-	} else if !d.Keadaan.IsValid() {
-		errs["keadaan"] = "Keadaan pulang tidak valid (pilihan: Membaik, Sembuh, Rujuk, Keadaan Khusus, Meninggal)"
+	if d.KeadaanPulang == "" {
+		errs["keadaan_pulang"] = "Keadaan pulang wajib diisi"
+	} else if !d.KeadaanPulang.IsValidRanap() {
+		errs["keadaan_pulang"] = "Keadaan pulang tidak valid"
 	}
-	if len(d.KetKeadaan) > 50 {
-		errs["ket_keadaan"] = "Keterangan keadaan pulang maksimal 50 karakter"
+	if len(d.KeteranganKeadaanPulang) > 50 {
+		errs["keterangan_keadaan_pulang"] = "Keterangan keadaan pulang maksimal 50 karakter"
 	}
 
 	if d.Dilanjutkan == "" {
 		errs["dilanjutkan"] = "Status dilanjutkan wajib diisi"
 	} else if !d.Dilanjutkan.IsValid() {
-		errs["dilanjutkan"] = "Status dilanjutkan tidak valid (pilihan: Kembali Ke RS, RS Lain, Dokter Luar, Puskesmes, Lainnya)"
+		errs["dilanjutkan"] = "Status dilanjutkan tidak valid"
 	}
-	if len(d.KetDilanjutkan) > 50 {
-		errs["ket_dilanjutkan"] = "Keterangan status dilanjutkan maksimal 50 karakter"
+	if len(d.KeteranganDilanjutkan) > 50 {
+		errs["keterangan_dilanjutkan"] = "Keterangan status dilanjutkan maksimal 50 karakter"
 	}
 
-	if d.Kontrol != "" && d.Kontrol != "0000-00-00 00:00:00" {
-		if _, err := time.ParseInLocation("2006-01-02 15:04:05", d.Kontrol, time.Local); err != nil {
-			errs["kontrol"] = "Format tanggal & jam kontrol harus YYYY-MM-DD HH:mm:ss"
+	if d.KeadaanPulang != KeadaanPulangMeninggal && d.KeadaanPulang != KeadaanPulangRujuk {
+		if d.WaktuKontrol == "" || d.WaktuKontrol == "0000-00-00 00:00:00" {
+			errs["waktu_kontrol"] = "Waktu kontrol wajib diisi"
+		}
+	}
+
+	if d.WaktuKontrol != "" && d.WaktuKontrol != "0000-00-00 00:00:00" {
+		waktu, err := time.ParseInLocation("2006-01-02 15:04:05", d.WaktuKontrol, time.Local)
+		if err != nil {
+			errs["waktu_kontrol"] = "Format tanggal & jam kontrol harus YYYY-MM-DD HH:mm:ss"
+		} else if waktu.Hour() >= 14 {
+			errs["waktu_kontrol"] = "Jam kontrol harus kurang dari jam 14:00"
 		}
 	}
 }

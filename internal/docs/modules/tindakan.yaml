@@ -47,12 +47,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil daftar tindakan laboratorium
@@ -102,12 +99,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil detail tindakan laboratorium
@@ -167,12 +161,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil daftar tindakan radiologi
@@ -214,12 +205,9 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    code:
-                                        type: integer
-                                        example: 200
-                                    status:
-                                        type: string
-                                        example: OK
+                                    success:
+                                        type: boolean
+                                        example: true
                                     message:
                                         type: string
                                         example: Berhasil mengambil detail tindakan radiologi

@@ -240,7 +240,7 @@ func TestService_SimpanResumePasienRalan(t *testing.T) {
 		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:  "Batuk",
 			DiagnosaUtama: "ISPA",
-			KondisiPulang: resumepasien.KondisiPulangHidup,
+			KeadaanPulang: resumepasien.KeadaanPulangHidup,
 		},
 	}
 
@@ -349,7 +349,7 @@ func TestService_UpdateResumePasienRalan(t *testing.T) {
 		DataResumePasienRalan: resumepasien.DataResumePasienRalan{
 			KeluhanUtama:  "Update keluhan",
 			DiagnosaUtama: "Update diagnosa",
-			KondisiPulang: resumepasien.KondisiPulangHidup,
+			KeadaanPulang: resumepasien.KeadaanPulangHidup,
 		},
 	}
 
@@ -466,7 +466,7 @@ func TestService_DetailResumePasienRanap(t *testing.T) {
 					KeluhanUtama:  "Nyeri dada",
 					DiagnosaUtama: "STEMI",
 					CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-					Keadaan:       resumepasien.KeadaanPulangMembaik,
+					KeadaanPulang: resumepasien.KeadaanPulangMembaik,
 					Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
 				},
 			},
@@ -549,12 +549,13 @@ func TestService_SimpanResumePasienRanap(t *testing.T) {
 		NoRawat: "2026/09/07/000002",
 		DataResumePasienRanap: resumepasien.DataResumePasienRanap{
 			DiagnosaAwal:  "Chest Pain",
-			Alasan:        "Evaluasi nyeri dada",
+			AlasanRawat:   "Evaluasi nyeri dada",
 			KeluhanUtama:  "Nyeri dada kiri menjalar",
 			DiagnosaUtama: "STEMI Anterior",
 			CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-			Keadaan:       resumepasien.KeadaanPulangMembaik,
+			KeadaanPulang: resumepasien.KeadaanPulangMembaik,
 			Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			WaktuKontrol:  "2026-09-12 09:00:00",
 		},
 	}
 
@@ -633,12 +634,13 @@ func TestService_UpdateResumePasienRanap(t *testing.T) {
 	validUpdateReq := resumepasien.UpdateResumePasienRanapRequest{
 		DataResumePasienRanap: resumepasien.DataResumePasienRanap{
 			DiagnosaAwal:  "Chest Pain",
-			Alasan:        "Evaluasi nyeri dada",
+			AlasanRawat:   "Evaluasi nyeri dada",
 			KeluhanUtama:  "Nyeri dada berkurang",
 			DiagnosaUtama: "STEMI Anterior Resolving",
 			CaraKeluar:    resumepasien.CaraKeluarAtasIzinDokter,
-			Keadaan:       resumepasien.KeadaanPulangSembuh,
+			KeadaanPulang: resumepasien.KeadaanPulangSembuh,
 			Dilanjutkan:   resumepasien.DilanjutkanKembaliKeRS,
+			WaktuKontrol:  "2026-09-12 09:00:00",
 		},
 	}
 
@@ -739,8 +741,8 @@ func TestService_Referensi(t *testing.T) {
 
 	t.Run("ReferensiRalan", func(t *testing.T) {
 		ref := svc.ReferensiRalan(context.Background())
-		if len(ref.KondisiPulang) == 0 {
-			t.Error("expected non-empty KondisiPulang")
+		if len(ref.KeadaanPulang) == 0 {
+			t.Error("expected non-empty KeadaanPulang")
 		}
 	})
 

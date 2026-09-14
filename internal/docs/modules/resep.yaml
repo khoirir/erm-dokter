@@ -20,14 +20,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/AturanPakai"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar aturan pakai
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/AturanPakai"
     /api/v1/resep/metode-racik:
         get:
             tags: [Resep]
@@ -41,14 +45,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/MetodeRacik"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar metode racik
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/MetodeRacik"
     /api/v1/resep/{id_kunjungan}/{status_lanjut}:
         get:
             tags: [Resep]
@@ -96,16 +104,20 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Resep"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar resep
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Resep"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     description: Status lanjut atau ID kunjungan tidak valid
         post:
@@ -150,12 +162,16 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Resep"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan resep obat
+                                    data:
+                                        $ref: "#/components/schemas/Resep"
                 "400":
                     description: Kesalahan format input, nomor rawat tidak cocok, atau data obat kosong
                 "403":
@@ -209,16 +225,20 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Resep"
-                                        meta:
-                                            $ref: "#/components/schemas/PaginationMeta"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat resep pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Resep"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
                 "400":
                     description: Status lanjut atau ID pasien tidak valid
     /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}:
@@ -255,12 +275,16 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Resep"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail resep obat
+                                    data:
+                                        $ref: "#/components/schemas/Resep"
                 "400":
                     description: ID kunjungan, ID resep, atau status lanjut tidak valid
                 "404":
@@ -312,12 +336,16 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            $ref: "#/components/schemas/Resep"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui resep obat
+                                    data:
+                                        $ref: "#/components/schemas/Resep"
                 "400":
                     description: Validasi payload gagal (obat tidak ditemukan, format salah, ranap tidak aktif)
                 "403":
@@ -364,7 +392,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/BaseResponse"
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus resep obat
                 "400":
                     description: ID kunjungan, ID resep, atau status lanjut tidak valid
                 "403":

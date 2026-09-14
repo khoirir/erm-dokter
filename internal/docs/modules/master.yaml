@@ -3,7 +3,7 @@ paths:
         get:
             tags: [Master]
             summary: Daftar Master Penjamin
-            description: Mengambil daftar penjamin / asuransi pasien yang aktif di sistem.
+            description: Mengambil seluruh daftar master penjamin atau asuransi pasien yang aktif.
             security:
                 - BearerAuth: []
             responses:
@@ -12,21 +12,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Penjamin"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar penjamin
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Penjamin"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/master/depo:
         get:
             tags: [Master]
             summary: Daftar Master Depo Farmasi
-            description: Mengambil daftar bangsal / depo farmasi yang aktif.
+            description: Mengambil seluruh daftar master depo farmasi yang aktif.
             security:
                 - BearerAuth: []
             responses:
@@ -35,21 +73,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Depo"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar depo
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Depo"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/master/poliklinik:
         get:
             tags: [Master]
             summary: Daftar Master Poliklinik
-            description: Mengambil daftar master poliklinik / unit rawat jalan yang aktif.
+            description: Mengambil seluruh daftar master unit poliklinik rawat jalan yang aktif.
             security:
                 - BearerAuth: []
             responses:
@@ -58,21 +134,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Poliklinik"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar poliklinik
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Poliklinik"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/master/bangsal:
         get:
             tags: [Master]
             summary: Daftar Master Bangsal Rawat Inap
-            description: Mengambil daftar bangsal rawat inap yang aktif dan memiliki kamar aktif.
+            description: Mengambil seluruh daftar master bangsal rawat inap yang aktif.
             security:
                 - BearerAuth: []
             responses:
@@ -81,21 +195,59 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/Bangsal"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar bangsal
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Bangsal"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/master/kelas:
         get:
             tags: [Master]
             summary: Daftar Master Kelas Kamar Rawat Inap
-            description: Mengambil daftar kelas kamar rawat inap yang aktif pada bangsal aktif.
+            description: Mengambil seluruh daftar master kelas kamar rawat inap yang aktif.
             security:
                 - BearerAuth: []
             responses:
@@ -104,60 +256,123 @@ paths:
                     content:
                         application/json:
                             schema:
-                                allOf:
-                                    - $ref: "#/components/schemas/BaseResponse"
-                                    - type: object
-                                      properties:
-                                        data:
-                                            type: array
-                                            items:
-                                                $ref: "#/components/schemas/KelasKamar"
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar kelas kamar
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/KelasKamar"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         Penjamin:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
+                    description: Kode penjamin / asuransi pasien
                     example: BPJ
                 nama:
                     type: string
+                    description: Nama penjamin / asuransi pasien
                     example: BPJS KESEHATAN
         Depo:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
+                    description: Kode depo farmasi
                     example: DPRJ
                 nama:
                     type: string
+                    description: Nama depo farmasi
                     example: Depo Rawat Jalan
         Poliklinik:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
+                    description: Kode unit poliklinik rawat jalan
                     example: INT
                 nama:
                     type: string
+                    description: Nama unit poliklinik rawat jalan
                     example: Penyakit Dalam
         Bangsal:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
+                    description: Kode bangsal rawat inap
                     example: B01
                 nama:
                     type: string
+                    description: Nama bangsal rawat inap
                     example: Bangsal Melati
         KelasKamar:
             type: object
+            required:
+                - kode
+                - nama
             properties:
                 kode:
                     type: string
+                    description: Kode / nama kelas kamar rawat inap
                     example: Kelas 1
                 nama:
                     type: string
+                    description: Label kelas kamar rawat inap
                     example: Kelas 1
