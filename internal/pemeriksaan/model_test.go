@@ -27,9 +27,11 @@ func TestPemeriksaan_CompositeKey(t *testing.T) {
 		t.Errorf("Parsed mismatch: %+v", parsed)
 	}
 
-	_, errInvalid := pemeriksaan.ParseIdPemeriksaan("invalid~format")
-	if errInvalid == nil {
-		t.Error("Expected error for invalid composite key")
+	invalidKeys := []string{"invalid~format", "~~", "2026/01/01~~", "~~10:00:00", ""}
+	for _, k := range invalidKeys {
+		if _, err := pemeriksaan.ParseIdPemeriksaan(k); err == nil {
+			t.Errorf("Expected error for invalid composite key %q", k)
+		}
 	}
 }
 

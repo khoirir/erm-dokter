@@ -1265,7 +1265,7 @@ func TestSimpanPemeriksaan_CheckoutRanap(t *testing.T) {
 	if !errors.As(err, &bErr) {
 		t.Fatalf("expected *apperror.BusinessError, got %T (%v)", err, err)
 	}
-	if bErr.Message != "Pasien rawat inap sudah keluar / checkout dari kamar inap" {
+	if bErr.Message != "Pasien sudah keluar dari kamar inap" {
 		t.Errorf("unexpected error message: %s", bErr.Message)
 	}
 }

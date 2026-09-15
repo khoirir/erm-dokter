@@ -1,5 +1,7 @@
 package shared
 
+import "strings"
+
 type StatusLanjut string
 
 const (
@@ -14,6 +16,24 @@ func (s StatusLanjut) IsValid() bool {
 	default:
 		return false
 	}
+}
+
+func ParseStatusLanjut(val string) (StatusLanjut, bool) {
+	switch strings.ToLower(strings.TrimSpace(val)) {
+	case "ralan":
+		return StatusLanjutRawatJalan, true
+	case "ranap":
+		return StatusLanjutRawatInap, true
+	default:
+		return "", false
+	}
+}
+
+func ParseStatusLanjutWithSemua(val string) (StatusLanjut, bool) {
+	if strings.ToLower(strings.TrimSpace(val)) == "semua" {
+		return "Semua", true
+	}
+	return ParseStatusLanjut(val)
 }
 
 type SortOrder string

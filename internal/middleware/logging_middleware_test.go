@@ -52,7 +52,7 @@ func TestLoggingMiddleware_AuthenticatedAndAnonymous(t *testing.T) {
 	}
 
 	// 3. OPTIONS preflight request (should bypass logger without error)
-	req3 := httptest.NewRequest("OPTIONS", "/api/v1/pemeriksaan/pasien/test/Semua", nil)
+	req3 := httptest.NewRequest("OPTIONS", "/api/v1/pemeriksaan/Semua/pasien/test", nil)
 	rr3 := httptest.NewRecorder()
 	loggedHandler.ServeHTTP(rr3, req3)
 

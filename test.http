@@ -110,37 +110,37 @@ Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 11. Pemeriksaan - Riwayat Pasien (Semua Kunjungan)
-GET {{baseUrl}}/api/v1/pemeriksaan/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5/Semua?tanggal=2026-01-01,2026-04-30&page=1&limit=20
+GET {{baseUrl}}/api/v1/pemeriksaan/semua/pasien/1VWFQe6X8Mb3Me5aqbrG_7CE-x2SQPLS-GqEeu02ad109Ep5?tanggal=2026-01-01,2026-04-30&page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 12a. Pemeriksaan - Riwayat Kunjungan (Semua)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Semua?page=1&limit=20
+GET {{baseUrl}}/api/v1/pemeriksaan/semua/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 12b. Pemeriksaan - Riwayat Kunjungan (Ralan)
-GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=20
+GET {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 12c. Pemeriksaan - Riwayat Kunjungan (Ranap)
-GET {{baseUrl}}/api/v1/pemeriksaan/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG/Ranap?page=1&limit=20
+GET {{baseUrl}}/api/v1/pemeriksaan/ranap/FJhxvVvG9GnbckdbCeD8BuDIRk96jwTiE2Ig_uGDlWyn33QNCZIo58_5pXOG?page=1&limit=20
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 14. Pemeriksaan - Detail Pemeriksaan (Ralan)
-GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+GET {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 15. Pemeriksaan - Detail Pemeriksaan (Ranap)
-GET {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
+GET {{baseUrl}}/api/v1/pemeriksaan/ranap/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 16. Pemeriksaan - Simpan Pemeriksaan (Ralan)
-POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -168,7 +168,7 @@ Content-Type: application/json
 }
 
 ### 17. Pemeriksaan - Simpan Pemeriksaan (Ranap)
-POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap
+POST {{baseUrl}}/api/v1/pemeriksaan/ranap/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -195,7 +195,7 @@ Content-Type: application/json
 }
 
 ### 18. Pemeriksaan - Simpan Validasi No Rawat (400)
-POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -213,7 +213,7 @@ Content-Type: application/json
 }
 
 ### 19. Pemeriksaan - Simpan Validasi Waktu Sebelum Registrasi (400)
-POST {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -231,22 +231,22 @@ Content-Type: application/json
 }
 
 ### 20. Pemeriksaan - Hapus Pemeriksaan Ralan Hak Akses Ditolak
-DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+DELETE {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 21. Pemeriksaan - Hapus Pemeriksaan Ranap > 48 jam
-DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
+DELETE {{baseUrl}}/api/v1/pemeriksaan/ranap/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/WTs45UgN3QZlcwroLrSTIsiuYwNs75Xq7QhrNMzCMVWyFPBXDZbIf0Hf807Jz7HKnlR_XiDXkT2prscnVrOd6Pc
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 22. Pemeriksaan - Hapus Sukses
-DELETE {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ranap/6yE88oLW3teaG8unUZZt3MKMsneON3fRnFtTgGqW5xxcuKLOjUs623xvtfKoL2ooIYnXN1fGu9FH-KWr9LTZ9zw
+DELETE {{baseUrl}}/api/v1/pemeriksaan/ranap/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/6yE88oLW3teaG8unUZZt3MKMsneON3fRnFtTgGqW5xxcuKLOjUs623xvtfKoL2ooIYnXN1fGu9FH-KWr9LTZ9zw
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 23. Pemeriksaan - Update Pemeriksaan (Ranap) Sukses
-PUT {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+PUT {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -273,7 +273,7 @@ Content-Type: application/json
 }
 
 ### 24. Pemeriksaan - Update Pemeriksaan Validasi Error (400)
-PUT {{baseUrl}}/api/v1/pemeriksaan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
+PUT {{baseUrl}}/api/v1/pemeriksaan/ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/hbumeLTXPgozgb5eNRc66wkEkH0FLrlkAsh-EF4zoaj4A50TTZ3TeBYAspwMzeOYrKz8ueZwDnh7aRY15LSeIek
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -295,17 +295,17 @@ Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 27. Resep - Riwayat Resep per Kunjungan (Ralan)
-GET {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan?page=1&limit=5
+GET {{baseUrl}}/api/v1/resep/Ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_?page=1&limit=5
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 28. Resep - Riwayat Resep Pasien by RM
-GET {{baseUrl}}/api/v1/resep/pasien/2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI/Semua?page=1&limit=5
+GET {{baseUrl}}/api/v1/resep/Semua/pasien/2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI?page=1&limit=5
 Authorization: Bearer {{login.response.body.data.token}}
 Accept: application/json
 
 ### 29. Resep - Simpan Resep Non-Racikan (Ralan)
-POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/resep/Ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -321,7 +321,7 @@ Content-Type: application/json
 }
 
 ### 30. Resep - Simpan Resep Racikan & Non-Racikan (Kombinasi)
-POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/resep/Ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 
@@ -353,7 +353,7 @@ Content-Type: application/json
 }
 
 ### 31. Resep - Simpan Validasi Error No Rawat Beda (400)
-POST {{baseUrl}}/api/v1/resep/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_/Ralan
+POST {{baseUrl}}/api/v1/resep/Ralan/cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
 

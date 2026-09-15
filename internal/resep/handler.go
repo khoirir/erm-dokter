@@ -29,15 +29,13 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/v1/resep/aturan-pakai", authMiddleware(timeoutMiddleware(h.DaftarAturanPakai)))
 	mux.HandleFunc("GET /api/v1/resep/metode-racik", authMiddleware(timeoutMiddleware(h.DaftarMetodeRacik)))
-	mux.HandleFunc("GET /api/v1/resep/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarResep)))
-	mux.HandleFunc("GET /api/v1/resep/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarResepByRM)))
-	mux.HandleFunc("GET /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.DetailResep)))
-	mux.HandleFunc("POST /api/v1/resep/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanResep)))
-	mux.HandleFunc("PUT /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.UpdateResep)))
-	mux.HandleFunc("DELETE /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}", authMiddleware(timeoutMiddleware(h.HapusResep)))
+	mux.HandleFunc("GET /api/v1/resep/{status_lanjut}/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.DaftarResepByRM)))
+	mux.HandleFunc("GET /api/v1/resep/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DaftarResep)))
+	mux.HandleFunc("GET /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}", authMiddleware(timeoutMiddleware(h.DetailResep)))
+	mux.HandleFunc("POST /api/v1/resep/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanResep)))
+	mux.HandleFunc("PUT /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}", authMiddleware(timeoutMiddleware(h.UpdateResep)))
+	mux.HandleFunc("DELETE /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}", authMiddleware(timeoutMiddleware(h.HapusResep)))
 }
-
-
 
 
 func (h *Handler) DaftarAturanPakai(w http.ResponseWriter, r *http.Request) {
@@ -63,18 +61,18 @@ func (h *Handler) DaftarMetodeRacik(w http.ResponseWriter, r *http.Request) {
 
 
 func (h *Handler) DaftarResep(w http.ResponseWriter, r *http.Request) {
-	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+	idKunjungan := r.PathValue("id_kunjungan")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if status != "Semua" && !status.IsValid() {
+	status, ok := shared.ParseStatusLanjutWithSemua(statusLanjut)
+	if !ok {
 		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
 		return
 	}
 
 	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, err)
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
 		return
 	}
 
@@ -106,18 +104,18 @@ func (h *Handler) DaftarResep(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DaftarResepByRM(w http.ResponseWriter, r *http.Request) {
-	idPasien := r.PathValue("id_pasien")
 	statusLanjut := r.PathValue("status_lanjut")
+	idPasien := r.PathValue("id_pasien")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if status != "Semua" && !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid"))
+	status, ok := shared.ParseStatusLanjutWithSemua(statusLanjut)
+	if !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
 	noRekamMedis, err := crypto.Decrypt(idPasien, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, err)
+		apperror.HandleError(w, apperror.NewBusinessError("ID pasien tidak valid"))
 		return
 	}
 
@@ -149,13 +147,12 @@ func (h *Handler) DaftarResepByRM(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DetailResep(w http.ResponseWriter, r *http.Request) {
-	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+	idKunjungan := r.PathValue("id_kunjungan")
 	idResep := r.PathValue("id_resep")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid (Ralan/Ranap)"))
+	if _, ok := shared.ParseStatusLanjut(statusLanjut); !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
@@ -178,7 +175,7 @@ func (h *Handler) DetailResep(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resep.NoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewNotFoundError("Data resep obat tidak ditemukan pada kunjungan ini"))
+		apperror.HandleError(w, apperror.NewNotFoundError("Data resep tidak sesuai dengan data kunjungan"))
 		return
 	}
 
@@ -191,12 +188,12 @@ func (h *Handler) DetailResep(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 
-	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+	idKunjungan := r.PathValue("id_kunjungan")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid (Ralan/Ranap)"))
+	status, ok := shared.ParseStatusLanjut(statusLanjut)
+	if !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
@@ -208,12 +205,12 @@ func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 
 	var req SimpanResepRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data resep tidak valid"))
 		return
 	}
 
 	if req.NoRawat != noRawatURL {
-		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat resep tidak sesuai dengan ID kunjungan"))
 		return
 	}
 
@@ -246,17 +243,17 @@ func (h *Handler) SimpanResep(w http.ResponseWriter, r *http.Request) {
 		*resep = listResep[0]
 	}
 
-	response.Success(w, "Berhasil menyimpan resep obat", resep)
+	response.Created(w, "Berhasil menyimpan resep obat", resep)
 }
 
 func (h *Handler) UpdateResep(w http.ResponseWriter, r *http.Request) {
-	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+	idKunjungan := r.PathValue("id_kunjungan")
 	idResep := r.PathValue("id_resep")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if !status.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid (Ralan/Ranap)"))
+	status, ok := shared.ParseStatusLanjut(statusLanjut)
+	if !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
@@ -274,12 +271,12 @@ func (h *Handler) UpdateResep(w http.ResponseWriter, r *http.Request) {
 
 	var req SimpanResepRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data resep tidak valid"))
 		return
 	}
 
 	if req.NoRawat != noRawatURL {
-		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat resep tidak sesuai dengan ID kunjungan"))
 		return
 	}
 
@@ -316,12 +313,12 @@ func (h *Handler) UpdateResep(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HapusResep(w http.ResponseWriter, r *http.Request) {
-	idKunjungan := r.PathValue("id_kunjungan")
 	statusLanjut := r.PathValue("status_lanjut")
+	idKunjungan := r.PathValue("id_kunjungan")
 	idResep := r.PathValue("id_resep")
 
-	status := shared.StatusLanjut(statusLanjut)
-	if !status.IsValid() {
+	status, ok := shared.ParseStatusLanjut(statusLanjut)
+	if !ok {
 		apperror.HandleError(w, apperror.NewBusinessError("status lanjut tidak valid (Ralan/Ranap)"))
 		return
 	}

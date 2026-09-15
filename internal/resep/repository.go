@@ -25,7 +25,6 @@ type Repository interface {
 	UpdateResep(ctx context.Context, noResep string, req SimpanResepRequest) (*Resep, error)
 }
 
-
 type repository struct {
 	db *sql.DB
 }
@@ -54,6 +53,10 @@ func (r *repository) queryResep(ctx context.Context, whereClause string, paramVa
 		statusCondition = " AND ro.status = 'ralan'"
 	case shared.StatusLanjutRawatInap:
 		statusCondition = " AND ro.status = 'ranap'"
+	case "Semua", "":
+
+	default:
+		return nil, 0, fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
 	}
 
 	tanggalCondition := ""
@@ -560,8 +563,17 @@ func (r *repository) generateNoResep(ctx context.Context, tx *sql.Tx, tglPeresep
 }
 
 func (r *repository) SimpanResep(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanResepRequest) (*Resep, error) {
+	var dbStatus string
+	switch statusLanjut {
+	case shared.StatusLanjutRawatJalan:
+		dbStatus = "ralan"
+	case shared.StatusLanjutRawatInap:
+		dbStatus = "ranap"
+	default:
+		return nil, fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
+	}
+
 	var lastErr error
-	dbStatus := strings.ToLower(string(statusLanjut))
 
 	for attempt := 1; attempt <= 3; attempt++ {
 		tx, err := r.db.BeginTx(ctx, nil)

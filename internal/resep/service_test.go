@@ -607,7 +607,7 @@ func TestSimpanResep_PasienBPJSSudahBayar(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for paid BPJS patient, got nil")
 	}
-	if err.Error() != "Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat membuat atau mengubah resep" {
+	if err.Error() != "Pasien BPJS sudah bayar, resep tidak dapat disimpan" {
 		t.Errorf("unexpected error message: %v", err)
 	}
 }
@@ -666,7 +666,7 @@ func TestSimpanResep_StatusKamarInap(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error patient checked out ranap for ralan prescription, got nil")
 		}
-		if !strings.Contains(err.Error(), "sudah keluar / checkout") {
+		if !strings.Contains(err.Error(), "sudah keluar dari kamar inap") {
 			t.Errorf("expected error to mention checkout, got: %v", err)
 		}
 	})

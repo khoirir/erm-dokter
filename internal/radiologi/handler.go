@@ -27,12 +27,10 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	// Hasil Radiologi
 	mux.HandleFunc("GET /api/v1/radiologi/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarHasilRadiologi)))
 	mux.HandleFunc("GET /api/v1/radiologi/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarHasilRadiologiByRM)))
 	mux.HandleFunc("GET /api/v1/radiologi/{id_kunjungan}/{status_lanjut}/{id_radiologi}", authMiddleware(timeoutMiddleware(h.DetailHasilRadiologi)))
 
-	// Permintaan Radiologi
 	mux.HandleFunc("POST /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanRadiologi)))
 	mux.HandleFunc("GET /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanRadiologi)))
 	mux.HandleFunc("GET /api/v1/radiologi/pasien/{id_pasien}/permintaan/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanRadiologiByRM)))
@@ -41,7 +39,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.Ha
 	mux.HandleFunc("DELETE /api/v1/radiologi/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanRadiologi)))
 }
 
-// Hasil Radiologi Handlers
 
 func (h *Handler) DaftarHasilRadiologi(w http.ResponseWriter, r *http.Request) {
 	idKunjungan := strings.TrimSpace(r.PathValue("id_kunjungan"))
@@ -206,8 +203,6 @@ func (h *Handler) DetailHasilRadiologi(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, "Berhasil mengambil detail hasil radiologi", data)
 }
-
-// Permintaan Radiologi Handlers
 
 func (h *Handler) encryptDetailPermintaanRadiologi(detail *DetailPermintaanRadiologi) {
 	if detail == nil {

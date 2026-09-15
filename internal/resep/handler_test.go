@@ -113,7 +113,7 @@ func TestResepHandler_DaftarResep(t *testing.T) {
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, authMwForResep, noOpMw)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/resep/"+encKunjungan+"/Ralan?page=1&limit=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/resep/Ralan/"+encKunjungan+"?page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -171,11 +171,19 @@ func TestResepHandler_SimpanResep(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/resep/"+encKunjungan+"/Ralan", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/resep/Ralan/"+encKunjungan, bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusOK {
-		t.Fatalf("Expected status 200 OK, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("Expected status 201 Created, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	// Test invalid status lanjut
+	reqInvalid := httptest.NewRequest(http.MethodGet, "/api/v1/resep/invalid_status/"+encKunjungan, nil)
+	rrInvalid := httptest.NewRecorder()
+	mux.ServeHTTP(rrInvalid, reqInvalid)
+	if rrInvalid.Code != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 for invalid status lanjut, got %d", rrInvalid.Code)
 	}
 }

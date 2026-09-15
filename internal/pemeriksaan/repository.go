@@ -232,7 +232,7 @@ func (r *repository) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, st
 		args = append(args, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)
 
 	default:
-		return nil, errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
+		return nil, fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
 	}
 
 	row := r.db.QueryRowContext(ctx, query, args...)
@@ -267,7 +267,7 @@ func (r *repository) SimpanPemeriksaan(ctx context.Context, kodeDokter string, s
 			req.RencanaTindakLanjut, req.Penilaian, req.Instruksi, req.Evaluasi, kodeDokter,
 		}
 	default:
-		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
+		return fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
 	}
 
 	_, err := r.db.ExecContext(ctx, query, args...)
@@ -324,7 +324,7 @@ func (r *repository) UpdatePemeriksaan(ctx context.Context, id IdPemeriksaan, st
 			id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan,
 		}
 	default:
-		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
+		return fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
 	}
 
 	_, err := r.db.ExecContext(ctx, query, args...)
@@ -353,7 +353,7 @@ func (r *repository) HapusPemeriksaan(ctx context.Context, id IdPemeriksaan, sta
 	case shared.StatusLanjutRawatInap:
 		query = deletePemeriksaanRanap
 	default:
-		return errors.New("Status lanjut tidak valid (pilihan: Ralan, Ranap)")
+		return fmt.Errorf("repository: status lanjut '%s' tidak didukung", statusLanjut)
 	}
 
 	_, err := r.db.ExecContext(ctx, query, id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan)

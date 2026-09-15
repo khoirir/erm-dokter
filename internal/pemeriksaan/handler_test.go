@@ -108,7 +108,8 @@ func TestPemeriksaanHandler_DaftarPemeriksaan(t *testing.T) {
 	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, authMw, noOpMw)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/pemeriksaan/"+encKunjungan+"/Ralan?page=1&limit=20", nil)
+	// Test dengan lowercase 'ralan'
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/pemeriksaan/ralan/"+encKunjungan+"?page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -166,11 +167,63 @@ func TestPemeriksaanHandler_SimpanPemeriksaan(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/pemeriksaan/"+encKunjungan+"/Ralan", bytes.NewReader(body))
+	// Test dengan lowercase 'ralan'
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/pemeriksaan/ralan/"+encKunjungan, bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("Expected status 201 Created, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestPemeriksaanHandler_DetailDanHapusPemeriksaan(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/03/000001", testEncKey)
+	plainIdPem := "2026/09/03/000001~2026-09-03~09:00:00"
+	encIdPem, _ := crypto.Encrypt(plainIdPem, testEncKey)
+
+	mockSvc := &mockPemeriksaanService{
+		detailPemeriksaanFn: func(ctx context.Context, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) (*pemeriksaan.Pemeriksaan, error) {
+			return &pemeriksaan.Pemeriksaan{
+				NoRawat: id.NoRawat,
+				DataPemeriksaan: pemeriksaan.DataPemeriksaan{
+					TanggalPemeriksaan: id.TanggalPemeriksaan,
+					JamPemeriksaan:     id.JamPemeriksaan,
+					Kesadaran:          pemeriksaan.KesadaranComposMentis,
+				},
+			}, nil
+		},
+		hapusPemeriksaanFn: func(ctx context.Context, kodeDokter string, id pemeriksaan.IdPemeriksaan, statusLanjut shared.StatusLanjut) error {
+			return nil
+		},
+	}
+
+	handler := pemeriksaan.NewHandler(mockSvc, testEncKey)
+	mux := http.NewServeMux()
+	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
+	handler.RegisterRoutes(mux, authMw, noOpMw)
+
+	// Test Detail dengan lowercase 'ralan'
+	reqDetail := httptest.NewRequest(http.MethodGet, "/api/v1/pemeriksaan/ralan/"+encKunjungan+"/"+encIdPem, nil)
+	rrDetail := httptest.NewRecorder()
+	mux.ServeHTTP(rrDetail, reqDetail)
+	if rrDetail.Code != http.StatusOK {
+		t.Fatalf("Expected detail 200, got %d: %s", rrDetail.Code, rrDetail.Body.String())
+	}
+
+	// Test Hapus dengan lowercase 'ralan'
+	reqHapus := httptest.NewRequest(http.MethodDelete, "/api/v1/pemeriksaan/ralan/"+encKunjungan+"/"+encIdPem, nil)
+	rrHapus := httptest.NewRecorder()
+	mux.ServeHTTP(rrHapus, reqHapus)
+	if rrHapus.Code != http.StatusOK {
+		t.Fatalf("Expected hapus 200, got %d: %s", rrHapus.Code, rrHapus.Body.String())
+	}
+
+	// Test Invalid Status Lanjut
+	reqInvalid := httptest.NewRequest(http.MethodGet, "/api/v1/pemeriksaan/invalid_unit/"+encKunjungan, nil)
+	rrInvalid := httptest.NewRecorder()
+	mux.ServeHTTP(rrInvalid, reqInvalid)
+	if rrInvalid.Code != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 Bad Request for invalid status_lanjut, got %d: %s", rrInvalid.Code, rrInvalid.Body.String())
 	}
 }

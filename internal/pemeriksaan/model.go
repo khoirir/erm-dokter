@@ -23,8 +23,8 @@ func (id IdPemeriksaan) CompositeKey() string {
 
 func ParseIdPemeriksaan(decryptedKey string) (IdPemeriksaan, error) {
 	parts := strings.Split(decryptedKey, "~")
-	if len(parts) != 3 {
-		return IdPemeriksaan{}, errors.New("format ID pemeriksaan tidak valid")
+	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+		return IdPemeriksaan{}, errors.New("ID pemeriksaan tidak valid")
 	}
 	return IdPemeriksaan{
 		NoRawat:            parts[0],

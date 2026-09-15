@@ -3,17 +3,11 @@ paths:
         get:
             tags: [Resep]
             summary: Daftar Master Aturan Pakai
-            description: Mengambil daftar master aturan pakai obat untuk kebutuhan autocomplete / dropdown dengan fitur pencarian keyword (opsional).
+            description: Mengambil daftar referensi aturan pakai obat untuk kebutuhan pencarian atau autocomplete.
             security:
                 - BearerAuth: []
             parameters:
-                - name: keyword
-                  in: query
-                  required: false
-                  description: Kata kunci pencarian aturan pakai (contoh "3 x 1" atau "tablet")
-                  schema:
-                    type: string
-                    example: "3 x 1"
+                - $ref: "#/components/parameters/ResepKeywordFilter"
             responses:
                 "200":
                     description: Berhasil mengambil daftar aturan pakai
@@ -21,6 +15,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -32,11 +30,43 @@ paths:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/AturanPakai"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/resep/metode-racik:
         get:
             tags: [Resep]
             summary: Daftar Master Metode Racik
-            description: Mengambil daftar referensi metode racikan obat (misalnya Puyer/PULV, Kapsul/CAPS, Salep, Sirup, dll).
+            description: Mengambil daftar referensi metode racikan obat.
             security:
                 - BearerAuth: []
             responses:
@@ -46,6 +76,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -57,47 +91,51 @@ paths:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/MetodeRacik"
-    /api/v1/resep/{id_kunjungan}/{status_lanjut}:
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/resep/{status_lanjut}/{id_kunjungan}:
         get:
             tags: [Resep]
             summary: Riwayat Resep per Kunjungan
-            description: Mengambil riwayat peresepan obat pasien untuk satu kunjungan tertentu (Ralan, Ranap, atau Semua).
+            description: Mengambil riwayat peresepan obat pasien pada satu kunjungan tertentu.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_kunjungan
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Ralan
-                - name: tanggal
-                  in: query
-                  required: false
-                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
-                  schema:
-                    type: string
-                    example: "2026-08-01,2026-08-27"
-                - name: page
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    default: 1
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    default: 5
+                - $ref: "#/components/parameters/ResepStatusLanjutSemua"
+                - $ref: "#/components/parameters/ResepIdKunjungan"
+                - $ref: "#/components/parameters/ResepTanggalFilter"
+                - $ref: "#/components/parameters/ResepPageFilter"
+                - $ref: "#/components/parameters/ResepLimitFilter"
             responses:
                 "200":
                     description: Berhasil mengambil daftar resep
@@ -105,6 +143,11 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
                                 properties:
                                     success:
                                         type: boolean
@@ -119,37 +162,78 @@ paths:
                                     meta:
                                         $ref: "#/components/schemas/PaginationMeta"
                 "400":
-                    description: Status lanjut atau ID kunjungan tidak valid
+                    description: Parameter permintaan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
             tags: [Resep]
             summary: Simpan Resep Obat Baru
-            description: |
-                Membuat dan menyimpan resep obat baru untuk pasien kunjungan Rawat Jalan atau Rawat Inap.
-                Mendukung peresepan obat **Non-Racikan**, **Racikan**, ataupun **kombinasi keduanya**.
-
-                ### Aturan Bisnis & Validasi:
-                - Dokter pembuat otomatis diambil dari kredensial Token JWT login (`claims.KodeDokter`).
-                - **Validasi Cross-Check**: Kolom `no_rawat` pada request body wajib cocok dengan hasil dekripsi `id_kunjungan` di URL.
-                - **Batas Waktu Peresepan (Ralan)**: Dibatasi maksimal 48 jam dari waktu registrasi kunjungan pasien.
-                - **Status Kamar Inap (Ranap)**: Pasien yang dirawat inap aktif hanya dapat diresepkan berstatus `Ranap`.
-                - **Atomisitas Database**: Transaksi disimpan secara atomik ke tabel `resep_obat`, `resep_dokter`, `resep_dokter_racikan`, dan `resep_dokter_racikan_detail`.
+            description: Menyimpan data resep obat baru untuk pasien rawat jalan maupun rawat inap.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_kunjungan
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Jenis perawatan (Ralan atau Ranap)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap]
-                    example: Ralan
+                - $ref: "#/components/parameters/ResepStatusLanjut"
+                - $ref: "#/components/parameters/ResepIdKunjungan"
             requestBody:
                 required: true
                 content:
@@ -157,12 +241,16 @@ paths:
                         schema:
                             $ref: "#/components/schemas/SimpanResepRequest"
             responses:
-                "200":
+                "201":
                     description: Berhasil menyimpan resep obat
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -173,52 +261,98 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/Resep"
                 "400":
-                    description: Kesalahan format input, nomor rawat tidak cocok, atau data obat kosong
+                    description: Parameter atau data resep tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pasien BPJS sudah bayar, resep tidak dapat disimpan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Melebihi batas waktu peresepan 48 jam
+                    description: Akses ditolak
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Peresepan obat melewati batas waktu maksimal 48 jam
                 "404":
-                    description: Kunjungan atau data registrasi pasien tidak ditemukan
-    /api/v1/resep/pasien/{id_pasien}/{status_lanjut}:
+                    description: Data kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/resep/{status_lanjut}/pasien/{id_pasien}:
         get:
             tags: [Resep]
-            summary: Riwayat Resep Seluruh Kunjungan Pasien
-            description: Mengambil seluruh riwayat peresepan obat pasien berdasarkan Nomor Rekam Medis (Ralan, Ranap, atau Semua).
+            summary: Riwayat Resep Pasien
+            description: Mengambil seluruh riwayat peresepan obat pasien dari seluruh kunjungan.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_pasien
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Filter jenis perawatan (Ralan, Ranap, atau Semua)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap, Semua]
-                    example: Semua
-                - name: tanggal
-                  in: query
-                  required: false
-                  description: Filter rentang tanggal peresepan (format YYYY-MM-DD,YYYY-MM-DD)
-                  schema:
-                    type: string
-                    example: "2026-08-01,2026-08-27"
-                - name: page
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    default: 1
-                - name: limit
-                  in: query
-                  required: false
-                  schema:
-                    type: integer
-                    default: 5
+                - $ref: "#/components/parameters/ResepStatusLanjutSemua"
+                - $ref: "#/components/parameters/ResepIdPasien"
+                - $ref: "#/components/parameters/ResepTanggalFilter"
+                - $ref: "#/components/parameters/ResepPageFilter"
+                - $ref: "#/components/parameters/ResepLimitFilter"
             responses:
                 "200":
                     description: Berhasil mengambil riwayat resep pasien
@@ -226,6 +360,11 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
                                 properties:
                                     success:
                                         type: boolean
@@ -240,35 +379,64 @@ paths:
                                     meta:
                                         $ref: "#/components/schemas/PaginationMeta"
                 "400":
-                    description: Status lanjut atau ID pasien tidak valid
-    /api/v1/resep/{id_kunjungan}/{status_lanjut}/{id_resep}:
+                    description: Parameter permintaan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}:
         get:
             tags: [Resep]
-            summary: Detail Resep Obat Kunjungan Pasien
-            description: Mengambil informasi detail satu resep obat berdasarkan ID resep dan ID kunjungan pasien.
+            summary: Detail Resep Obat
+            description: Mengambil detail informasi resep obat pasien.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_kunjungan
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Jenis perawatan (Ralan atau Ranap)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap]
-                    example: Ralan
-                - name: id_resep
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Resep Obat
-                  schema:
-                    type: string
+                - $ref: "#/components/parameters/ResepStatusLanjut"
+                - $ref: "#/components/parameters/ResepIdKunjungan"
+                - $ref: "#/components/parameters/ResepIdResep"
             responses:
                 "200":
                     description: Berhasil mengambil detail resep obat
@@ -276,6 +444,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -286,44 +458,79 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/Resep"
                 "400":
-                    description: ID kunjungan, ID resep, atau status lanjut tidak valid
+                    description: Parameter permintaan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID resep tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data resep obat tidak ditemukan pada kunjungan ini
+                    description: Data resep obat tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resep obat tidak ditemukan pada kunjungan ini
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
             tags: [Resep]
-            summary: Edit / Update Resep Obat
-            description: |
-                Memperbarui resep obat (non-racikan dan/atau racikan) yang telah dibuat dokter dengan nomor resep yang tetap.
-
-                ### Aturan Bisnis & Validasi:
-                - **Dokter Pembuat**: Hanya dokter yang membuat resep (`kd_dokter == claims.KodeDokter`) yang berhak mengedit.
-                - **Proteksi Farmasi**: Resep yang **sudah divalidasi oleh apotek** (`tgl_perawatan != 0000-00-00` && `jam != 00:00:00`) atau **sudah diserahkan ke pasien** (`tgl_penyerahan != 0000-00-00` && `jam_penyerahan != 00:00:00`) **terkunci permanen dan ditolak**.
-                - **Proteksi 48 Jam (Rawat Jalan)**: Batas waktu pengeditan maksimal 48 jam dari waktu registrasi pasien.
-                - **Validasi Ranap**: Pasien rawat inap tidak boleh berstatus checkout/selesai.
-                - **Atomisitas Transaksi**: Header `resep_obat` diperbarui dan detail resep di-*replace* secara atomik dalam 1 transaksi DB.
+            summary: Perbarui Resep Obat
+            description: Memperbarui data resep obat pasien.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_kunjungan
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Jenis perawatan (Ralan atau Ranap)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap]
-                    example: Ralan
-                - name: id_resep
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Resep Obat
-                  schema:
-                    type: string
+                - $ref: "#/components/parameters/ResepStatusLanjut"
+                - $ref: "#/components/parameters/ResepIdKunjungan"
+                - $ref: "#/components/parameters/ResepIdResep"
             requestBody:
                 required: true
                 content:
@@ -337,6 +544,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -347,45 +558,95 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/Resep"
                 "400":
-                    description: Validasi payload gagal (obat tidak ditemukan, format salah, ranap tidak aktif)
+                    description: Parameter atau data resep tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pasien BPJS sudah bayar, resep tidak dapat disimpan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Ditolak karena bukan dokter pembuat, resep telah diproses farmasi, atau lewat batas 48 jam
+                    description: Akses ditolak
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Peresepan obat melewati batas waktu maksimal 48 jam
                 "404":
-                    description: Data resep obat tidak ditemukan pada kunjungan ini
+                    description: Data resep obat tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resep obat tidak ditemukan pada kunjungan ini
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
             tags: [Resep]
-            summary: Hapus / Batalkan Resep Obat
-            description: |
-                Menghapus atau membatalkan resep obat yang telah dibuat oleh dokter.
-
-                ### Aturan Bisnis & Validasi:
-                - **Dokter Pembuat**: Hanya dokter yang membuat resep (`kd_dokter == claims.KodeDokter`) yang berhak menghapus.
-                - **Proteksi Farmasi**: Resep yang **sudah divalidasi oleh apotek** (`tgl_perawatan != 0000-00-00` && `jam != 00:00:00`) atau **sudah diserahkan ke pasien** (`tgl_penyerahan != 0000-00-00` && `jam_penyerahan != 00:00:00`) **terkunci permanen dan ditolak**.
-                - **Proteksi 48 Jam (Rawat Jalan)**: Batas waktu penghapusan maksimal 48 jam dari waktu registrasi pasien.
-                - **Atomisitas Transaksi**: Seluruh data racikan detail, racikan header, resep non-racik, dan header resep obat dibersihkan secara atomik.
+            summary: Hapus Resep Obat
+            description: Menghapus atau membatalkan resep obat pasien.
             security:
                 - BearerAuth: []
             parameters:
-                - name: id_kunjungan
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
-                  schema:
-                    type: string
-                - name: status_lanjut
-                  in: path
-                  required: true
-                  description: Jenis perawatan (Ralan atau Ranap)
-                  schema:
-                    type: string
-                    enum: [Ralan, Ranap]
-                    example: Ralan
-                - name: id_resep
-                  in: path
-                  required: true
-                  description: Encrypted ID Nomor Resep Obat
-                  schema:
-                    type: string
+                - $ref: "#/components/parameters/ResepStatusLanjut"
+                - $ref: "#/components/parameters/ResepIdKunjungan"
+                - $ref: "#/components/parameters/ResepIdResep"
             responses:
                 "200":
                     description: Berhasil menghapus resep obat
@@ -393,6 +654,9 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
@@ -401,23 +665,167 @@ paths:
                                         type: string
                                         example: Berhasil menghapus resep obat
                 "400":
-                    description: ID kunjungan, ID resep, atau status lanjut tidak valid
+                    description: Parameter permintaan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pasien BPJS sudah bayar, resep tidak dapat dihapus
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Ditolak karena bukan dokter pembuat, resep telah divalidasi/diserahkan farmasi, atau melebihi batas waktu 48 jam
+                    description: Akses ditolak
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Peresepan obat melewati batas waktu maksimal 48 jam
                 "404":
-                    description: Data resep obat tidak ditemukan pada kunjungan ini
+                    description: Data resep obat tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resep obat tidak ditemukan pada kunjungan ini
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
+    parameters:
+        ResepStatusLanjutSemua:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status lanjut pelayanan (semua, ralan, ranap)
+            schema:
+                type: string
+                enum: [semua, ralan, ranap]
+                example: ralan
+        ResepStatusLanjut:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status lanjut pelayanan (ralan, ranap)
+            schema:
+                type: string
+                enum: [ralan, ranap]
+                example: ralan
+        ResepIdKunjungan:
+            name: id_kunjungan
+            in: path
+            required: true
+            description: ID Kunjungan pasien
+            schema:
+                type: string
+        ResepIdPasien:
+            name: id_pasien
+            in: path
+            required: true
+            description: ID Pasien
+            schema:
+                type: string
+        ResepIdResep:
+            name: id_resep
+            in: path
+            required: true
+            description: ID Resep obat
+            schema:
+                type: string
+        ResepTanggalFilter:
+            name: tanggal
+            in: query
+            required: false
+            description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+            schema:
+                type: string
+                example: "2026-08-01,2026-08-27"
+        ResepPageFilter:
+            name: page
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 1
+        ResepLimitFilter:
+            name: limit
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 5
+        ResepKeywordFilter:
+            name: keyword
+            in: query
+            required: false
+            description: Kata kunci pencarian aturan pakai (contoh "3 x 1" atau "tablet")
+            schema:
+                type: string
+                example: "3 x 1"
     schemas:
         Resep:
             type: object
             properties:
                 id:
                     type: string
-                    description: Encrypted ID Nomor Resep
+                    description: ID Resep obat
                     example: 2l1bLdukCaw2wBgR1XqLwbNEgwZaoreA7WooO9BjSyI
                 id_kunjungan:
                     type: string
-                    description: Encrypted ID Nomor Rawat Kunjungan
+                    description: ID Kunjungan pasien
                     example: eN781vJ9A8Z
                 no_resep:
                     type: string
@@ -453,7 +861,7 @@ components:
             properties:
                 id_obat:
                     type: string
-                    description: Encrypted ID Kode Obat
+                    description: ID Obat
                     example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
                 kode_obat:
                     type: string
@@ -504,7 +912,7 @@ components:
             properties:
                 id_obat:
                     type: string
-                    description: Encrypted ID Kode Obat
+                    description: ID Obat
                     example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
                 kode_obat:
                     type: string
@@ -529,15 +937,15 @@ components:
             properties:
                 no_rawat:
                     type: string
-                    description: Nomor Rawat Pasien (wajib cocok dengan hasil dekripsi id_kunjungan)
+                    description: Nomor rawat kunjungan pasien
                     example: "2026/04/22/036934"
                 tanggal_peresepan:
                     type: string
-                    description: Tanggal peresepan YYYY-MM-DD (opsional, default hari ini)
+                    description: Tanggal peresepan obat (YYYY-MM-DD)
                     example: "2026-08-28"
                 jam_peresepan:
                     type: string
-                    description: Jam peresepan HH:mm:ss (opsional, default jam sekarang)
+                    description: Jam peresepan obat (HH:mm:ss)
                     example: "10:00:00"
                 resep_dokter:
                     type: array
@@ -558,12 +966,12 @@ components:
             properties:
                 id_obat:
                     type: string
-                    description: Encrypted ID Kode Obat
+                    description: ID Obat
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
                 jumlah:
                     type: number
                     format: double
-                    description: Jumlah obat (> 0)
+                    description: Jumlah obat
                     example: 10
                 aturan_pakai:
                     type: string
@@ -588,7 +996,7 @@ components:
                     example: "PULV"
                 jumlah_racikan:
                     type: integer
-                    description: Jumlah bungkus/kapsul racikan (> 0)
+                    description: Jumlah racikan
                     example: 10
                 aturan_pakai:
                     type: string
@@ -596,11 +1004,11 @@ components:
                     example: "3 x 1 bungkus"
                 keterangan:
                     type: string
-                    description: Keterangan tambahan (opsional)
+                    description: Keterangan tambahan
                     example: "Sebelum tidur"
                 detail:
                     type: array
-                    description: Komposisi obat bahan racikan (minimal 1 bahan)
+                    description: Komposisi bahan obat racikan
                     items:
                         $ref: "#/components/schemas/ResepRacikanDetailInput"
         ResepRacikanDetailInput:
@@ -611,16 +1019,16 @@ components:
             properties:
                 id_obat:
                     type: string
-                    description: Encrypted ID Kode Obat
+                    description: ID Obat
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
                 kandungan:
                     type: string
-                    description: Kandungan/dosis obat racikan (opsional)
+                    description: Kandungan atau dosis obat
                     example: "500 mg"
                 jumlah:
                     type: number
                     format: double
-                    description: Jumlah bahan obat (> 0)
+                    description: Jumlah bahan obat
                     example: 5.00
         AturanPakai:
             type: object

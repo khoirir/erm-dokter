@@ -98,8 +98,8 @@ func TestAuthHandler_Login_ValidationAndWrongPassword(t *testing.T) {
 			Message string `json:"message"`
 		}
 		_ = json.Unmarshal(rr.Body.Bytes(), &resp)
-		if resp.Message != "Data login tidak valid" {
-			t.Errorf("Expected message 'Data login tidak valid', got '%s'", resp.Message)
+		if resp.Message != "Format data login tidak valid" {
+			t.Errorf("Expected message 'Format data login tidak valid', got '%s'", resp.Message)
 		}
 	})
 

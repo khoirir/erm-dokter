@@ -27,6 +27,56 @@ func TestStatusLanjut_IsValid(t *testing.T) {
 	}
 }
 
+func TestParseStatusLanjut(t *testing.T) {
+	tests := []struct {
+		input       string
+		expected    shared.StatusLanjut
+		expectedOk  bool
+	}{
+		{"ralan", shared.StatusLanjutRawatJalan, true},
+		{"Ralan", shared.StatusLanjutRawatJalan, true},
+		{"RALAN", shared.StatusLanjutRawatJalan, true},
+		{"ranap", shared.StatusLanjutRawatInap, true},
+		{"Ranap", shared.StatusLanjutRawatInap, true},
+		{"RANAP", shared.StatusLanjutRawatInap, true},
+		{"semua", "", false},
+		{"igd", "", false},
+		{"", "", false},
+	}
+
+	for _, tt := range tests {
+		got, ok := shared.ParseStatusLanjut(tt.input)
+		if ok != tt.expectedOk || got != tt.expected {
+			t.Errorf("ParseStatusLanjut(%q) = (%v, %v), expected (%v, %v)", tt.input, got, ok, tt.expected, tt.expectedOk)
+		}
+	}
+}
+
+func TestParseStatusLanjutWithSemua(t *testing.T) {
+	tests := []struct {
+		input      string
+		expected   shared.StatusLanjut
+		expectedOk bool
+	}{
+		{"ralan", shared.StatusLanjutRawatJalan, true},
+		{"Ralan", shared.StatusLanjutRawatJalan, true},
+		{"ranap", shared.StatusLanjutRawatInap, true},
+		{"Ranap", shared.StatusLanjutRawatInap, true},
+		{"semua", "Semua", true},
+		{"Semua", "Semua", true},
+		{"SEMUA", "Semua", true},
+		{"invalid", "", false},
+		{"", "", false},
+	}
+
+	for _, tt := range tests {
+		got, ok := shared.ParseStatusLanjutWithSemua(tt.input)
+		if ok != tt.expectedOk || got != tt.expected {
+			t.Errorf("ParseStatusLanjutWithSemua(%q) = (%v, %v), expected (%v, %v)", tt.input, got, ok, tt.expected, tt.expectedOk)
+		}
+	}
+}
+
 func TestSortOrder_IsValid(t *testing.T) {
 	tests := []struct {
 		name     string

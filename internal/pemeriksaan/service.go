@@ -97,7 +97,10 @@ func (s *service) DetailPemeriksaan(ctx context.Context, id IdPemeriksaan, statu
 		return nil, err
 	}
 	if pemeriksaan == nil {
-		return nil, apperror.NewNotFoundError("Detail pemeriksaan tidak ditemukan")
+		return nil, apperror.NewNotFoundError(
+			"Data pemeriksaan tidak ditemukan",
+			fmt.Sprintf("Data pemeriksaan tidak ditemukan untuk no_rawat '%s' tanggal '%s' jam '%s' (%s)", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, statusLanjut),
+		)
 	}
 
 	return pemeriksaan, nil
@@ -120,15 +123,12 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 	}
 
 	if err := s.repo.SimpanPemeriksaan(ctx, kodeDokter, statusLanjut, req); err != nil {
-		var mysqlErr *mysql.MySQLError
-		if (errors.As(err, &mysqlErr) && mysqlErr.Number == 1062) || strings.Contains(err.Error(), "1062") || strings.Contains(err.Error(), "Duplicate entry") {
-			errMsg := fmt.Sprintf("Data pemeriksaan pada tanggal %s jam %s sudah pernah disimpan sebelumnya. Silakan sesuaikan jam pemeriksaan.", req.TanggalPemeriksaan, req.JamPemeriksaan)
-			s.log.Warn("Penyimpanan pemeriksaan duplikat untuk no_rawat %s (%s %s): %s", req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, errMsg)
+		if isDuplicateEntry(err) {
 			return nil, apperror.ValidationError{
-				"jam_pemeriksaan": errMsg,
+				"jam_pemeriksaan": fmt.Sprintf("Pemeriksaan pada %s %s sudah ada", req.TanggalPemeriksaan, req.JamPemeriksaan),
 			}
 		}
-		s.log.Error("Gagal menyimpan pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", req.NoRawat, statusLanjut, kodeDokter, err)
+		s.log.Error("Gagal menyimpan data pemeriksaan no_rawat '%s' (%s) oleh dokter '%s': %v", req.NoRawat, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 
@@ -138,32 +138,23 @@ func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, stat
 		JamPemeriksaan:     req.JamPemeriksaan,
 	}
 
-	detail, err := s.repo.DetailPemeriksaan(ctx, idPemeriksaan, statusLanjut)
+	detail, err := s.DetailPemeriksaan(ctx, idPemeriksaan, statusLanjut)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail pemeriksaan setelah simpan no_rawat %s (%s): %v", req.NoRawat, statusLanjut, err)
 		return nil, err
 	}
-	if detail == nil {
-		return nil, apperror.NewNotFoundError("Data pemeriksaan yang baru disimpan tidak ditemukan")
-	}
 
-	s.log.Info("Berhasil menyimpan pemeriksaan no_rawat %s (%s) oleh dokter %s", req.NoRawat, statusLanjut, kodeDokter)
+	s.log.Info("Berhasil menyimpan data pemeriksaan no_rawat '%s' (%s %s, %s) oleh dokter '%s'", req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, kodeDokter)
 	return detail, nil
 }
 
 func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut, req UpdatePemeriksaanRequest) (*Pemeriksaan, error) {
-	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
+	pemeriksaan, err := s.DetailPemeriksaan(ctx, id, statusLanjut)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail pemeriksaan untuk update %+v (%s): %v", id, statusLanjut, err)
 		return nil, err
 	}
-	if pemeriksaan == nil {
-		return nil, apperror.NewNotFoundError("Data pemeriksaan tidak ditemukan")
-	}
 
-	if pemeriksaan.KodeDokterPetugas != kodeDokter {
-		s.log.Warn("Percobaan mengubah pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: diinput oleh %s (%s)", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, pemeriksaan.KodeDokterPetugas, pemeriksaan.NamaDokterPetugas)
-		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
+	if err := s.validasiKepemilikanDokter(pemeriksaan, kodeDokter, "mengubah"); err != nil {
+		return nil, err
 	}
 
 	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut); err != nil {
@@ -171,15 +162,12 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 	}
 
 	if err := s.repo.UpdatePemeriksaan(ctx, id, statusLanjut, req); err != nil {
-		var mysqlErr *mysql.MySQLError
-		if (errors.As(err, &mysqlErr) && mysqlErr.Number == 1062) || strings.Contains(err.Error(), "1062") || strings.Contains(err.Error(), "Duplicate entry") {
-			errMsg := fmt.Sprintf("Data pemeriksaan pada tanggal %s jam %s sudah pernah disimpan sebelumnya. Silakan sesuaikan jam pemeriksaan.", req.TanggalPemeriksaan, req.JamPemeriksaan)
-			s.log.Warn("Pembaruan pemeriksaan duplikat untuk no_rawat %s (%s %s): %s", id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, errMsg)
+		if isDuplicateEntry(err) {
 			return nil, apperror.ValidationError{
-				"jam_pemeriksaan": errMsg,
+				"jam_pemeriksaan": fmt.Sprintf("Pemeriksaan pada %s %s sudah ada", req.TanggalPemeriksaan, req.JamPemeriksaan),
 			}
 		}
-		s.log.Error("Gagal memperbarui pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", id.NoRawat, statusLanjut, kodeDokter, err)
+		s.log.Error("Gagal memperbarui data pemeriksaan no_rawat '%s' (%s) oleh dokter '%s': %v", id.NoRawat, statusLanjut, kodeDokter, err)
 		return nil, err
 	}
 
@@ -189,32 +177,23 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 		JamPemeriksaan:     req.JamPemeriksaan,
 	}
 
-	detail, err := s.repo.DetailPemeriksaan(ctx, updatedId, statusLanjut)
+	detail, err := s.DetailPemeriksaan(ctx, updatedId, statusLanjut)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail pemeriksaan setelah update no_rawat %s (%s): %v", id.NoRawat, statusLanjut, err)
 		return nil, err
 	}
-	if detail == nil {
-		return nil, apperror.NewNotFoundError("Data pemeriksaan yang baru diperbarui tidak ditemukan")
-	}
 
-	s.log.Info("Berhasil memperbarui data pemeriksaan no_rawat %s (%s %s -> %s %s) oleh dokter %s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, req.TanggalPemeriksaan, req.JamPemeriksaan, kodeDokter)
+	s.log.Info("Berhasil memperbarui data pemeriksaan no_rawat '%s' (%s %s -> %s %s) oleh dokter '%s'", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, req.TanggalPemeriksaan, req.JamPemeriksaan, kodeDokter)
 	return detail, nil
 }
 
 func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id IdPemeriksaan, statusLanjut shared.StatusLanjut) error {
-	pemeriksaan, err := s.repo.DetailPemeriksaan(ctx, id, statusLanjut)
+	pemeriksaan, err := s.DetailPemeriksaan(ctx, id, statusLanjut)
 	if err != nil {
-		s.log.Error("Gagal mengambil detail pemeriksaan untuk hapus %+v (%s): %v", id, statusLanjut, err)
 		return err
 	}
-	if pemeriksaan == nil {
-		return apperror.NewNotFoundError("Data pemeriksaan tidak ditemukan")
-	}
 
-	if pemeriksaan.KodeDokterPetugas != kodeDokter {
-		s.log.Warn("Percobaan menghapus pemeriksaan no_rawat %s (%s %s) oleh dokter %s ditolak: diinput oleh %s (%s)", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter, pemeriksaan.KodeDokterPetugas, pemeriksaan.NamaDokterPetugas)
-		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus data pemeriksaan ini karena diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas))
+	if err := s.validasiKepemilikanDokter(pemeriksaan, kodeDokter, "menghapus"); err != nil {
+		return err
 	}
 
 	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut); err != nil {
@@ -222,72 +201,93 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 	}
 
 	if err := s.repo.HapusPemeriksaan(ctx, id, statusLanjut); err != nil {
-		s.log.Error("Gagal menghapus pemeriksaan no_rawat %s (%s) oleh dokter %s: %v", id.NoRawat, statusLanjut, kodeDokter, err)
+		s.log.Error("Gagal menghapus data pemeriksaan no_rawat '%s' (%s) oleh dokter '%s': %v", id.NoRawat, statusLanjut, kodeDokter, err)
 		return err
 	}
 
-	s.log.Info("Berhasil menghapus data pemeriksaan no_rawat %s (%s %s) oleh dokter %s", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter)
+	s.log.Info("Berhasil menghapus data pemeriksaan no_rawat '%s' (%s %s) oleh dokter '%s'", id.NoRawat, id.TanggalPemeriksaan, id.JamPemeriksaan, kodeDokter)
 	return nil
 }
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPeriksa, jamPeriksa string, statusLanjut shared.StatusLanjut) error {
-	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
+func (s *service) validasiKepemilikanDokter(pemeriksaan *Pemeriksaan, kodeDokter, aksi string) error {
+	if pemeriksaan.KodeDokterPetugas != kodeDokter {
+		return apperror.NewForbiddenError(
+			fmt.Sprintf("Data pemeriksaan ini diinput oleh dokter/petugas lain (%s)", pemeriksaan.NamaDokterPetugas),
+			fmt.Sprintf("Dokter '%s' mencoba %s data pemeriksaan no_rawat '%s' (%s %s) milik '%s' (%s)",
+				kodeDokter, aksi, pemeriksaan.NoRawat, pemeriksaan.TanggalPemeriksaan, pemeriksaan.JamPemeriksaan,
+				pemeriksaan.KodeDokterPetugas, pemeriksaan.NamaDokterPetugas),
+		)
+	}
+	return nil
+}
+
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPemeriksaan, jamPemeriksaan string, statusLanjut shared.StatusLanjut) error {
+	tanggalRegistrasi, jamRegistrasi, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
-		s.log.Error("Gagal mengambil data registrasi no_rawat %s: %v", noRawat, err)
+		s.log.Error("Gagal mengambil data registrasi no_rawat '%s': %v", noRawat, err)
 		return err
 	}
 	if !exists {
 		return apperror.NewNotFoundError("Data registrasi kunjungan pasien tidak ditemukan")
 	}
 
-	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
+	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasi, jamRegistrasi)
 	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
+		s.log.Error("Gagal parse waktu registrasi no_rawat '%s' (%s %s): %v", noRawat, tanggalRegistrasi, jamRegistrasi, err)
 		return err
 	}
 
-	if tanggalPeriksa != "" && jamPeriksa != "" {
-		waktuPemeriksaan, err := shared.ParseWaktu(tanggalPeriksa, jamPeriksa)
+	if tanggalPemeriksaan != "" && jamPemeriksaan != "" {
+		waktuPemeriksaan, err := shared.ParseWaktu(tanggalPemeriksaan, jamPemeriksaan)
 		if err != nil {
 			return apperror.NewBusinessError(err.Error())
 		}
 
 		if waktuPemeriksaan.Before(waktuRegistrasi) {
-			errs := apperror.ValidationError{
-				"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tanggalPeriksa, jamPeriksa, tanggalRegistrasiStr, jamRegistrasiStr),
+			return apperror.ValidationError{
+				"tanggal_pemeriksaan": fmt.Sprintf("Waktu pemeriksaan tidak boleh sebelum registrasi (%s %s)", tanggalRegistrasi, jamRegistrasi),
 			}
-			s.log.Warn("Validasi waktu pemeriksaan gagal untuk no_rawat %s: %+v", noRawat, errs)
-			return errs
 		}
 	}
 
-	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi, tanggalRegistrasiStr, jamRegistrasiStr)
+	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi)
 }
 
-func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time, tglRegStr, jamRegStr string) error {
+func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time) error {
 	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
 	if err != nil {
-		s.log.Error("Gagal cek status kamar inap untuk no_rawat %s: %v", noRawat, err)
+		s.log.Error("Gagal cek status kamar inap untuk no_rawat '%s': %v", noRawat, err)
 		return err
 	}
 
 	if hasRecordKamar {
 		if !isAktifRanap {
-			return apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
+			return apperror.NewBusinessError("Pasien sudah keluar dari kamar inap")
 		}
 		return nil
 	}
 
 	if strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap)) {
-		return apperror.NewBusinessError("Pasien belum/tidak terdaftar di kamar inap. Pemeriksaan harus menggunakan status 'Ralan'.")
+		return apperror.NewBusinessError("Pasien belum terdaftar di kamar inap, gunakan status 'ralan'")
 	}
 
 	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
 	if time.Now().After(batasWaktu) {
-		errMsg := fmt.Sprintf("Batas waktu pemeriksaan medis untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
-		s.log.Warn("Pemeriksaan ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
-		return apperror.NewForbiddenError(errMsg)
+		return apperror.NewForbiddenError(
+			fmt.Sprintf("Pemeriksaan melewati batas waktu maksimal %d jam", s.maxEditJam),
+			fmt.Sprintf("Pemeriksaan no_rawat '%s' ditolak karena melewati batas %d jam dari registrasi (%s)", noRawat, s.maxEditJam, waktuRegistrasi.Format("2006-01-02 15:04:05")),
+		)
 	}
 
 	return nil
+}
+
+func isDuplicateEntry(err error) bool {
+	if err == nil {
+		return false
+	}
+	var mysqlErr *mysql.MySQLError
+	return (errors.As(err, &mysqlErr) && mysqlErr.Number == 1062) ||
+		strings.Contains(err.Error(), "1062") ||
+		strings.Contains(err.Error(), "Duplicate entry")
 }

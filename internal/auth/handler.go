@@ -30,7 +30,7 @@ func (h *Handler) RegisterRoutes(
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-	if !shared.DecodeJSON(w, r, &req, "Data login tidak valid") {
+	if !shared.DecodeJSON(w, r, &req, "Format data login tidak valid") {
 		return
 	}
 
