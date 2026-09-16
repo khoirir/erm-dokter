@@ -86,7 +86,7 @@ func (h *Handler) SimpanRujukanInternal(w http.ResponseWriter, r *http.Request) 
 
 	var req SimpanRujukanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data rujukan tidak valid"))
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *Handler) SimpanRujukanInternal(w http.ResponseWriter, r *http.Request) 
 
 	decryptedTujuan, err := crypto.Decrypt(req.IdTujuan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID tujuan rujukan tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID poli rujukan tidak valid"))
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *Handler) HapusRujukanInternal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if parsedId.NoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewForbiddenError("Data rujukan internal tidak sesuai dengan kunjungan pasien"))
+		apperror.HandleError(w, apperror.NewForbiddenError("ID rujukan tidak sesuai dengan ID kunjungan"))
 		return
 	}
 

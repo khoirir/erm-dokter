@@ -94,7 +94,7 @@ func TestHandler_GetDaftarTindakanLab_Success(t *testing.T) {
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk?page=1&limit=20&keyword=Darah", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/pk?page=1&limit=20&keyword=Darah", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -130,7 +130,7 @@ func TestHandler_GetDaftarTindakanLab_InvalidKategori(t *testing.T) {
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/radiologi", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/radiologi", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -145,7 +145,7 @@ func TestHandler_GetDaftarTindakanLab_InvalidKeyword(t *testing.T) {
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk?keyword=da", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/pk?keyword=da", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -184,7 +184,7 @@ func TestHandler_GetDetailTindakanLab_Success(t *testing.T) {
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
 	encId, _ := crypto.Encrypt("PK001", testEncryptionKey)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/"+encId, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/pk/"+encId, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -223,7 +223,7 @@ func TestHandler_GetDetailTindakanLab_InvalidEncryptedId(t *testing.T) {
 	dummyMiddleware := func(next http.HandlerFunc) http.HandlerFunc { return next }
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/invalid-token-here", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/pk/invalid-token-here", nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -235,7 +235,7 @@ func TestHandler_GetDetailTindakanLab_InvalidEncryptedId(t *testing.T) {
 func TestHandler_GetDetailTindakanLab_NotFound(t *testing.T) {
 	mockSvc := &mockService{
 		getDetailTindakanLabFn: func(ctx context.Context, kategori shared.KategoriLab, kodeTindakan string) (*tindakan.DetailTindakanLab, error) {
-			return nil, apperror.NewNotFoundError("Data tindakan laboratorium tidak ditemukan")
+			return nil, apperror.NewNotFoundError("Tindakan laboratorium tidak ditemukan")
 		},
 	}
 
@@ -245,7 +245,7 @@ func TestHandler_GetDetailTindakanLab_NotFound(t *testing.T) {
 	handler.RegisterRoutes(mux, dummyMiddleware, dummyMiddleware)
 
 	encId, _ := crypto.Encrypt("PK999", testEncryptionKey)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/lab/pk/"+encId, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tindakan/laboratorium/pk/"+encId, nil)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -369,7 +369,7 @@ func TestHandler_GetDetailTindakanRadiologi_InvalidEncryptedId(t *testing.T) {
 func TestHandler_GetDetailTindakanRadiologi_NotFound(t *testing.T) {
 	mockSvc := &mockService{
 		getDetailTindakanRadiologiFn: func(ctx context.Context, kodeTindakan string) (*tindakan.TindakanRadiologi, error) {
-			return nil, apperror.NewNotFoundError("Data tindakan radiologi tidak ditemukan")
+			return nil, apperror.NewNotFoundError("Tindakan radiologi tidak ditemukan")
 		},
 	}
 

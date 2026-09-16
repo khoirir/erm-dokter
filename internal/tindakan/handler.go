@@ -24,8 +24,8 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("GET /api/v1/tindakan/lab/{kategori}", authMiddleware(timeoutMiddleware(h.GetDaftarTindakanLab)))
-	mux.HandleFunc("GET /api/v1/tindakan/lab/{kategori}/{id_tindakan}", authMiddleware(timeoutMiddleware(h.GetDetailTindakanLab)))
+	mux.HandleFunc("GET /api/v1/tindakan/laboratorium/{kategori}", authMiddleware(timeoutMiddleware(h.GetDaftarTindakanLab)))
+	mux.HandleFunc("GET /api/v1/tindakan/laboratorium/{kategori}/{id_tindakan}", authMiddleware(timeoutMiddleware(h.GetDetailTindakanLab)))
 	mux.HandleFunc("GET /api/v1/tindakan/radiologi", authMiddleware(timeoutMiddleware(h.GetDaftarTindakanRadiologi)))
 	mux.HandleFunc("GET /api/v1/tindakan/radiologi/{id_tindakan}", authMiddleware(timeoutMiddleware(h.GetDetailTindakanRadiologi)))
 }
@@ -34,7 +34,7 @@ func (h *Handler) GetDaftarTindakanLab(w http.ResponseWriter, r *http.Request) {
 	kategoriRaw := r.PathValue("kategori")
 	kat := shared.KategoriLab(strings.ToUpper(strings.TrimSpace(kategoriRaw)))
 	if !kat.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Kategori laboratorium tidak valid (pilihan: PK, PA, MB)"))
+		apperror.HandleError(w, apperror.NewBusinessError("Kategori laboratorium tidak valid"))
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *Handler) GetDetailTindakanLab(w http.ResponseWriter, r *http.Request) {
 	kategoriRaw := r.PathValue("kategori")
 	kat := shared.KategoriLab(strings.ToUpper(strings.TrimSpace(kategoriRaw)))
 	if !kat.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Kategori laboratorium tidak valid (pilihan: PK, PA, MB)"))
+		apperror.HandleError(w, apperror.NewBusinessError("Kategori laboratorium tidak valid"))
 		return
 	}
 
@@ -85,7 +85,7 @@ func (h *Handler) GetDetailTindakanLab(w http.ResponseWriter, r *http.Request) {
 
 	kodeTindakan, err := crypto.Decrypt(idTindakan, h.encryptionKey)
 	if err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("ID tindakan lab tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("ID tindakan laboratorium tidak valid"))
 		return
 	}
 

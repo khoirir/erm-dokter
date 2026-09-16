@@ -16,7 +16,7 @@ import (
 type Repository interface {
 	DaftarHasilRadiologiKunjungan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, int, error)
 	DaftarHasilRadiologiPasien(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, int, error)
-	DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*HasilRadiologi, error)
+	DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi) (*HasilRadiologi, error)
 
 	SimpanPermintaanRadiologi(ctx context.Context, noRawat string, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest, kodeTindakanList []string) (string, error)
 	DaftarPermintaanRadiologiKunjungan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]DetailPermintaanRadiologi, error)
@@ -155,7 +155,7 @@ func (r *repository) queryRiwayatRadiologi(ctx context.Context, whereClause stri
 	return list, total, nil
 }
 
-func (r *repository) DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*HasilRadiologi, error) {
+func (r *repository) DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi) (*HasilRadiologi, error) {
 	query := `
 		SELECT 
 			pr.no_rawat,
@@ -182,13 +182,6 @@ func (r *repository) DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRa
 	`
 	args := []any{idHasil.NoRawat, idHasil.KodeTindakan, idHasil.TanggalPeriksa, idHasil.JamPeriksa}
 
-	switch statusLanjut {
-	case shared.StatusLanjutRawatJalan:
-		query += " AND pr.status = 'Ralan'"
-	case shared.StatusLanjutRawatInap:
-		query += " AND pr.status = 'Ranap'"
-	}
-
 	var item HasilRadiologi
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
 		&item.NoRawat,
@@ -207,7 +200,7 @@ func (r *repository) DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRa
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -418,11 +411,11 @@ func (r *repository) DaftarPermintaanRadiologiKunjungan(ctx context.Context, noR
 		SELECT 
 			pr.noorder AS no_permintaan,
 			pr.no_rawat,
-			DATE_FORMAT(pr.tgl_permintaan, '%%%%Y-%%%%m-%%%%d') AS tanggal_permintaan,
+			DATE_FORMAT(pr.tgl_permintaan, '%%Y-%%m-%%d') AS tanggal_permintaan,
 			pr.jam_permintaan,
-			DATE_FORMAT(pr.tgl_sampel, '%%%%Y-%%%%m-%%%%d') AS tanggal_sampel,
+			DATE_FORMAT(pr.tgl_sampel, '%%Y-%%m-%%d') AS tanggal_sampel,
 			pr.jam_sampel,
-			DATE_FORMAT(pr.tgl_hasil, '%%%%Y-%%%%m-%%%%d') AS tanggal_hasil,
+			DATE_FORMAT(pr.tgl_hasil, '%%Y-%%m-%%d') AS tanggal_hasil,
 			pr.jam_hasil,
 			pr.dokter_perujuk AS kd_dokter_perujuk,
 			COALESCE(d.nm_dokter, '-') AS nm_dokter_perujuk,
@@ -531,11 +524,11 @@ func (r *repository) DaftarPermintaanRadiologiPasien(ctx context.Context, noRM s
 		SELECT 
 			pr.noorder AS no_permintaan,
 			pr.no_rawat,
-			DATE_FORMAT(pr.tgl_permintaan, '%%%%Y-%%%%m-%%%%d') AS tanggal_permintaan,
+			DATE_FORMAT(pr.tgl_permintaan, '%%Y-%%m-%%d') AS tanggal_permintaan,
 			pr.jam_permintaan,
-			DATE_FORMAT(pr.tgl_sampel, '%%%%Y-%%%%m-%%%%d') AS tanggal_sampel,
+			DATE_FORMAT(pr.tgl_sampel, '%%Y-%%m-%%d') AS tanggal_sampel,
 			pr.jam_sampel,
-			DATE_FORMAT(pr.tgl_hasil, '%%%%Y-%%%%m-%%%%d') AS tanggal_hasil,
+			DATE_FORMAT(pr.tgl_hasil, '%%Y-%%m-%%d') AS tanggal_hasil,
 			pr.jam_hasil,
 			pr.dokter_perujuk AS kd_dokter_perujuk,
 			COALESCE(d.nm_dokter, '-') AS nm_dokter_perujuk,
@@ -686,6 +679,9 @@ func (r *repository) DetailPermintaanRadiologi(ctx context.Context, noPermintaan
 		&detail.DiagnosaKlinis,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

@@ -2,18 +2,19 @@ paths:
     /api/v1/rujukan-internal/opsi-poli:
         get:
             tags: [Rujukan Internal]
-            summary: Daftar Opsi Dokter & Poliklinik Rujukan
+            summary: Pilihan Dokter & Poliklinik Rujukan
             description: |
-                Mengambil daftar opsi dokter dan poliklinik tujuan rujukan internal yang aktif berpraktek (berdasarkan tabel `jadwal`).
-                - Otomatis mengecualikan dokter yang sedang login (`kd_dokter != dokter_login`).
-                - ID publik pada response dienkripsi AES-GCM composite key (`kd_poli~kd_dokter`) untuk digunakan sebagai payload `id_tujuan` saat membuat rujukan.
+                Mengambil daftar pilihan dokter dan poliklinik tujuan untuk rujukan internal atau konsultasi antar-poliklinik.
+                - Menampilkan dokter dan poliklinik yang memiliki jadwal praktek aktif.
+                - Dokter yang sedang memeriksa pasien otomatis tidak disertakan dalam pilihan.
+                - ID pada data ini digunakan sebagai tujuan saat membuat rujukan internal baru.
             security:
                 - BearerAuth: []
             parameters:
                 - name: keyword
                   in: query
                   required: false
-                  description: Kata kunci pencarian nama poliklinik atau nama dokter (opsional)
+                  description: Kata kunci pencarian nama poliklinik atau dokter (opsional)
                   schema:
                     type: string
                     example: jantung
@@ -24,6 +25,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -36,21 +41,52 @@ paths:
                                         items:
                                             $ref: "#/components/schemas/OpsiPoliDokter"
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token otentikasi tidak valid atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/rujukan-internal/{id_kunjungan}:
         get:
             tags: [Rujukan Internal]
             summary: Daftar Rujukan Internal Pasien per Kunjungan
-            description: Mengambil seluruh rujukan internal / konsul antar-poli yang dibuat untuk kunjungan tertentu.
+            description: Mengambil seluruh riwayat rujukan internal atau konsultasi yang telah dibuat untuk pasien pada kunjungan yang dipilih.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: ID kunjungan pasien
                   schema:
                     type: string
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
             responses:
                 "200":
                     description: Berhasil mengambil daftar rujukan internal
@@ -58,6 +94,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -71,27 +111,73 @@ paths:
                                             $ref: "#/components/schemas/RujukanInternal"
                 "400":
                     description: ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token tidak ada atau kadaluarsa
+                    description: Token otentikasi tidak valid atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
             tags: [Rujukan Internal]
             summary: Simpan Rujukan Internal Baru
             description: |
-                Menyimpan rujukan internal pasien ke dokter dan poliklinik lain.
+                Membuat rujukan internal baru untuk pasien ke dokter dan poliklinik tujuan.
 
-                ### Aturan Bisnis & Validasi:
-                - **Proteksi Diri Sendiri**: Dokter tidak dapat membuat rujukan internal ke dirinya sendiri.
-                - **Proteksi Duplikasi**: Pasien tidak dapat dirujuk ke dokter yang sama lebih dari 1 kali pada kunjungan yang sama.
-                - **Proteksi Batas Waktu 48 Jam**: Pembuatan rujukan ditolak jika waktu registrasi rawat jalan telah melewati batas waktu 48 jam.
+                ### Ketentuan & Aturan:
+                - Rujukan tidak dapat ditujukan ke dokter pemeriksa yang sedang menangani pasien.
+                - Pasien tidak dapat dirujuk ke dokter tujuan yang sama lebih dari satu kali dalam satu kunjungan.
+                - Rujukan hanya dapat dibuat dalam batas waktu maksimal 48 jam sejak pasien terdaftar di rawat jalan.
+                - Pasien BPJS yang sudah menyelesaikan administrasi / pembayaran tidak dapat dibuatkan rujukan baru.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: ID kunjungan pasien
                   schema:
                     type: string
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
             requestBody:
                 required: true
                 content:
@@ -105,6 +191,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -115,36 +205,119 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/RujukanInternal"
                 "400":
-                    description: ID tujuan tidak valid, format JSON salah, atau duplikasi rujukan
+                    description: Data yang dikirim tidak lengkap atau tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Tujuan rujukan tidak dapat dipilih
+                                    error:
+                                        type: object
+                                        additionalProperties:
+                                            type: string
+                                        example:
+                                            id_tujuan: Tujuan rujukan tidak dapat dipilih
+                "401":
+                    description: Token otentikasi tidak valid atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
                     description: Melebihi batas waktu maksimal 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Rujukan internal tidak dapat disimpan, melebihi batas 48 jam
                 "404":
-                    description: Data kunjungan pasien tidak ditemukan
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/rujukan-internal/{id_kunjungan}/{id_rujukan}:
         delete:
             tags: [Rujukan Internal]
-            summary: Batalkan / Hapus Rujukan Internal
+            summary: Batalkan Rujukan Internal
             description: |
-                Membatalkan rujukan internal pasien yang telah dibuat.
+                Membatalkan rujukan internal pasien yang telah dibuat sebelumnya.
 
-                ### Aturan Bisnis:
-                - **Validasi Kunjungan**: ID rujukan harus cocok dengan ID kunjungan pasien pada URL.
-                - **Proteksi Batas Waktu 48 Jam**: Pembatalan rujukan ditolak jika telah melewati batas waktu 48 jam.
+                ### Ketentuan & Aturan:
+                - Rujukan yang dibatalkan harus sesuai dengan kunjungan pasien yang dipilih.
+                - Pembatalan rujukan hanya dapat dilakukan dalam batas waktu maksimal 48 jam sejak pasien terdaftar.
+                - Pasien BPJS yang sudah menyelesaikan administrasi / pembayaran tidak dapat dibatalkan rujukannya.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: ID kunjungan pasien
                   schema:
                     type: string
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
                 - name: id_rujukan
                   in: path
                   required: true
-                  description: Encrypted Composite Key ID Rujukan (NoRawat~KodePoli~KodeDokter)
+                  description: ID rujukan internal yang akan dibatalkan
                   schema:
                     type: string
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
             responses:
                 "200":
                     description: Berhasil membatalkan rujukan internal
@@ -152,6 +325,10 @@ paths:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -159,58 +336,158 @@ paths:
                                     message:
                                         type: string
                                         example: Berhasil membatalkan rujukan internal
+                                    data:
+                                        type: "null"
+                                        example: null
                 "400":
                     description: ID kunjungan atau ID rujukan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID rujukan tidak valid
+                "401":
+                    description: Token otentikasi tidak valid atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Melebihi batas waktu 48 jam atau ID rujukan tidak cocok dengan kunjungan
+                    description: Data rujukan tidak sesuai dengan kunjungan atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Rujukan internal tidak dapat dihapus, melebihi batas 48 jam
                 "404":
-                    description: Data rujukan internal tidak ditemukan
+                    description: Data rujukan internal atau registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data rujukan internal tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         OpsiPoliDokter:
             type: object
+            required:
+                - id
+                - kode_poli
+                - nama_poli
+                - kode_dokter
+                - nama_dokter
             properties:
                 id:
                     type: string
-                    description: Encrypted ID composite key (KodePoli~KodeDokter)
+                    description: ID pilihan dokter dan poliklinik tujuan
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
                 kode_poli:
                     type: string
+                    description: Kode poliklinik tujuan
                     example: "INT"
                 nama_poli:
                     type: string
+                    description: Nama poliklinik tujuan
                     example: "Penyakit Dalam"
                 kode_dokter:
                     type: string
+                    description: Kode dokter tujuan
                     example: "DR002"
                 nama_dokter:
                     type: string
+                    description: Nama dokter tujuan
                     example: "dr. Fulan, Sp.PD"
         RujukanInternal:
             type: object
+            required:
+                - id
+                - id_kunjungan
+                - no_rawat
+                - kode_poli
+                - nama_poli
+                - kode_dokter
+                - nama_dokter
             properties:
                 id:
                     type: string
-                    description: Encrypted ID composite key (NoRawat~KodePoli~KodeDokter)
+                    description: ID rujukan internal
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
                 id_kunjungan:
                     type: string
-                    description: Encrypted ID Nomor Rawat Kunjungan
+                    description: ID kunjungan pasien
                     example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
                 no_rawat:
                     type: string
+                    description: Nomor rawat kunjungan pasien
                     example: "2026/04/22/000001"
                 kode_poli:
                     type: string
+                    description: Kode poliklinik rujukan
                     example: "INT"
                 nama_poli:
                     type: string
+                    description: Nama poliklinik rujukan
                     example: "Penyakit Dalam"
                 kode_dokter:
                     type: string
+                    description: Kode dokter tujuan rujukan
                     example: "DR002"
                 nama_dokter:
                     type: string
+                    description: Nama dokter tujuan rujukan
                     example: "dr. Fulan, Sp.PD"
         SimpanRujukanRequest:
             type: object
@@ -219,5 +496,5 @@ components:
             properties:
                 id_tujuan:
                     type: string
-                    description: Encrypted ID opsi tujuan dokter dan poli (didapatkan dari endpoint /rujukan-internal/opsi-poli)
+                    description: ID pilihan dokter dan poliklinik tujuan (didapatkan dari endpoint daftar opsi rujukan)
                     example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"

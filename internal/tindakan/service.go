@@ -48,7 +48,7 @@ func (s *service) GetDetailTindakanLab(ctx context.Context, kategori shared.Kate
 	tindakan, templates, err := s.repo.GetDetailTindakanLab(ctx, kategori, kodeTindakan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data tindakan laboratorium tidak ditemukan")
+			return nil, apperror.NewNotFoundError("Tindakan laboratorium tidak ditemukan")
 		}
 		s.log.Error("gagal mengambil detail tindakan laboratorium %s kategori %s: %v", kodeTindakan, kategori, err)
 		return nil, err
@@ -93,7 +93,7 @@ func (s *service) GetDetailTindakanRadiologi(ctx context.Context, kodeTindakan s
 	tindakan, err := s.repo.GetDetailTindakanRadiologi(ctx, kodeTindakan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data tindakan radiologi tidak ditemukan")
+			return nil, apperror.NewNotFoundError("Tindakan radiologi tidak ditemukan")
 		}
 		s.log.Error("gagal mengambil detail tindakan radiologi %s: %v", kodeTindakan, err)
 		return nil, err

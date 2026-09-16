@@ -20,7 +20,7 @@ func (id IdOpsiPoliDokter) CompositeKey() string {
 func ParseIdOpsiPoliDokter(decryptedKey string) (IdOpsiPoliDokter, error) {
 	parts := strings.Split(decryptedKey, "~")
 	if len(parts) != 2 {
-		return IdOpsiPoliDokter{}, errors.New("format ID opsi poli dokter tidak valid")
+		return IdOpsiPoliDokter{}, errors.New("ID poli rujukan tidak valid")
 	}
 	return IdOpsiPoliDokter{
 		KodePoli:   strings.TrimSpace(parts[0]),
@@ -57,7 +57,7 @@ func (id IdRujukanInternal) CompositeKey() string {
 func ParseIdRujukanInternal(decryptedKey string) (IdRujukanInternal, error) {
 	parts := strings.Split(decryptedKey, "~")
 	if len(parts) != 3 {
-		return IdRujukanInternal{}, errors.New("format ID rujukan internal tidak valid")
+		return IdRujukanInternal{}, errors.New("ID rujukan tidak valid")
 	}
 	return IdRujukanInternal{
 		NoRawat:    strings.TrimSpace(parts[0]),

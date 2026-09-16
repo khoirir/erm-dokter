@@ -187,3 +187,65 @@ func TestResepHandler_SimpanResep(t *testing.T) {
 		t.Fatalf("Expected status 400 for invalid status lanjut, got %d", rrInvalid.Code)
 	}
 }
+
+func TestResepHandler_DetailResep(t *testing.T) {
+	encResep, _ := crypto.Encrypt("202609030001", testEncKey)
+
+	mockSvc := &mockResepService{
+		detailResepFn: func(ctx context.Context, noResep string) (*resep.Resep, error) {
+			if noResep == "202609030001" {
+				return &resep.Resep{
+					NoResep:          "202609030001",
+					NoRawat:          "2026/09/03/000001",
+					TanggalPeresepan: "2026-09-03",
+					JamPeresepan:     "10:00:00",
+					Status:           "ralan",
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	handler := resep.NewHandler(mockSvc, testEncKey)
+	mux := http.NewServeMux()
+	noOpMw := func(next http.HandlerFunc) http.HandlerFunc { return next }
+	handler.RegisterRoutes(mux, authMwForResep, noOpMw)
+
+	t.Run("Sukses detail resep via route ringkas /api/v1/resep/{id_resep}", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resep/"+encResep, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			Success bool        `json:"success"`
+			Data    resep.Resep `json:"data"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		decId, err := crypto.Decrypt(resp.Data.Id, testEncKey)
+		if err != nil || decId != "202609030001" {
+			t.Errorf("Expected decrypted Id '202609030001', got '%s' (err: %v)", decId, err)
+		}
+
+		decKunjungan, err := crypto.Decrypt(resp.Data.IdKunjungan, testEncKey)
+		if err != nil || decKunjungan != "2026/09/03/000001" {
+			t.Errorf("Expected decrypted IdKunjungan '2026/09/03/000001', got '%s' (err: %v)", decKunjungan, err)
+		}
+	})
+
+	t.Run("Error ID resep tidak valid", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/resep/invalid-encrypted-id", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("Expected status 400 for invalid id_resep, got %d", rr.Code)
+		}
+	})
+}

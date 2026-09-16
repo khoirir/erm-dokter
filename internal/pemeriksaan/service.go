@@ -118,7 +118,7 @@ func (s *service) DaftarKesadaran(ctx context.Context) []OpsiReferensi {
 }
 
 func (s *service) SimpanPemeriksaan(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPemeriksaanRequest) (*Pemeriksaan, error) {
-	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "disimpan"); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (s *service) UpdatePemeriksaan(ctx context.Context, kodeDokter string, id I
 		return nil, err
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, req.TanggalPemeriksaan, req.JamPemeriksaan, statusLanjut, "diubah"); err != nil {
 		return nil, err
 	}
 
@@ -196,7 +196,7 @@ func (s *service) HapusPemeriksaan(ctx context.Context, kodeDokter string, id Id
 		return err
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, id.NoRawat, "", "", statusLanjut, "dihapus"); err != nil {
 		return err
 	}
 
@@ -221,7 +221,7 @@ func (s *service) validasiKepemilikanDokter(pemeriksaan *Pemeriksaan, kodeDokter
 	return nil
 }
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPemeriksaan, jamPemeriksaan string, statusLanjut shared.StatusLanjut) error {
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPemeriksaan, jamPemeriksaan string, statusLanjut shared.StatusLanjut, aksi string) error {
 	tanggalRegistrasi, jamRegistrasi, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal mengambil data registrasi no_rawat '%s': %v", noRawat, err)
@@ -250,10 +250,6 @@ func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tang
 		}
 	}
 
-	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi)
-}
-
-func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time) error {
 	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
 	if err != nil {
 		s.log.Error("Gagal cek status kamar inap untuk no_rawat '%s': %v", noRawat, err)
@@ -274,8 +270,8 @@ func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat 
 	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
 	if time.Now().After(batasWaktu) {
 		return apperror.NewForbiddenError(
-			fmt.Sprintf("Pemeriksaan melewati batas waktu maksimal %d jam", s.maxEditJam),
-			fmt.Sprintf("Pemeriksaan no_rawat '%s' ditolak karena melewati batas %d jam dari registrasi (%s)", noRawat, s.maxEditJam, waktuRegistrasi.Format("2006-01-02 15:04:05")),
+			fmt.Sprintf("Pemeriksaan tidak dapat %s, melebihi batas %d jam", aksi, s.maxEditJam),
+			fmt.Sprintf("Pemeriksaan no_rawat '%s' ditolak untuk %s karena melewati batas %d jam dari registrasi (%s)", noRawat, aksi, s.maxEditJam, waktuRegistrasi.Format("2006-01-02 15:04:05")),
 		)
 	}
 

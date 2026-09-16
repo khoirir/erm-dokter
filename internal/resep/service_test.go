@@ -1168,10 +1168,14 @@ func TestHapusResep_ForbiddenInactiveRanap(t *testing.T) {
 	mockRepo := &mockRepository{
 		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
 			return &resep.Resep{
-				NoResep:    "202608280001",
-				NoRawat:    "2026/08/28/000001",
-				KodeDokter: "DK001",
-				Status:     "ranap",
+				NoResep:          "202608280001",
+				NoRawat:          "2026/08/28/000001",
+				KodeDokter:       "DK001",
+				Status:           "ranap",
+				TanggalPerawatan: "0000-00-00",
+				JamPerawatan:     "00:00:00",
+				TanggalPenyerahan: "0000-00-00",
+				JamPenyerahan:    "00:00:00",
 			}, nil
 		},
 	}
@@ -1201,10 +1205,14 @@ func TestHapusResep_ForbiddenBPJSSudahBayar(t *testing.T) {
 	mockRepo := &mockRepository{
 		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
 			return &resep.Resep{
-				NoResep:    "202608280001",
-				NoRawat:    "2026/08/28/000001",
-				KodeDokter: "DK001",
-				Status:     "ralan",
+				NoResep:          "202608280001",
+				NoRawat:          "2026/08/28/000001",
+				KodeDokter:       "DK001",
+				Status:           "ralan",
+				TanggalPerawatan: "0000-00-00",
+				JamPerawatan:     "00:00:00",
+				TanggalPenyerahan: "0000-00-00",
+				JamPenyerahan:    "00:00:00",
 			}, nil
 		},
 	}
@@ -1511,9 +1519,14 @@ func TestUpdateResep_ForbiddenInactiveRanap(t *testing.T) {
 	mockRepo := &mockRepository{
 		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
 			return &resep.Resep{
-				NoResep:    "202608280001",
-				NoRawat:    "2026/08/28/000001",
-				KodeDokter: "DK001",
+				NoResep:          "202608280001",
+				NoRawat:          "2026/08/28/000001",
+				KodeDokter:       "DK001",
+				Status:           "ranap",
+				TanggalPerawatan: "0000-00-00",
+				JamPerawatan:     "00:00:00",
+				TanggalPenyerahan: "0000-00-00",
+				JamPenyerahan:    "00:00:00",
 			}, nil
 		},
 	}
@@ -1552,9 +1565,13 @@ func TestUpdateResep_ObatNotFound(t *testing.T) {
 	mockRepo := &mockRepository{
 		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
 			return &resep.Resep{
-				NoResep:    "202608280001",
-				NoRawat:    "2026/08/28/000001",
-				KodeDokter: "DK001",
+				NoResep:          "202608280001",
+				NoRawat:          "2026/08/28/000001",
+				KodeDokter:       "DK001",
+				TanggalPerawatan: "0000-00-00",
+				JamPerawatan:     "00:00:00",
+				TanggalPenyerahan: "0000-00-00",
+				JamPenyerahan:    "00:00:00",
 			}, nil
 		},
 	}
@@ -1600,9 +1617,13 @@ func TestUpdateResep_MetodeRacikNotFound(t *testing.T) {
 	mockRepo := &mockRepository{
 		detailResepFunc: func(ctx context.Context, noResep string) (*resep.Resep, error) {
 			return &resep.Resep{
-				NoResep:    "202608280001",
-				NoRawat:    "2026/08/28/000001",
-				KodeDokter: "DK001",
+				NoResep:          "202608280001",
+				NoRawat:          "2026/08/28/000001",
+				KodeDokter:       "DK001",
+				TanggalPerawatan: "0000-00-00",
+				JamPerawatan:     "00:00:00",
+				TanggalPenyerahan: "0000-00-00",
+				JamPenyerahan:    "00:00:00",
 			}, nil
 		},
 		cekKeberadaanMetodeRacikFunc: func(ctx context.Context, listKodeRacik []string) (map[string]bool, error) {

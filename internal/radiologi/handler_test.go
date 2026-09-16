@@ -20,77 +20,77 @@ import (
 const testEncryptionKey = "bafaa956-751d-4f59-98cc-574ee9dfe9f6"
 
 type mockRadiologiService struct {
-	getRiwayatRadiologiKunjunganFn func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error)
-	getRiwayatRadiologiPasienFn    func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error)
-	getDetailHasilRadiologiFn      func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error)
+	daftarHasilRadiologiFn func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error)
+	daftarHasilRadiologiByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error)
+	detailHasilRadiologiFn func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error)
 
-	simpanPermintaanRadiologiFn       func(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error)
-	getDaftarPermintaanRadiologiFn    func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error)
-	getRiwayatPermintaanRadiologiByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error)
-	getDetailPermintaanRadiologiFn    func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*radiologi.DetailPermintaanRadiologi, error)
-	updatePermintaanRadiologiFn       func(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error)
-	hapusPermintaanRadiologiFn        func(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+	simpanPermintaanRadiologiFn func(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error)
+	daftarPermintaanRadiologiFn func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error)
+	daftarPermintaanRadiologiByRMFn func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error)
+	detailPermintaanRadiologiFn func(ctx context.Context, noPermintaan string) (*radiologi.DetailPermintaanRadiologi, error)
+	updatePermintaanRadiologiFn func(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error)
+	hapusPermintaanRadiologiFn func(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut) error
 }
 
-func (m *mockRadiologiService) GetRiwayatRadiologiKunjungan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
-	if m.getRiwayatRadiologiKunjunganFn != nil {
-		return m.getRiwayatRadiologiKunjunganFn(ctx, noRawat, statusLanjut, filter)
+func (m *mockRadiologiService) DaftarHasilRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
+	if m.daftarHasilRadiologiFn != nil {
+		return m.daftarHasilRadiologiFn(ctx, noRawat, statusLanjut, filter)
 	}
 	return nil, shared.PaginationMeta{}, nil
 }
 
-func (m *mockRadiologiService) GetRiwayatRadiologiPasien(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
-	if m.getRiwayatRadiologiPasienFn != nil {
-		return m.getRiwayatRadiologiPasienFn(ctx, noRM, statusLanjut, filter)
+func (m *mockRadiologiService) DaftarHasilRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
+	if m.daftarHasilRadiologiByRMFn != nil {
+		return m.daftarHasilRadiologiByRMFn(ctx, noRM, statusLanjut, filter)
 	}
 	return nil, shared.PaginationMeta{}, nil
 }
 
-func (m *mockRadiologiService) GetDetailHasilRadiologi(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
-	if m.getDetailHasilRadiologiFn != nil {
-		return m.getDetailHasilRadiologiFn(ctx, idHasil, statusLanjut)
+func (m *mockRadiologiService) DetailHasilRadiologi(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
+	if m.detailHasilRadiologiFn != nil {
+		return m.detailHasilRadiologiFn(ctx, idHasil)
 	}
 	return nil, nil
 }
 
-func (m *mockRadiologiService) SimpanPermintaanRadiologi(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error) {
+func (m *mockRadiologiService) SimpanPermintaanRadiologi(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error) {
 	if m.simpanPermintaanRadiologiFn != nil {
-		return m.simpanPermintaanRadiologiFn(ctx, kodeDokterLogin, statusLanjut, req)
+		return m.simpanPermintaanRadiologiFn(ctx, kodeDokter, statusLanjut, req)
 	}
 	return nil, nil
 }
 
-func (m *mockRadiologiService) GetDaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error) {
-	if m.getDaftarPermintaanRadiologiFn != nil {
-		return m.getDaftarPermintaanRadiologiFn(ctx, noRawat, statusLanjut)
+func (m *mockRadiologiService) DaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error) {
+	if m.daftarPermintaanRadiologiFn != nil {
+		return m.daftarPermintaanRadiologiFn(ctx, noRawat, statusLanjut)
 	}
 	return nil, nil
 }
 
-func (m *mockRadiologiService) GetRiwayatPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error) {
-	if m.getRiwayatPermintaanRadiologiByRMFn != nil {
-		return m.getRiwayatPermintaanRadiologiByRMFn(ctx, noRM, statusLanjut, filter)
+func (m *mockRadiologiService) DaftarPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error) {
+	if m.daftarPermintaanRadiologiByRMFn != nil {
+		return m.daftarPermintaanRadiologiByRMFn(ctx, noRM, statusLanjut, filter)
 	}
 	return nil, shared.PaginationMeta{}, nil
 }
 
-func (m *mockRadiologiService) GetDetailPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*radiologi.DetailPermintaanRadiologi, error) {
-	if m.getDetailPermintaanRadiologiFn != nil {
-		return m.getDetailPermintaanRadiologiFn(ctx, noRawat, noPermintaan, statusLanjut)
+func (m *mockRadiologiService) DetailPermintaanRadiologi(ctx context.Context, noPermintaan string) (*radiologi.DetailPermintaanRadiologi, error) {
+	if m.detailPermintaanRadiologiFn != nil {
+		return m.detailPermintaanRadiologiFn(ctx, noPermintaan)
 	}
 	return nil, nil
 }
 
-func (m *mockRadiologiService) UpdatePermintaanRadiologi(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error) {
+func (m *mockRadiologiService) UpdatePermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest) (*radiologi.DetailPermintaanRadiologi, error) {
 	if m.updatePermintaanRadiologiFn != nil {
-		return m.updatePermintaanRadiologiFn(ctx, kodeDokterLogin, noRawat, noPermintaan, statusLanjut, req)
+		return m.updatePermintaanRadiologiFn(ctx, kodeDokter, noRawat, noPermintaan, statusLanjut, req)
 	}
 	return nil, nil
 }
 
-func (m *mockRadiologiService) HapusPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
+func (m *mockRadiologiService) HapusPermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut) error {
 	if m.hapusPermintaanRadiologiFn != nil {
-		return m.hapusPermintaanRadiologiFn(ctx, noRawat, noPermintaan, statusLanjut, kodeDokterLogin)
+		return m.hapusPermintaanRadiologiFn(ctx, kodeDokter, noRawat, noPermintaan, statusLanjut)
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func TestHandler_DaftarHasilRadiologi_Success(t *testing.T) {
 	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getRiwayatRadiologiKunjunganFn: func(ctx context.Context, nr string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
+		daftarHasilRadiologiFn: func(ctx context.Context, nr string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
 			if nr != noRawat {
 				t.Errorf("Expected noRawat %s, got %s", noRawat, nr)
 			}
@@ -130,7 +130,7 @@ func TestHandler_DaftarHasilRadiologi_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan?page=1&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Ralan/"+encKunjungan+"?page=1&limit=10", nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -160,7 +160,7 @@ func TestHandler_DaftarHasilRadiologi_InvalidToken(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/invalid-token/Ralan", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Ralan/invalid-token", nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -175,7 +175,7 @@ func TestHandler_DaftarHasilRadiologi_InvalidStatusLanjut(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/BukanStatus", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/BukanStatus/"+encKunjungan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -190,7 +190,7 @@ func TestHandler_DaftarHasilRadiologi_InvalidFilter(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan?tanggal=bukan-tanggal", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Ralan/"+encKunjungan+"?tanggal=bukan-tanggal", nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -203,13 +203,13 @@ func TestHandler_DaftarHasilRadiologi_InvalidFilter(t *testing.T) {
 func TestHandler_DaftarHasilRadiologi_ServiceError(t *testing.T) {
 	encKunjungan, _ := crypto.Encrypt("2026/04/22/000001", testEncryptionKey)
 	svc := &mockRadiologiService{
-		getRiwayatRadiologiKunjunganFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
+		daftarHasilRadiologiFn: func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
 			return nil, shared.PaginationMeta{}, errors.New("db error")
 		},
 	}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Ralan/"+encKunjungan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -224,7 +224,7 @@ func TestHandler_DaftarHasilRadiologiByRM_Success(t *testing.T) {
 	encPasien, _ := crypto.Encrypt(noRM, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getRiwayatRadiologiPasienFn: func(ctx context.Context, rm string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
+		daftarHasilRadiologiByRMFn: func(ctx context.Context, rm string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, shared.PaginationMeta, error) {
 			if rm != noRM {
 				t.Errorf("Expected noRM %s, got %s", noRM, rm)
 			}
@@ -243,7 +243,7 @@ func TestHandler_DaftarHasilRadiologiByRM_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/pasien/"+encPasien+"/Semua", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Semua/pasien/"+encPasien, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -257,7 +257,7 @@ func TestHandler_DaftarHasilRadiologiByRM_InvalidToken(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/pasien/invalid-token/Semua", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/Semua/pasien/invalid-token", nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -273,17 +273,16 @@ func TestHandler_DetailHasilRadiologi_Success(t *testing.T) {
 	tanggalPeriksa := "2026-04-22"
 	jamPeriksa := "10:00:00"
 
-	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
 	composite := noRawat + "~" + kodeTindakan + "~" + tanggalPeriksa + "~" + jamPeriksa
 	encRadiologi, _ := crypto.Encrypt(composite, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getDetailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
+		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
 			return &radiologi.HasilRadiologi{
 				NoRawat:        idHasil.NoRawat,
 				KodeTindakan:   idHasil.KodeTindakan,
 				NamaTindakan:   "Rontgen Thorax",
-				Status:         string(statusLanjut),
+				Status:         "Ralan",
 				TanggalPeriksa: idHasil.TanggalPeriksa,
 				JamPeriksa:     idHasil.JamPeriksa,
 				Hasil:          "Cor dan Pulmo normal",
@@ -293,9 +292,9 @@ func TestHandler_DetailHasilRadiologi_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan/"+encRadiologi, nil)
-	rr := httptest.NewRecorder()
 
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/"+encRadiologi, nil)
+	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -316,85 +315,34 @@ func TestHandler_DetailHasilRadiologi_Success(t *testing.T) {
 }
 
 func TestHandler_DetailHasilRadiologi_MalformedCompositeID(t *testing.T) {
-	encKunjungan, _ := crypto.Encrypt("2026/04/22/000001", testEncryptionKey)
 	encRadiologi, _ := crypto.Encrypt("invalid~composite", testEncryptionKey)
 
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan/"+encRadiologi, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/"+encRadiologi, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("Expected status 400, got %d: %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestHandler_DetailHasilRadiologi_MismatchedNoRawat(t *testing.T) {
-	encKunjungan, _ := crypto.Encrypt("2026/04/22/000001", testEncryptionKey)
-	composite := "2026/04/22/999999~RAD001~2026-04-22~10:00:00"
-	encRadiologi, _ := crypto.Encrypt(composite, testEncryptionKey)
-
-	svc := &mockRadiologiService{}
-	router := setupRadiologiRouter(svc)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan/"+encRadiologi, nil)
-	rr := httptest.NewRecorder()
-
-	router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("Expected status 400, got %d: %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestHandler_DetailHasilRadiologi_InvalidStatusLanjut(t *testing.T) {
-	noRawat := "2026/04/22/000001"
-	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
-	composite := noRawat + "~RAD001~2026-04-22~10:00:00"
-	encRadiologi, _ := crypto.Encrypt(composite, testEncryptionKey)
-
-	svc := &mockRadiologiService{}
-	router := setupRadiologiRouter(svc)
-
-	testCases := []struct {
-		name         string
-		statusLanjut string
-	}{
-		{name: "RejectSemua", statusLanjut: "Semua"},
-		{name: "RejectInvalidStatus", statusLanjut: "InvalidStatus"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/"+tc.statusLanjut+"/"+encRadiologi, nil)
-			rr := httptest.NewRecorder()
-
-			router.ServeHTTP(rr, req)
-
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("Expected status 400 for status lanjut %s, got %d: %s", tc.statusLanjut, rr.Code, rr.Body.String())
-			}
-		})
 	}
 }
 
 func TestHandler_DetailHasilRadiologi_NotFound(t *testing.T) {
 	noRawat := "2026/04/22/000001"
-	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
 	composite := noRawat + "~RAD001~2026-04-22~10:00:00"
 	encRadiologi, _ := crypto.Encrypt(composite, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getDetailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
+		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
 			return nil, apperror.NewNotFoundError("Data hasil pemeriksaan radiologi tidak ditemukan")
 		},
 	}
 
 	router := setupRadiologiRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/"+encKunjungan+"/Ralan/"+encRadiologi, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/hasil/"+encRadiologi, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -470,7 +418,7 @@ func TestHandler_SimpanPermintaanRadiologi_Success(t *testing.T) {
 		]
 	}`
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Ralan", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/Ralan/"+encKunjungan, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
@@ -508,7 +456,7 @@ func TestHandler_SimpanPermintaanRadiologi_MismatchedNoRawat(t *testing.T) {
 		"pemeriksaan": [{"id_tindakan": "` + encTindakan + `"}]
 	}`
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Ralan", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/Ralan/"+encKunjungan, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
@@ -524,7 +472,7 @@ func TestHandler_SimpanPermintaanRadiologi_RejectSemua(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouterWithAuth(svc)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Semua", strings.NewReader("{}"))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/radiologi/permintaan/Semua/"+encKunjungan, strings.NewReader("{}"))
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -539,7 +487,7 @@ func TestHandler_DaftarPermintaanRadiologi_Success(t *testing.T) {
 	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getDaftarPermintaanRadiologiFn: func(ctx context.Context, nr string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error) {
+		daftarPermintaanRadiologiFn: func(ctx context.Context, nr string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error) {
 			return []radiologi.DetailPermintaanRadiologi{
 				{
 					PermintaanRadiologiHeader: radiologi.PermintaanRadiologiHeader{
@@ -557,7 +505,7 @@ func TestHandler_DaftarPermintaanRadiologi_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouterWithAuth(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Semua", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/Semua/"+encKunjungan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -572,7 +520,7 @@ func TestHandler_DaftarPermintaanRadiologiByRM_Success(t *testing.T) {
 	encPasien, _ := crypto.Encrypt(noRM, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getRiwayatPermintaanRadiologiByRMFn: func(ctx context.Context, rm string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error) {
+		daftarPermintaanRadiologiByRMFn: func(ctx context.Context, rm string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatPermintaanRadiologi) ([]radiologi.DetailPermintaanRadiologi, shared.PaginationMeta, error) {
 			return []radiologi.DetailPermintaanRadiologi{
 				{
 					PermintaanRadiologiHeader: radiologi.PermintaanRadiologiHeader{
@@ -586,7 +534,7 @@ func TestHandler_DaftarPermintaanRadiologiByRM_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouterWithAuth(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/pasien/"+encPasien+"/permintaan/Semua?page=1&limit=5", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/Semua/pasien/"+encPasien+"?page=1&limit=5", nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -599,15 +547,14 @@ func TestHandler_DaftarPermintaanRadiologiByRM_Success(t *testing.T) {
 func TestHandler_DetailPermintaanRadiologi_Success(t *testing.T) {
 	noRawat := "2026/09/05/000001"
 	noOrder := "RAD202609050001"
-	encKunjungan, _ := crypto.Encrypt(noRawat, testEncryptionKey)
 	encPermintaan, _ := crypto.Encrypt(noOrder, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		getDetailPermintaanRadiologiFn: func(ctx context.Context, nr, np string, statusLanjut shared.StatusLanjut) (*radiologi.DetailPermintaanRadiologi, error) {
+		detailPermintaanRadiologiFn: func(ctx context.Context, np string) (*radiologi.DetailPermintaanRadiologi, error) {
 			return &radiologi.DetailPermintaanRadiologi{
 				PermintaanRadiologiHeader: radiologi.PermintaanRadiologiHeader{
 					NoPermintaan:      np,
-					NoRawat:           nr,
+					NoRawat:           noRawat,
 					TanggalPermintaan: "2026-09-05",
 					Status:            "Ralan",
 				},
@@ -616,30 +563,13 @@ func TestHandler_DetailPermintaanRadiologi_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouterWithAuth(svc)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Ralan/"+encPermintaan, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/"+encPermintaan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestHandler_DetailPermintaanRadiologi_RejectSemua(t *testing.T) {
-	encKunjungan, _ := crypto.Encrypt("2026/09/05/000001", testEncryptionKey)
-	encPermintaan, _ := crypto.Encrypt("RAD202609050001", testEncryptionKey)
-
-	svc := &mockRadiologiService{}
-	router := setupRadiologiRouterWithAuth(svc)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Semua/"+encPermintaan, nil)
-	rr := httptest.NewRecorder()
-
-	router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("Expected 400 Bad Request for status lanjut 'Semua' on detail, got %d", rr.Code)
 	}
 }
 
@@ -650,7 +580,7 @@ func TestHandler_UpdatePermintaanRadiologi_RejectSemua(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouterWithAuth(svc)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Semua/"+encPermintaan, strings.NewReader("{}"))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/radiologi/permintaan/Semua/"+encKunjungan+"/"+encPermintaan, strings.NewReader("{}"))
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -667,7 +597,7 @@ func TestHandler_HapusPermintaanRadiologi_RejectSemua(t *testing.T) {
 	svc := &mockRadiologiService{}
 	router := setupRadiologiRouterWithAuth(svc)
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Semua/"+encPermintaan, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/radiologi/permintaan/Semua/"+encKunjungan+"/"+encPermintaan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -684,7 +614,7 @@ func TestHandler_HapusPermintaanRadiologi_Success(t *testing.T) {
 	encPermintaan, _ := crypto.Encrypt(noOrder, testEncryptionKey)
 
 	svc := &mockRadiologiService{
-		hapusPermintaanRadiologiFn: func(ctx context.Context, nr, np string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
+		hapusPermintaanRadiologiFn: func(ctx context.Context, kodeDokterLogin, nr, np string, statusLanjut shared.StatusLanjut) error {
 			if kodeDokterLogin != "DR01" {
 				t.Errorf("Expected DR01, got %s", kodeDokterLogin)
 			}
@@ -693,7 +623,7 @@ func TestHandler_HapusPermintaanRadiologi_Success(t *testing.T) {
 	}
 
 	router := setupRadiologiRouterWithAuth(svc)
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/radiologi/permintaan/"+encKunjungan+"/Ralan/"+encPermintaan, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/radiologi/permintaan/Ralan/"+encKunjungan+"/"+encPermintaan, nil)
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -701,5 +631,63 @@ func TestHandler_HapusPermintaanRadiologi_Success(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("Expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
 	}
+}
+
+func TestHandler_DetailPermintaanRadiologi(t *testing.T) {
+	noRawat := "2026/09/05/000001"
+	noOrder := "RAD202609050001"
+	encPermintaan, _ := crypto.Encrypt(noOrder, testEncryptionKey)
+
+	svc := &mockRadiologiService{
+		detailPermintaanRadiologiFn: func(ctx context.Context, np string) (*radiologi.DetailPermintaanRadiologi, error) {
+			if np == noOrder {
+				return &radiologi.DetailPermintaanRadiologi{
+					PermintaanRadiologiHeader: radiologi.PermintaanRadiologiHeader{
+						NoPermintaan:      noOrder,
+						NoRawat:           noRawat,
+						TanggalPermintaan: "2026-09-05",
+						JamPermintaan:     "10:00:00",
+						Status:            "Ralan",
+					},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	router := setupRadiologiRouterWithAuth(svc)
+
+	t.Run("Sukses detail permintaan via canonical route ringkas", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/"+encPermintaan, nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var resp struct {
+			Success bool                                `json:"success"`
+			Data    radiologi.DetailPermintaanRadiologi `json:"data"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		decOrder, err := crypto.Decrypt(resp.Data.NoPermintaan, testEncryptionKey)
+		if err != nil || decOrder != noOrder {
+			t.Errorf("Expected decrypted NoPermintaan %s, got %s (err: %v)", noOrder, decOrder, err)
+		}
+	})
+
+	t.Run("Error ID permintaan tidak valid", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/radiologi/permintaan/invalid-encrypted-id", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("Expected 400 Bad Request, got %d", rr.Code)
+		}
+	})
 }
 

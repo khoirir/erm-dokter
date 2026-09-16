@@ -56,6 +56,8 @@ type mockRawatJalanService struct {
 	tglReg, jamReg string
 	exists         bool
 	err            error
+	kdPenjamin     string
+	statusBayar    string
 }
 
 func (m *mockRawatJalanService) DaftarAntreanDokter(ctx context.Context, kodeDokter string, filter rawatjalan.FilterAntreanDokter) ([]rawatjalan.KunjunganRawatJalan, shared.PaginationMeta, error) {
@@ -77,11 +79,19 @@ func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat s
 	if !m.exists {
 		return nil, nil
 	}
+	kdPenjamin := m.kdPenjamin
+	if kdPenjamin == "" {
+		kdPenjamin = "UMU"
+	}
+	sttsBayar := m.statusBayar
+	if sttsBayar == "" {
+		sttsBayar = "Belum Bayar"
+	}
 	return &rawatjalan.InfoRegistrasiPasien{
 		TanggalRegistrasi: m.tglReg,
 		JamRegistrasi:     m.jamReg,
-		KodePenjamin:      "UMU",
-		StatusBayar:       "Belum Bayar",
+		KodePenjamin:      kdPenjamin,
+		StatusBayar:       sttsBayar,
 	}, nil
 }
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {
@@ -104,7 +114,7 @@ func TestDaftarOpsiPoliDokter_Success(t *testing.T) {
 			{InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log)
+	svc := NewService(repo, &mockRawatJalanService{}, 48, log)
 
 	result, err := svc.DaftarOpsiPoliDokter(context.Background(), "DR001", "")
 	if err != nil {
@@ -125,7 +135,7 @@ func TestDaftarOpsiPoliDokter_WithKeyword(t *testing.T) {
 			{InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log)
+	svc := NewService(repo, &mockRawatJalanService{}, 48, log)
 
 	result, err := svc.DaftarOpsiPoliDokter(context.Background(), "DR001", "Penyakit")
 	if err != nil {
@@ -143,7 +153,7 @@ func TestDaftarRujukanInternal_Success(t *testing.T) {
 			{NoRawat: "2026/04/22/000001", InfoPoliDokter: InfoPoliDokter{KodePoli: "INT", NamaPoli: "Penyakit Dalam", KodeDokter: "DR002", NamaDokter: "dr. Sp.PD"}},
 		},
 	}
-	svc := NewService(repo, &mockRawatJalanService{}, log)
+	svc := NewService(repo, &mockRawatJalanService{}, 48, log)
 
 	result, err := svc.DaftarRujukanInternal(context.Background(), "2026/04/22/000001")
 	if err != nil {
@@ -160,7 +170,7 @@ func TestDaftarRujukanInternal_Success(t *testing.T) {
 func TestSimpanRujukanInternal_CannotReferToSelf(t *testing.T) {
 	log := logger.New()
 	repo := &mockRepository{}
-	svc := NewService(repo, &mockRawatJalanService{}, log)
+	svc := NewService(repo, &mockRawatJalanService{}, 48, log)
 
 	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR001")
 	if err == nil {
@@ -179,7 +189,7 @@ func TestSimpanRujukanInternal_DuplicateReferral(t *testing.T) {
 	}
 	today := time.Now().Format("2006-01-02")
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log)
+	svc := NewService(repo, rjSvc, 48, log)
 
 	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err == nil {
@@ -196,7 +206,7 @@ func TestSimpanRujukanInternal_Exceeds48Hours(t *testing.T) {
 	repo := &mockRepository{adaResult: false}
 	pastDate := time.Now().Add(-72 * time.Hour).Format("2006-01-02")
 	rjSvc := &mockRawatJalanService{tglReg: pastDate, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log)
+	svc := NewService(repo, rjSvc, 48, log)
 
 	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err == nil {
@@ -205,6 +215,9 @@ func TestSimpanRujukanInternal_Exceeds48Hours(t *testing.T) {
 	var forbidden *apperror.ForbiddenError
 	if !errors.As(err, &forbidden) {
 		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+	if forbidden.Message != "Rujukan internal tidak dapat disimpan, melebihi batas 48 jam" {
+		t.Errorf("unexpected error message: %s", forbidden.Message)
 	}
 }
 
@@ -218,7 +231,7 @@ func TestSimpanRujukanInternal_Success(t *testing.T) {
 		},
 	}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log)
+	svc := NewService(repo, rjSvc, 48, log)
 
 	result, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
 	if err != nil {
@@ -237,7 +250,7 @@ func TestHapusRujukanInternal_Success(t *testing.T) {
 	today := time.Now().Format("2006-01-02")
 	repo := &mockRepository{}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log)
+	svc := NewService(repo, rjSvc, 48, log)
 
 	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
 	if err != nil {
@@ -253,7 +266,7 @@ func TestHapusRujukanInternal_NotFound(t *testing.T) {
 	today := time.Now().Format("2006-01-02")
 	repo := &mockRepository{hapusErr: sql.ErrNoRows}
 	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
-	svc := NewService(repo, rjSvc, log)
+	svc := NewService(repo, rjSvc, 48, log)
 
 	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
 	if err == nil {
@@ -262,6 +275,66 @@ func TestHapusRujukanInternal_NotFound(t *testing.T) {
 	var notFound *apperror.NotFoundError
 	if !errors.As(err, &notFound) {
 		t.Fatalf("expected NotFoundError, got %v", err)
+	}
+}
+
+func TestHapusRujukanInternal_Exceeds48Hours(t *testing.T) {
+	log := logger.New()
+	repo := &mockRepository{}
+	pastDate := time.Now().Add(-72 * time.Hour).Format("2006-01-02")
+	rjSvc := &mockRawatJalanService{tglReg: pastDate, jamReg: "08:00:00", exists: true}
+	svc := NewService(repo, rjSvc, 48, log)
+
+	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
+	if err == nil {
+		t.Fatal("expected 48 hours forbidden error, got nil")
+	}
+	var forbidden *apperror.ForbiddenError
+	if !errors.As(err, &forbidden) {
+		t.Fatalf("expected ForbiddenError, got %v", err)
+	}
+	if forbidden.Message != "Rujukan internal tidak dapat dihapus, melebihi batas 48 jam" {
+		t.Errorf("unexpected error message: %s", forbidden.Message)
+	}
+}
+
+func TestSimpanRujukanInternal_BPJSSudahBayar(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{adaResult: false}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true, kdPenjamin: "BPJ", statusBayar: "Sudah Bayar"}
+	svc := NewService(repo, rjSvc, 48, log)
+
+	_, err := svc.SimpanRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "INT", "DR002")
+	if err == nil {
+		t.Fatal("expected error for BPJS sudah bayar on simpan, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+	if bErr.Message != "Pasien BPJS sudah bayar, rujukan tidak dapat disimpan" {
+		t.Errorf("unexpected error message: %s", bErr.Message)
+	}
+}
+
+func TestHapusRujukanInternal_BPJSSudahBayar(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+	repo := &mockRepository{}
+	rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true, kdPenjamin: "BPJ", statusBayar: "Sudah Bayar"}
+	svc := NewService(repo, rjSvc, 48, log)
+
+	err := svc.HapusRujukanInternal(context.Background(), "DR001", "2026/04/22/000001", "DR002")
+	if err == nil {
+		t.Fatal("expected error for BPJS sudah bayar on hapus, got nil")
+	}
+	var bErr *apperror.BusinessError
+	if !errors.As(err, &bErr) {
+		t.Fatalf("expected BusinessError, got %v", err)
+	}
+	if bErr.Message != "Pasien BPJS sudah bayar, rujukan tidak dapat dihapus" {
+		t.Errorf("unexpected error message: %s", bErr.Message)
 	}
 }
 

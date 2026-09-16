@@ -284,7 +284,7 @@ paths:
                                         example: false
                                     message:
                                         type: string
-                                        example: Pemeriksaan melewati batas waktu maksimal 48 jam
+                                        example: Pemeriksaan tidak dapat disimpan, melebihi batas 48 jam
                 "404":
                     description: Data registrasi kunjungan pasien tidak ditemukan
                     content:

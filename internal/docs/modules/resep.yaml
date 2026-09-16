@@ -426,16 +426,14 @@ paths:
                                     message:
                                         type: string
                                         example: Terjadi kesalahan pada server
-    /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}:
+    /api/v1/resep/{id_resep}:
         get:
             tags: [Resep]
             summary: Detail Resep Obat
-            description: Mengambil detail informasi resep obat pasien.
+            description: Mengambil detail informasi resep obat pasien berdasarkan ID resep.
             security:
                 - BearerAuth: []
             parameters:
-                - $ref: "#/components/parameters/ResepStatusLanjut"
-                - $ref: "#/components/parameters/ResepIdKunjungan"
                 - $ref: "#/components/parameters/ResepIdResep"
             responses:
                 "200":
@@ -472,7 +470,7 @@ paths:
                                         example: false
                                     message:
                                         type: string
-                                        example: ID resep tidak sesuai dengan ID kunjungan
+                                        example: ID resep tidak valid
                 "401":
                     description: Token tidak ada atau telah kedaluwarsa
                     content:
@@ -504,7 +502,7 @@ paths:
                                         example: false
                                     message:
                                         type: string
-                                        example: Data resep obat tidak ditemukan pada kunjungan ini
+                                        example: Data resep obat tidak ditemukan
                 "500":
                     description: Terjadi kesalahan pada server internal
                     content:
@@ -521,6 +519,7 @@ paths:
                                     message:
                                         type: string
                                         example: Terjadi kesalahan pada server
+    /api/v1/resep/{status_lanjut}/{id_kunjungan}/{id_resep}:
         put:
             tags: [Resep]
             summary: Perbarui Resep Obat

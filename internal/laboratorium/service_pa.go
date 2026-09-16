@@ -56,8 +56,8 @@ func (s *service) UpdatePermintaanLabPA(ctx context.Context, kodeDokterLogin, no
 		return nil, apperror.NewForbiddenError("Hanya dokter pemohon yang berhak mengubah permintaan laboratorium ini")
 	}
 
-	isSampelDiambil := detail.TanggalSampel != "0000-00-00" && strings.TrimSpace(detail.TanggalSampel) != ""
-	isHasilKeluar := detail.TanggalHasil != "0000-00-00" && strings.TrimSpace(detail.TanggalHasil) != ""
+	isSampelDiambil := detail.TanggalSampel != "0000-00-00"
+	isHasilKeluar := detail.TanggalHasil != "0000-00-00"
 
 	if isSampelDiambil || isHasilKeluar {
 		return nil, apperror.NewBusinessError("Permintaan laboratorium sudah diproses (sudah diambil sampel atau hasil sudah keluar) dan tidak dapat diubah")
@@ -195,8 +195,8 @@ func (s *service) HapusPermintaanLabPA(ctx context.Context, noRawat string, noPe
 		return apperror.NewForbiddenError("Hanya dokter pemohon yang berhak membatalkan permintaan laboratorium ini")
 	}
 
-	isSampelDiambil := detail.TanggalSampel != "0000-00-00" && strings.TrimSpace(detail.TanggalSampel) != ""
-	isHasilKeluar := detail.TanggalHasil != "0000-00-00" && strings.TrimSpace(detail.TanggalHasil) != ""
+	isSampelDiambil := detail.TanggalSampel != "0000-00-00"
+	isHasilKeluar := detail.TanggalHasil != "0000-00-00"
 
 	if isSampelDiambil || isHasilKeluar {
 		return apperror.NewBusinessError("Permintaan laboratorium sudah diproses (sudah diambil sampel atau hasil sudah keluar) dan tidak dapat dibatalkan")

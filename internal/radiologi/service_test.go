@@ -2,7 +2,6 @@ package radiologi_test
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -19,7 +18,7 @@ import (
 type mockRepository struct {
 	daftarHasilRadiologiKunjunganFn func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, int, error)
 	daftarHasilRadiologiPasienFn    func(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter radiologi.FilterRiwayatRadiologi) ([]radiologi.HasilRadiologi, int, error)
-	detailHasilRadiologiFn          func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error)
+	detailHasilRadiologiFn          func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error)
 
 	simpanPermintaanRadiologiFn       func(ctx context.Context, noRawat string, kodeDokter string, statusLanjut shared.StatusLanjut, req radiologi.SimpanPermintaanRadiologiRequest, kodeTindakanList []string) (string, error)
 	daftarPermintaanRadiologiKunjunganFn func(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]radiologi.DetailPermintaanRadiologi, error)
@@ -43,9 +42,9 @@ func (m *mockRepository) DaftarHasilRadiologiPasien(ctx context.Context, noRM st
 	return nil, 0, nil
 }
 
-func (m *mockRepository) DetailHasilRadiologi(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
+func (m *mockRepository) DetailHasilRadiologi(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
 	if m.detailHasilRadiologiFn != nil {
-		return m.detailHasilRadiologiFn(ctx, idHasil, statusLanjut)
+		return m.detailHasilRadiologiFn(ctx, idHasil)
 	}
 	return nil, nil
 }
@@ -174,7 +173,7 @@ func TestService_GetRiwayatRadiologiKunjungan_Success(t *testing.T) {
 	}
 
 	svc := createTestService(mockRepo, nil, nil, nil)
-	list, meta, err := svc.GetRiwayatRadiologiKunjungan(context.Background(), "2026/04/22/000001", shared.StatusLanjutRawatJalan, radiologi.FilterRiwayatRadiologi{Page: 1, Limit: 5})
+	list, meta, err := svc.DaftarHasilRadiologi(context.Background(), "2026/04/22/000001", shared.StatusLanjutRawatJalan, radiologi.FilterRiwayatRadiologi{Page: 1, Limit: 5})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -201,7 +200,7 @@ func TestService_GetRiwayatRadiologiKunjungan_Error(t *testing.T) {
 	}
 
 	svc := createTestService(mockRepo, nil, nil, nil)
-	_, _, err := svc.GetRiwayatRadiologiKunjungan(context.Background(), "2026/04/22/000001", shared.StatusLanjutRawatJalan, radiologi.FilterRiwayatRadiologi{})
+	_, _, err := svc.DaftarHasilRadiologi(context.Background(), "2026/04/22/000001", shared.StatusLanjutRawatJalan, radiologi.FilterRiwayatRadiologi{})
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
@@ -225,7 +224,7 @@ func TestService_GetRiwayatRadiologiPasien_Success(t *testing.T) {
 	}
 
 	svc := createTestService(mockRepo, nil, nil, nil)
-	list, meta, err := svc.GetRiwayatRadiologiPasien(context.Background(), "123456", shared.StatusLanjutRawatInap, radiologi.FilterRiwayatRadiologi{Page: 1, Limit: 10})
+	list, meta, err := svc.DaftarHasilRadiologiByRM(context.Background(), "123456", shared.StatusLanjutRawatInap, radiologi.FilterRiwayatRadiologi{Page: 1, Limit: 10})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -240,7 +239,7 @@ func TestService_GetRiwayatRadiologiPasien_Success(t *testing.T) {
 
 func TestService_GetDetailHasilRadiologi_Success(t *testing.T) {
 	mockRepo := &mockRepository{
-		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
+		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
 			return &radiologi.HasilRadiologi{
 				NoRawat:        idHasil.NoRawat,
 				KodeTindakan:   idHasil.KodeTindakan,
@@ -261,7 +260,7 @@ func TestService_GetDetailHasilRadiologi_Success(t *testing.T) {
 		TanggalPeriksa: "2026-04-22",
 		JamPeriksa:     "10:00:00",
 	}
-	res, err := svc.GetDetailHasilRadiologi(context.Background(), idHasil, shared.StatusLanjutRawatJalan)
+	res, err := svc.DetailHasilRadiologi(context.Background(), idHasil)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -272,8 +271,8 @@ func TestService_GetDetailHasilRadiologi_Success(t *testing.T) {
 
 func TestService_GetDetailHasilRadiologi_NotFound(t *testing.T) {
 	mockRepo := &mockRepository{
-		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*radiologi.HasilRadiologi, error) {
-			return nil, sql.ErrNoRows
+		detailHasilRadiologiFn: func(ctx context.Context, idHasil radiologi.IdHasilRadiologi) (*radiologi.HasilRadiologi, error) {
+			return nil, nil
 		},
 	}
 
@@ -284,7 +283,7 @@ func TestService_GetDetailHasilRadiologi_NotFound(t *testing.T) {
 		TanggalPeriksa: "2026-04-22",
 		JamPeriksa:     "10:00:00",
 	}
-	_, err := svc.GetDetailHasilRadiologi(context.Background(), idHasil, shared.StatusLanjutRawatJalan)
+	_, err := svc.DetailHasilRadiologi(context.Background(), idHasil)
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
@@ -416,8 +415,50 @@ func TestService_HapusPermintaanRadiologi_LockedWhenSampleTaken(t *testing.T) {
 	}
 
 	svc := createTestService(mockRepo, nil, nil, nil)
-	err := svc.HapusPermintaanRadiologi(context.Background(), "2026/09/05/000001", "RAD202609050001", shared.StatusLanjutRawatJalan, "DR01")
+	err := svc.HapusPermintaanRadiologi(context.Background(), "DR01", "2026/09/05/000001", "RAD202609050001", shared.StatusLanjutRawatJalan)
 	if err == nil {
 		t.Fatalf("Expected locked error, got nil")
+	}
+}
+
+func TestService_DetailPermintaanRadiologi_Success(t *testing.T) {
+	mockRepo := &mockRepository{
+		detailPermintaanRadiologiFn: func(ctx context.Context, noPermintaan string) (*radiologi.DetailPermintaanRadiologi, error) {
+			if noPermintaan == "RAD202609050001" {
+				return &radiologi.DetailPermintaanRadiologi{
+					PermintaanRadiologiHeader: radiologi.PermintaanRadiologiHeader{
+						NoPermintaan:      noPermintaan,
+						NoRawat:           "2026/09/05/000001",
+						TanggalPermintaan: "2026-09-05",
+						JamPermintaan:     "10:00:00",
+						Status:            "Ralan",
+					},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	svc := createTestService(mockRepo, nil, nil, nil)
+	detail, err := svc.DetailPermintaanRadiologi(context.Background(), "RAD202609050001")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if detail.NoPermintaan != "RAD202609050001" {
+		t.Errorf("Expected NoPermintaan RAD202609050001, got %s", detail.NoPermintaan)
+	}
+}
+
+func TestService_DetailPermintaanRadiologi_NotFound(t *testing.T) {
+	mockRepo := &mockRepository{
+		detailPermintaanRadiologiFn: func(ctx context.Context, noPermintaan string) (*radiologi.DetailPermintaanRadiologi, error) {
+			return nil, nil
+		},
+	}
+
+	svc := createTestService(mockRepo, nil, nil, nil)
+	_, err := svc.DetailPermintaanRadiologi(context.Background(), "NONEXISTENT")
+	if err == nil {
+		t.Fatalf("Expected NotFound error, got nil")
 	}
 }

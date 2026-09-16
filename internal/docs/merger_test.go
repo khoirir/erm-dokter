@@ -63,7 +63,7 @@ func TestMergeOpenAPISpecs(t *testing.T) {
 		"/api/v1/resep/{status_lanjut}/{id_kunjungan}:",
 		"/api/v1/penilaian-medis/ranap-kandungan/{id_kunjungan}:",
 		"/api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}:",
-		"/api/v1/radiologi/{id_kunjungan}/{status_lanjut}:",
+		"/api/v1/radiologi/hasil/{status_lanjut}/{id_kunjungan}:",
 		"/api/v1/berkas-digital/{id_berkas}:",
 	}
 	for _, p := range expectedPaths {

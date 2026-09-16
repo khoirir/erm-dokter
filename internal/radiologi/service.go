@@ -2,8 +2,6 @@ package radiologi
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,16 +15,16 @@ import (
 )
 
 type Service interface {
-	GetRiwayatRadiologiKunjungan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error)
-	GetRiwayatRadiologiPasien(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error)
-	GetDetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*HasilRadiologi, error)
+	DaftarHasilRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error)
+	DaftarHasilRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error)
+	DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi) (*HasilRadiologi, error)
 
-	SimpanPermintaanRadiologi(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error)
-	GetDaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]DetailPermintaanRadiologi, error)
-	GetRiwayatPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatPermintaanRadiologi) ([]DetailPermintaanRadiologi, shared.PaginationMeta, error)
-	GetDetailPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanRadiologi, error)
-	UpdatePermintaanRadiologi(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error)
-	HapusPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
+	SimpanPermintaanRadiologi(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error)
+	DaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]DetailPermintaanRadiologi, error)
+	DaftarPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatPermintaanRadiologi) ([]DetailPermintaanRadiologi, shared.PaginationMeta, error)
+	DetailPermintaanRadiologi(ctx context.Context, noPermintaan string) (*DetailPermintaanRadiologi, error)
+	UpdatePermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error)
+	HapusPermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut) error
 }
 
 type service struct {
@@ -46,6 +44,9 @@ func NewService(
 	maxEditJam int,
 	log *logger.Logger,
 ) Service {
+	if maxEditJam <= 0 {
+		maxEditJam = 48
+	}
 	return &service{
 		repo:              repo,
 		rawatJalanService: rawatJalanService,
@@ -56,7 +57,7 @@ func NewService(
 	}
 }
 
-func (s *service) GetRiwayatRadiologiKunjungan(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error) {
+func (s *service) DaftarHasilRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error) {
 	list, total, err := s.repo.DaftarHasilRadiologiKunjungan(ctx, noRawat, statusLanjut, filter)
 	if err != nil {
 		s.log.Error("Gagal mengambil riwayat radiologi kunjungan %s: %v", noRawat, err)
@@ -67,7 +68,7 @@ func (s *service) GetRiwayatRadiologiKunjungan(ctx context.Context, noRawat stri
 	return list, meta, nil
 }
 
-func (s *service) GetRiwayatRadiologiPasien(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error) {
+func (s *service) DaftarHasilRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatRadiologi) ([]HasilRadiologi, shared.PaginationMeta, error) {
 	list, total, err := s.repo.DaftarHasilRadiologiPasien(ctx, noRM, statusLanjut, filter)
 	if err != nil {
 		s.log.Error("Gagal mengambil riwayat radiologi pasien %s: %v", noRM, err)
@@ -78,111 +79,30 @@ func (s *service) GetRiwayatRadiologiPasien(ctx context.Context, noRM string, st
 	return list, meta, nil
 }
 
-func (s *service) GetDetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi, statusLanjut shared.StatusLanjut) (*HasilRadiologi, error) {
-	item, err := s.repo.DetailHasilRadiologi(ctx, idHasil, statusLanjut)
+func (s *service) DetailHasilRadiologi(ctx context.Context, idHasil IdHasilRadiologi) (*HasilRadiologi, error) {
+	item, err := s.repo.DetailHasilRadiologi(ctx, idHasil)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data hasil pemeriksaan radiologi tidak ditemukan")
-		}
 		s.log.Error("Gagal mengambil detail hasil radiologi no_rawat %s kode_tindakan %s: %v", idHasil.NoRawat, idHasil.KodeTindakan, err)
 		return nil, err
+	}
+	if item == nil {
+		return nil, apperror.NewNotFoundError("Data hasil pemeriksaan radiologi tidak ditemukan")
 	}
 
 	return item, nil
 }
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tglPermintaan, jamPermintaan string, statusLanjut shared.StatusLanjut, action string) error {
-	infoReg, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
-	if err != nil {
-		return err
-	}
-
-	if infoReg.StatusBayar == "Sudah Bayar" && infoReg.KodePenjamin == "BPJ" {
-		passive := "membuat atau mengubah"
-		if action == "menghapus" || action == "membatalkan" {
-			passive = "membatalkan"
-		}
-		return apperror.NewBusinessError(fmt.Sprintf("Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat %s permintaan radiologi", passive))
-	}
-
-	tglRegStr := infoReg.TanggalRegistrasi
-	jamRegStr := infoReg.JamRegistrasi
-
-	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
-	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
-		return err
-	}
-
-	if tglPermintaan != "" && jamPermintaan != "" {
-		waktuPermintaan, err := shared.ParseWaktu(tglPermintaan, jamPermintaan)
-		if err != nil {
-			return apperror.NewBusinessError(err.Error())
-		}
-
-		if waktuPermintaan.Before(waktuRegistrasi) {
-			errs := apperror.ValidationError{
-				"tanggal_permintaan": fmt.Sprintf("Waktu permintaan radiologi (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPermintaan, jamPermintaan, tglRegStr, jamRegStr),
-			}
-			s.log.Warn("Validasi waktu permintaan radiologi gagal untuk no_rawat %s: %+v", noRawat, errs)
-			return errs
-		}
-	}
-
-	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi, tglRegStr, jamRegStr)
-}
-
-func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time, tglRegStr, jamRegStr string) error {
-	isKamarAktif, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
-	if err != nil {
-		s.log.Error("Gagal memeriksa status kamar inap pasien %s: %v", noRawat, err)
-		return err
-	}
-
-	if hasRecordKamar {
-		if !isKamarAktif {
-			return apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
-		}
-		return nil
-	}
-
-	if strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap)) {
-		return apperror.NewBusinessError("Pasien belum/tidak terdaftar di kamar inap. Permintaan radiologi harus menggunakan status 'Ralan'.")
-	}
-
-	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
-	if time.Now().After(batasWaktu) {
-		errMsg := fmt.Sprintf("Batas waktu permintaan radiologi untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
-		s.log.Warn("Permintaan radiologi ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
-		return apperror.NewForbiddenError(errMsg)
-	}
-
-	return nil
-}
-
-func (s *service) SimpanPermintaanRadiologi(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error) {
-	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "membuat"); err != nil {
+func (s *service) SimpanPermintaanRadiologi(ctx context.Context, kodeDokter string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error) {
+	if err := s.validasiRegistrasiDanStatus(ctx, req.NoRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "disimpan"); err != nil {
 		return nil, err
 	}
 
-	var kodeTindakanList []string
-	for _, item := range req.Pemeriksaan {
-		kodeTindakanList = append(kodeTindakanList, item.KodeTindakan)
-	}
-
-	adaMap, err := s.tindakanService.CekKeberadaanTindakanRadiologi(ctx, kodeTindakanList)
+	kodeTindakanList, err := s.validasiTindakanRadiologi(ctx, req)
 	if err != nil {
-		s.log.Error("Gagal memeriksa keberadaan tindakan radiologi: %v", err)
 		return nil, err
 	}
 
-	for _, kode := range kodeTindakanList {
-		if !adaMap[kode] {
-			return nil, apperror.NewBusinessError(fmt.Sprintf("Pemeriksaan radiologi '%s' tidak ditemukan atau tidak aktif", kode))
-		}
-	}
-
-	noPermintaan, err := s.repo.SimpanPermintaanRadiologi(ctx, req.NoRawat, kodeDokterLogin, statusLanjut, req, kodeTindakanList)
+	noPermintaan, err := s.repo.SimpanPermintaanRadiologi(ctx, req.NoRawat, kodeDokter, statusLanjut, req, kodeTindakanList)
 	if err != nil {
 		s.log.Error("Gagal menyimpan permintaan radiologi untuk no_rawat %s: %v", req.NoRawat, err)
 		return nil, err
@@ -194,10 +114,11 @@ func (s *service) SimpanPermintaanRadiologi(ctx context.Context, kodeDokterLogin
 		return nil, err
 	}
 
+	s.log.Info("Berhasil menyimpan permintaan radiologi no_permintaan '%s' untuk no_rawat '%s' (%s %s, %s) oleh dokter '%s'", noPermintaan, req.NoRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, kodeDokter)
 	return detail, nil
 }
 
-func (s *service) GetDaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]DetailPermintaanRadiologi, error) {
+func (s *service) DaftarPermintaanRadiologi(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]DetailPermintaanRadiologi, error) {
 	list, err := s.repo.DaftarPermintaanRadiologiKunjungan(ctx, noRawat, statusLanjut)
 	if err != nil {
 		s.log.Error("Gagal mengambil daftar permintaan radiologi no_rawat %s: %v", noRawat, err)
@@ -206,7 +127,7 @@ func (s *service) GetDaftarPermintaanRadiologi(ctx context.Context, noRawat stri
 	return list, nil
 }
 
-func (s *service) GetRiwayatPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatPermintaanRadiologi) ([]DetailPermintaanRadiologi, shared.PaginationMeta, error) {
+func (s *service) DaftarPermintaanRadiologiByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatPermintaanRadiologi) ([]DetailPermintaanRadiologi, shared.PaginationMeta, error) {
 	list, total, err := s.repo.DaftarPermintaanRadiologiPasien(ctx, noRM, statusLanjut, filter)
 	if err != nil {
 		s.log.Error("Gagal mengambil riwayat permintaan radiologi pasien no_rm %s: %v", noRM, err)
@@ -217,66 +138,124 @@ func (s *service) GetRiwayatPermintaanRadiologiByRM(ctx context.Context, noRM st
 	return list, meta, nil
 }
 
-func (s *service) GetDetailPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanRadiologi, error) {
+func (s *service) DetailPermintaanRadiologi(ctx context.Context, noPermintaan string) (*DetailPermintaanRadiologi, error) {
 	detail, err := s.repo.DetailPermintaanRadiologi(ctx, noPermintaan)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
-		}
 		s.log.Error("Gagal mengambil detail permintaan radiologi no_permintaan %s: %v", noPermintaan, err)
 		return nil, err
 	}
-
-	if detail.NoRawat != noRawat {
-		return nil, apperror.NewBusinessError("Permintaan radiologi tidak sesuai dengan kunjungan pasien")
-	}
-
-	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
-		return nil, apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
+	if detail == nil {
+		return nil, apperror.NewNotFoundError(
+			"Data permintaan radiologi tidak ditemukan",
+			fmt.Sprintf("Data permintaan radiologi no_permintaan '%s' tidak ditemukan di database", noPermintaan),
+		)
 	}
 
 	return detail, nil
 }
 
-func (s *service) UpdatePermintaanRadiologi(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error) {
-	detail, err := s.repo.DetailPermintaanRadiologi(ctx, noPermintaan)
+func (s *service) UpdatePermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanRadiologiRequest) (*DetailPermintaanRadiologi, error) {
+	detail, err := s.DetailPermintaanRadiologi(ctx, noPermintaan)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
-		}
-		s.log.Error("Gagal memeriksa detail permintaan radiologi sebelum update no_permintaan %s: %v", noPermintaan, err)
 		return nil, err
 	}
 
+	if err := s.validasiAksesDanStatusPermintaan(detail, noRawat, kodeDokter, "diubah"); err != nil {
+		return nil, err
+	}
+
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "diubah"); err != nil {
+		return nil, err
+	}
+
+	kodeTindakanList, err := s.validasiTindakanRadiologi(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.UpdatePermintaanRadiologi(ctx, noPermintaan, req, kodeTindakanList); err != nil {
+		s.log.Error("Gagal memperbarui permintaan radiologi no_permintaan '%s' untuk no_rawat '%s' (%s) oleh dokter '%s': %v", noPermintaan, noRawat, statusLanjut, kodeDokter, err)
+		return nil, err
+	}
+
+	updatedDetail, err := s.repo.DetailPermintaanRadiologi(ctx, noPermintaan)
+	if err != nil {
+		s.log.Error("Gagal mengambil detail setelah update permintaan radiologi no_permintaan '%s': %v", noPermintaan, err)
+		return nil, err
+	}
+
+	s.log.Info("Berhasil memperbarui permintaan radiologi no_permintaan '%s' untuk no_rawat '%s' (%s %s, %s) oleh dokter '%s'", noPermintaan, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, kodeDokter)
+	return updatedDetail, nil
+}
+
+func (s *service) HapusPermintaanRadiologi(ctx context.Context, kodeDokter, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut) error {
+	detail, err := s.DetailPermintaanRadiologi(ctx, noPermintaan)
+	if err != nil {
+		return err
+	}
+
+	if err := s.validasiAksesDanStatusPermintaan(detail, noRawat, kodeDokter, "dihapus"); err != nil {
+		return err
+	}
+
+	orderStatus := statusLanjut
+	if orderStatus == "" {
+		if strings.EqualFold(detail.Status, string(shared.StatusLanjutRawatInap)) {
+			orderStatus = shared.StatusLanjutRawatInap
+		} else {
+			orderStatus = shared.StatusLanjutRawatJalan
+		}
+	}
+
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, "", "", orderStatus, "dihapus"); err != nil {
+		return err
+	}
+
+	if err := s.repo.HapusPermintaanRadiologi(ctx, noPermintaan); err != nil {
+		s.log.Error("Gagal menghapus permintaan radiologi no_permintaan '%s' untuk no_rawat '%s' oleh dokter '%s': %v", noPermintaan, noRawat, kodeDokter, err)
+		return err
+	}
+
+	s.log.Info("Berhasil menghapus permintaan radiologi no_permintaan '%s' untuk no_rawat '%s' (%s) oleh dokter '%s'", noPermintaan, noRawat, orderStatus, kodeDokter)
+	return nil
+}
+
+func (s *service) validasiAksesDanStatusPermintaan(detail *DetailPermintaanRadiologi, noRawat, kodeDokter, action string) error {
 	if detail.NoRawat != noRawat {
-		return nil, apperror.NewBusinessError("Permintaan radiologi tidak sesuai dengan kunjungan pasien")
+		return apperror.NewNotFoundError(
+			"Permintaan radiologi tidak ditemukan",
+			fmt.Sprintf("Data permintaan radiologi no_permintaan '%s' tidak ditemukan untuk no_rawat '%s'", detail.NoPermintaan, noRawat),
+		)
 	}
 
-	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
-		return nil, apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
+	if detail.DokterPerujuk.KodeDokter != kodeDokter {
+		s.log.Warn("Percobaan %s permintaan radiologi no_order %s oleh dokter %s ditolak: dibuat oleh %s (%s)", action, detail.NoPermintaan, kodeDokter, detail.DokterPerujuk.KodeDokter, detail.DokterPerujuk.NamaDokter)
+		return apperror.NewForbiddenError(fmt.Sprintf("Permintaan radiologi dokter lain tidak dapat %s", action))
 	}
 
-	if detail.DokterPerujuk.KodeDokter != kodeDokterLogin {
-		return nil, apperror.NewForbiddenError("Hanya dokter pembuat order yang dapat memperbarui permintaan radiologi ini")
-	}
-
-	if (detail.TanggalSampel != "0000-00-00" && detail.TanggalSampel != "") || (detail.TanggalHasil != "0000-00-00" && detail.TanggalHasil != "") {
-		return nil, apperror.NewBusinessError("Permintaan radiologi sudah diproses oleh petugas dan tidak dapat diubah")
+	if detail.TanggalSampel != "0000-00-00" || detail.TanggalHasil != "0000-00-00" {
+		s.log.Warn("Percobaan %s permintaan radiologi no_order %s ditolak: sudah diproses petugas (sampel: %s, hasil: %s)", action, detail.NoPermintaan, detail.TanggalSampel, detail.TanggalHasil)
+		return apperror.NewForbiddenError(fmt.Sprintf("Permintaan radiologi sudah diproses oleh petugas, tidak dapat %s", action))
 	}
 
 	for _, p := range detail.Pemeriksaan {
 		if strings.EqualFold(p.StatusBayar, "Sudah") {
-			return nil, apperror.NewBusinessError("Permintaan radiologi yang pemeriksaannya telah dibayar tidak dapat diubah")
+			s.log.Warn("Percobaan %s permintaan radiologi no_order %s ditolak: pemeriksaan '%s' telah dibayar", action, detail.NoPermintaan, p.NamaTindakan)
+			return apperror.NewForbiddenError(fmt.Sprintf("Pemeriksaan radiologi sudah dibayar, tidak dapat %s", action))
 		}
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPermintaan, req.JamPermintaan, statusLanjut, "mengubah"); err != nil {
-		return nil, err
-	}
+	return nil
+}
 
+func (s *service) validasiTindakanRadiologi(ctx context.Context, req SimpanPermintaanRadiologiRequest) ([]string, error) {
 	var kodeTindakanList []string
 	for _, item := range req.Pemeriksaan {
 		kodeTindakanList = append(kodeTindakanList, item.KodeTindakan)
+	}
+
+	if len(kodeTindakanList) == 0 {
+		return nil, nil
 	}
 
 	adaMap, err := s.tindakanService.CekKeberadaanTindakanRadiologi(ctx, kodeTindakanList)
@@ -285,59 +264,77 @@ func (s *service) UpdatePermintaanRadiologi(ctx context.Context, kodeDokterLogin
 		return nil, err
 	}
 
-	for _, kode := range kodeTindakanList {
-		if !adaMap[kode] {
-			return nil, apperror.NewBusinessError(fmt.Sprintf("Pemeriksaan radiologi '%s' tidak ditemukan atau tidak aktif", kode))
+	valErrs := make(apperror.ValidationError)
+	for i, item := range req.Pemeriksaan {
+		if !adaMap[item.KodeTindakan] {
+			valErrs[fmt.Sprintf("pemeriksaan[%d].id_tindakan", i)] = "Tindakan radiologi tidak ditemukan"
 		}
 	}
 
-	if err := s.repo.UpdatePermintaanRadiologi(ctx, noPermintaan, req, kodeTindakanList); err != nil {
-		s.log.Error("Gagal memperbarui permintaan radiologi no_permintaan %s: %v", noPermintaan, err)
-		return nil, err
+	if len(valErrs) > 0 {
+		s.log.Warn("Validasi keberadaan tindakan radiologi gagal untuk no_rawat %s: %+v", req.NoRawat, valErrs)
+		return nil, valErrs
 	}
 
-	return s.repo.DetailPermintaanRadiologi(ctx, noPermintaan)
+	return kodeTindakanList, nil
 }
 
-func (s *service) HapusPermintaanRadiologi(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error {
-	detail, err := s.repo.DetailPermintaanRadiologi(ctx, noPermintaan)
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPermintaan, jamPermintaan string, statusLanjut shared.StatusLanjut, aksi string) error {
+	infoRegistrasi, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
+		s.log.Error("Gagal mengambil data registrasi no_rawat '%s': %v", noRawat, err)
+		return err
+	}
+
+	if infoRegistrasi.StatusBayar == "Sudah Bayar" && infoRegistrasi.KodePenjamin == "BPJ" {
+		return apperror.NewBusinessError(fmt.Sprintf("Pasien BPJS sudah bayar, permintaan radiologi tidak dapat %s", aksi))
+	}
+
+	tanggalRegistrasi := infoRegistrasi.TanggalRegistrasi
+	jamRegistrasi := infoRegistrasi.JamRegistrasi
+
+	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasi, jamRegistrasi)
+	if err != nil {
+		s.log.Error("Gagal parse waktu registrasi no_rawat '%s' (%s %s): %v", noRawat, tanggalRegistrasi, jamRegistrasi, err)
+		return err
+	}
+
+	if tanggalPermintaan != "" && jamPermintaan != "" {
+		waktuPermintaan, err := shared.ParseWaktu(tanggalPermintaan, jamPermintaan)
+		if err != nil {
+			return apperror.NewBusinessError(err.Error())
 		}
-		s.log.Error("Gagal memeriksa detail permintaan radiologi sebelum hapus no_permintaan %s: %v", noPermintaan, err)
-		return err
-	}
 
-	if detail.NoRawat != noRawat {
-		return apperror.NewBusinessError("Permintaan radiologi tidak sesuai dengan kunjungan pasien")
-	}
-
-	if statusLanjut != "" && !strings.EqualFold(detail.Status, string(statusLanjut)) {
-		return apperror.NewNotFoundError("Data permintaan radiologi tidak ditemukan")
-	}
-
-	if detail.DokterPerujuk.KodeDokter != kodeDokterLogin {
-		return apperror.NewForbiddenError("Hanya dokter pembuat order yang dapat membatalkan permintaan radiologi ini")
-	}
-
-	if (detail.TanggalSampel != "0000-00-00" && detail.TanggalSampel != "") || (detail.TanggalHasil != "0000-00-00" && detail.TanggalHasil != "") {
-		return apperror.NewBusinessError("Permintaan radiologi sudah diproses oleh petugas dan tidak dapat dibatalkan")
-	}
-
-	for _, p := range detail.Pemeriksaan {
-		if strings.EqualFold(p.StatusBayar, "Sudah") {
-			return apperror.NewBusinessError("Permintaan radiologi yang pemeriksaannya telah dibayar tidak dapat dibatalkan")
+		if waktuPermintaan.Before(waktuRegistrasi) {
+			return apperror.ValidationError{
+				"tanggal_permintaan": fmt.Sprintf("Waktu permintaan radiologi (%s %s) tidak boleh sebelum waktu registrasi (%s %s)", tanggalPermintaan, jamPermintaan, tanggalRegistrasi, jamRegistrasi),
+			}
 		}
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, "", "", statusLanjut, "membatalkan"); err != nil {
+	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
+	if err != nil {
+		s.log.Error("Gagal cek status kamar inap untuk no_rawat '%s': %v", noRawat, err)
 		return err
 	}
 
-	if err := s.repo.HapusPermintaanRadiologi(ctx, noPermintaan); err != nil {
-		s.log.Error("Gagal menghapus permintaan radiologi no_permintaan %s: %v", noPermintaan, err)
-		return err
+	if hasRecordKamar {
+		if !isAktifRanap {
+			return apperror.NewBusinessError("Pasien sudah keluar dari kamar inap")
+		}
+		return nil
+	}
+
+	if strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap)) {
+		return apperror.NewBusinessError("Pasien belum terdaftar di kamar inap, gunakan status 'ralan'")
+	}
+
+	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
+	if time.Now().After(batasWaktu) {
+		return apperror.NewForbiddenError(
+			fmt.Sprintf("Permintaan radiologi tidak dapat %s, melewati batas %d jam", aksi, s.maxEditJam),
+			fmt.Sprintf("Permintaan radiologi no_rawat '%s' ditolak untuk %s karena melewati batas %d jam dari registrasi (%s)", noRawat, aksi, s.maxEditJam, waktuRegistrasi.Format("2006-01-02 15:04:05")),
+		)
 	}
 
 	return nil

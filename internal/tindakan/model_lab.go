@@ -54,7 +54,7 @@ func (f FilterDaftarTindakanLab) Validate() apperror.ValidationError {
 	errs := make(apperror.ValidationError)
 
 	if f.Keyword != "" && len(f.Keyword) < 3 {
-		errs["keyword"] = "Pencarian tindakan lab minimal 3 karakter"
+		errs["keyword"] = "Pencarian tindakan laboratorium minimal 3 karakter"
 	}
 
 	if len(errs) > 0 {
