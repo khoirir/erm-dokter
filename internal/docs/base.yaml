@@ -62,6 +62,8 @@ tags:
       description: Daftar Pasien & Informasi Kamar Rawat Inap
     - name: Pasien
       description: Riwayat Kunjungan & Profil Pasien
+    - name: Diagnosa & Prosedur
+      description: Diagnosa ICD-10 & Prosedur Medis ICD-9-CM Pasien (Rawat Jalan & Rawat Inap)
 components:
     securitySchemes:
         BearerAuth:

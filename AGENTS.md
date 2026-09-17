@@ -10,6 +10,10 @@
 >    - **`internal/resep`** (Standar referensi untuk transaksi CRUD kompleks, validasi master data, dan relasi multi-tabel).
 >    - **`internal/pemeriksaan`** (Standar referensi untuk validasi format non-DB, validasi rentang nilai klinis, dan batasan rekam medis).
 >    - **`internal/penilaianmedis`** (Standar referensi untuk modularitas berkas per unit layanan: `ralan`, `igd`, `ranap`).
+> 3. **LARANGAN MUTLAK KODE & KONDISI REDUNDAN (*Zero Redundant Logic & Checks*)**:
+>    - **DILARANG KERAS membuat kode, percabangan, validasi ganda, atau pengecekan kondisi yang redundan (*no redundant code*)**.
+>    - Pada **Layer Handler** dengan identifier komposit (*composite key* seperti pada `internal/pemeriksaan`, `internal/diagnosa`), validasi integritas URL path **CUKUP memverifikasi kecocokan entitas induk** (`idComposite.NoRawat != noRawatURL`).
+>    - DILARANG menumpuk kondisi ganda yang mubazir (misal: `idComposite.NoRawat != noRawat || idComposite.Status != statusURL`) karena isolasi data sudah dijamin oleh entitas induk dan aturan status data merupakan tanggung jawab Layer Service. Wajib mengikuti pola acuan baku `internal/pemeriksaan/handler.go`.
 
 
 ---
@@ -84,7 +88,7 @@ flowchart TD
   1. Parsing parameter URL path / query param.
   2. **Dekripsi URL Token & Payload**: Mendekripsi seluruh identifier publik (`id_kunjungan`, `id_pasien`, `id_resep`, `id_obat`, `id_tindakan`, dll.) menggunakan `h.encryptionKey`.
   3. **Validasi Input Non-Database**: Memanggil `req.Validate()` dan langsung mengembalikan 400 Bad Request jika gagal.
-  4. **Pengecekan Integritas Payload**: Memverifikasi kecocokan `req.NoRawat == noRawatURL` untuk mencegah konflik saat multi-tab browser.
+  4. **Pengecekan Integritas Entitas Induk (*Zero Redundant Checks*)**: Memverifikasi kecocokan `req.NoRawat == noRawatURL` (pada request body) atau `idComposite.NoRawat != noRawatURL` (pada URL dengan composite key) untuk mencegah konflik saat multi-tab browser. DILARANG menambahkan multi-kondisi yang redundan (seperti `idComposite.Status != statusURL` atau validasi state database) di handler, karena entitas induk sudah terisolasi dan validasi state adalah domain milik Layer Service.
   5. Mengirimkan parameter bersih database (`noRawat`, `kodeDokter`, `req` dengan ID yang sudah didekripsi) ke Layer Service.
   6. **Enkripsi Balik Response ID**: Mengenkripsi kembali seluruh ID internal database sebelum dikembalikan ke client (`response.Success` / `response.Created`).
   7. Penanganan error terpusat via `apperror.HandleError(w, err)`.
@@ -118,6 +122,9 @@ flowchart TD
 >    - **Kelengkapan Operasi CRUD**: Fitur transaksi yang memiliki sifat serupa wajib memiliki kelengkapan operasi yang setara (misal: jika resep obat memiliki kemampuan Create, Read, Update, dan Delete dengan proteksi proses, maka permintaan laboratorium juga wajib menyediakan CRUD lengkap dengan proteksi proses yang setara).
 > 3. **Larangan Pola Ad-Hoc / Menyimpang**:
 >    - Dilarang keras mengarang atau menciptakan pendekatan koding baru yang menyimpang dari modul acuan baku yang sudah terbukti stabil di repositori ini.
+> 4. **Larangan Mutlak Kode & Validasi Redundan (*Zero Redundancy*)**:
+>    - Dilarang membuat kode redundan atau pengecekan multi-kondisi yang tumpang-tindih (*overlapping*).
+>    - Jika integritas URL sudah terverifikasi melalui entitas induk (`idComposite.NoRawat != noRawat`), dilarang menambahkan perbandingan status/field tambahan di level handler yang sudah ditangani oleh Service layer.
 
 ---
 

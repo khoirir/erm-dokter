@@ -304,6 +304,285 @@ paths:
                                     message:
                                         type: string
                                         example: Terjadi kesalahan pada server
+    /api/v1/master/icd10:
+        get:
+            tags: [Master]
+            summary: Daftar & Pencarian Master ICD-10
+            description: Mengambil daftar master diagnosa ICD-10 dengan dukungan pencarian kata kunci dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian kode atau nama diagnosa (minimal 3 karakter jika diisi)
+                  schema:
+                      type: string
+                      example: stroke
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                      type: integer
+                      default: 1
+                      example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                      type: integer
+                      default: 20
+                      example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar master ICD-10
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar master ICD-10
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/ICD10"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi query parameter gagal (kata kunci kurang dari 3 karakter)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            keyword:
+                                                type: string
+                                                example: Kata kunci pencarian minimal 3 karakter
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/master/icd9:
+        get:
+            tags: [Master]
+            summary: Daftar & Pencarian Master ICD-9
+            description: Mengambil daftar master prosedur / tindakan ICD-9-CM dengan dukungan pencarian kata kunci dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian kode atau deskripsi prosedur (minimal 3 karakter jika diisi)
+                  schema:
+                      type: string
+                      example: tomography
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                      type: integer
+                      default: 1
+                      example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                      type: integer
+                      default: 20
+                      example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar master ICD-9
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar master ICD-9
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/ICD9"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi query parameter gagal (kata kunci kurang dari 3 karakter)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            keyword:
+                                                type: string
+                                                example: Kata kunci pencarian minimal 3 karakter
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/master/sync-icd:
+        post:
+            tags: [Master]
+            summary: Sinkronisasi Ulang Master ICD-10 & ICD-9 ke Cache Memori
+            description: Memuat ulang (reload) seluruh dataset ICD-10 dan ICD-9-CM dari database MySQL ke dalam in-memory cache server secara atomik (zero-lock replacement).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil menyinkronkan data master ICD-10 dan ICD-9 ke memori
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyinkronkan data master ICD-10 dan ICD-9 ke memori
+                                    data:
+                                        $ref: "#/components/schemas/SyncICDResult"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         Penjamin:
@@ -376,3 +655,51 @@ components:
                     type: string
                     description: Label kelas kamar rawat inap
                     example: Kelas 1
+        ICD10:
+            type: object
+            required:
+                - kode
+                - nama
+            properties:
+                kode:
+                    type: string
+                    description: Kode ICD-10 diagnosa penyakit
+                    example: I63.9
+                nama:
+                    type: string
+                    description: Deskripsi nama penyakit
+                    example: Cerebral infarction, unspecified
+        ICD9:
+            type: object
+            required:
+                - kode
+                - nama
+            properties:
+                kode:
+                    type: string
+                    description: Kode ICD-9-CM prosedur tindakan
+                    example: "87.03"
+                nama:
+                    type: string
+                    description: Deskripsi panjang prosedur tindakan
+                    example: Computerized axial tomography of head
+        SyncICDResult:
+            type: object
+            required:
+                - total_icd10
+                - total_icd9
+                - synced_at
+            properties:
+                total_icd10:
+                    type: integer
+                    description: Jumlah record ICD-10 yang berhasil dimuat ke cache
+                    example: 15430
+                total_icd9:
+                    type: integer
+                    description: Jumlah record ICD-9 yang berhasil dimuat ke cache
+                    example: 4120
+                synced_at:
+                    type: string
+                    format: date-time
+                    description: Waktu eksekusi sinkronisasi cache selesai
+                    example: "2026-09-17T10:30:00Z"

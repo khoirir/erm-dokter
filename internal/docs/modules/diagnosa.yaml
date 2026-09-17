@@ -1,0 +1,817 @@
+paths:
+    /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}:
+        get:
+            tags: [Diagnosa & Prosedur]
+            summary: Daftar Diagnosa & Prosedur Pasien per Kunjungan
+            description: Mengambil seluruh daftar diagnosa penyakit (ICD-10) dan prosedur medis (ICD-9-CM) yang telah diinputkan pada kunjungan terkait secara terurut berdasarkan prioritas.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status lanjut pelayanan (semua, ralan, ranap)
+                  schema:
+                      type: string
+                      enum: [semua, ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar diagnosa dan prosedur
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message, data]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar diagnosa dan prosedur
+                                    data:
+                                        $ref: "#/components/schemas/DaftarDiagnosaProsedurResponse"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+        post:
+            tags: [Diagnosa & Prosedur]
+            summary: Tambah Diagnosa Penyakit (ICD-10)
+            description: Menambahkan diagnosa ICD-10 baru pada kunjungan pasien. Status kasus (Baru/Lama) akan ditentukan otomatis oleh sistem jika tidak diisi, dan prioritas otomatis dihitung (auto-increment) jika tidak disertakan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/TambahDiagnosaRequest"
+            responses:
+                "201":
+                    description: Berhasil menambahkan diagnosa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message, data]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menambahkan diagnosa
+                                    data:
+                                        $ref: "#/components/schemas/DiagnosaPasien"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/reorder:
+        put:
+            tags: [Diagnosa & Prosedur]
+            summary: Reorder / Urutkan Prioritas Diagnosa
+            description: Memperbarui urutan prioritas seluruh diagnosa pada kunjungan secara transaksional batch (drag-and-drop).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ReorderRequest"
+            responses:
+                "200":
+                    description: Berhasil mengurutkan data diagnosa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengurutkan data diagnosa
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/{id}:
+        put:
+            tags: [Diagnosa & Prosedur]
+            summary: Perbarui Diagnosa Penyakit
+            description: Memperbarui prioritas atau status penyakit (Baru/Lama) pada diagnosa spesifik menggunakan ID komposit terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+                - name: id
+                  in: path
+                  required: true
+                  description: Token terenkripsi dari composite key (no_rawat~kd_penyakit~status).
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19y..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateDiagnosaRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui data diagnosa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui data diagnosa
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+        delete:
+            tags: [Diagnosa & Prosedur]
+            summary: Hapus Diagnosa Penyakit
+            description: Menghapus diagnosa penyakit spesifik dari kunjungan pasien menggunakan ID komposit terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+                - name: id
+                  in: path
+                  required: true
+                  description: Token terenkripsi dari composite key (no_rawat~kd_penyakit~status).
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19y..."
+            responses:
+                "200":
+                    description: Berhasil menghapus data diagnosa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus data diagnosa
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/diagnosa/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Diagnosa & Prosedur]
+            summary: Riwayat Diagnosa & Prosedur Seluruh Kunjungan Pasien
+            description: Mengambil seluruh riwayat diagnosa ICD-10 dan prosedur ICD-9-CM pasien lintas kunjungan dalam bentuk struktur flat. Mendukung filter semua, ralan, maupun ranap.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status lanjut pelayanan (semua, ralan, ranap)
+                  schema:
+                      type: string
+                      enum: [semua, ralan, ranap]
+                      example: semua
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rkm_medis pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19z..."
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat diagnosa dan prosedur pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message, data]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat diagnosa dan prosedur pasien
+                                    data:
+                                        $ref: "#/components/schemas/RiwayatPasienResponse"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/prosedur/{status_lanjut}/{id_kunjungan}:
+        post:
+            tags: [Diagnosa & Prosedur]
+            summary: Tambah Prosedur / Tindakan ICD-9-CM
+            description: Menambahkan prosedur medis ICD-9-CM baru pada kunjungan pasien dengan prioritas otomatis (auto-increment) jika tidak disertakan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/TambahProsedurRequest"
+            responses:
+                "201":
+                    description: Berhasil menambahkan prosedur
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message, data]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menambahkan prosedur
+                                    data:
+                                        $ref: "#/components/schemas/ProsedurPasien"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/prosedur/{status_lanjut}/{id_kunjungan}/reorder:
+        put:
+            tags: [Diagnosa & Prosedur]
+            summary: Reorder / Urutkan Prioritas Prosedur
+            description: Memperbarui urutan prioritas seluruh prosedur ICD-9-CM pada kunjungan secara transaksional batch (drag-and-drop).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ReorderRequest"
+            responses:
+                "200":
+                    description: Berhasil mengurutkan data prosedur
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengurutkan data prosedur
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+    /api/v1/prosedur/{status_lanjut}/{id_kunjungan}/{id}:
+        put:
+            tags: [Diagnosa & Prosedur]
+            summary: Perbarui Prosedur Medis (ICD-9-CM)
+            description: Memperbarui prioritas pada prosedur medis tertentu menggunakan ID komposit terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+                - name: id
+                  in: path
+                  required: true
+                  description: Token terenkripsi dari composite key (no_rawat~kode~status).
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19y..."
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateProsedurRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui data prosedur
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui data prosedur
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+        delete:
+            tags: [Diagnosa & Prosedur]
+            summary: Hapus Prosedur Medis (ICD-9-CM)
+            description: Menghapus prosedur medis ICD-9-CM dari kunjungan pasien menggunakan ID komposit terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+                - name: id
+                  in: path
+                  required: true
+                  description: Token terenkripsi dari composite key (no_rawat~kode~status).
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19y..."
+            responses:
+                "200":
+                    description: Berhasil menghapus data prosedur
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus data prosedur
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "404":
+                    $ref: "#/components/responses/NotFoundError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
+components:
+    responses:
+        BadRequestError:
+            description: Format request tidak valid, ID kunjungan tidak sesuai, atau aturan bisnis dilanggar
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required: [success, message]
+                        properties:
+                            success:
+                                type: boolean
+                                example: false
+                            message:
+                                type: string
+                                example: Permintaan tidak valid
+        UnauthorizedError:
+            description: Token otentikasi tidak ada, tidak valid, atau telah kedaluwarsa
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required: [success, message]
+                        properties:
+                            success:
+                                type: boolean
+                                example: false
+                            message:
+                                type: string
+                                example: Kredensial login tidak valid atau telah kedaluwarsa
+        ForbiddenError:
+            description: Akses ditolak karena batas waktu 48 jam rawat jalan terlewati atau status kamar inap tidak valid
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required: [success, message]
+                        properties:
+                            success:
+                                type: boolean
+                                example: false
+                            message:
+                                type: string
+                                example: Pelayanan rawat jalan telah melewati batas waktu 48 jam
+        NotFoundError:
+            description: Master ICD tidak ditemukan atau item diagnosa/prosedur tidak tercatat pada kunjungan
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required: [success, message]
+                        properties:
+                            success:
+                                type: boolean
+                                example: false
+                            message:
+                                type: string
+                                example: Data tidak ditemukan
+        InternalServerError:
+            description: Terjadi kesalahan tidak terduga pada server database internal
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required: [success, message]
+                        properties:
+                            success:
+                                type: boolean
+                                example: false
+                            message:
+                                type: string
+                                example: Terjadi kesalahan pada server
+
+    schemas:
+        DiagnosaPasien:
+            type: object
+            required:
+                - id
+                - id_kunjungan
+                - kode
+                - nama
+                - status
+                - prioritas
+                - status_penyakit
+            properties:
+                id:
+                    type: string
+                    description: Token terenkripsi kunci komposit item (no_rawat~kd_penyakit~status).
+                    example: "U2FsdGVkX1..."
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi no_rawat kunjungan pasien.
+                    example: "U2FsdGVkX1..."
+                kode:
+                    type: string
+                    description: Kode ICD-10 asli.
+                    example: "I63.9"
+                nama:
+                    type: string
+                    description: Nama deskripsi penyakit dari master penyakit.
+                    example: "Cerebral infarction, unspecified"
+                status:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: "Ralan"
+                prioritas:
+                    type: integer
+                    description: Tingkat urutan prioritas diagnosa (1 untuk diagnosa utama / primer).
+                    example: 1
+                status_penyakit:
+                    type: string
+                    enum: [Baru, Lama]
+                    description: Status kasus diagnosa pasien.
+                    example: "Baru"
+
+        ProsedurPasien:
+            type: object
+            required:
+                - id
+                - id_kunjungan
+                - kode
+                - nama
+                - status
+                - prioritas
+            properties:
+                id:
+                    type: string
+                    description: Token terenkripsi kunci komposit item (no_rawat~kode~status).
+                    example: "U2FsdGVkX1..."
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi no_rawat kunjungan pasien.
+                    example: "U2FsdGVkX1..."
+                kode:
+                    type: string
+                    description: Kode ICD-9-CM asli.
+                    example: "87.03"
+                nama:
+                    type: string
+                    description: Deskripsi prosedur medis dari master ICD-9.
+                    example: "Computerized axial tomography of head"
+                status:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: "Ralan"
+                prioritas:
+                    type: integer
+                    description: Tingkat urutan prioritas prosedur (1 untuk prosedur utama).
+                    example: 1
+
+        DaftarDiagnosaProsedurResponse:
+            type: object
+            required:
+                - diagnosa
+                - prosedur
+            properties:
+                diagnosa:
+                    type: array
+                    description: Daftar diagnosa ICD-10 pada kunjungan.
+                    items:
+                        $ref: "#/components/schemas/DiagnosaPasien"
+                prosedur:
+                    type: array
+                    description: Daftar prosedur ICD-9-CM pada kunjungan.
+                    items:
+                        $ref: "#/components/schemas/ProsedurPasien"
+
+        RiwayatPasienResponse:
+            type: object
+            required:
+                - diagnosa
+                - prosedur
+            properties:
+                diagnosa:
+                    type: array
+                    description: Riwayat diagnosa ICD-10 pasien lintas kunjungan.
+                    items:
+                        $ref: "#/components/schemas/DiagnosaPasien"
+                prosedur:
+                    type: array
+                    description: Riwayat prosedur ICD-9-CM pasien lintas kunjungan.
+                    items:
+                        $ref: "#/components/schemas/ProsedurPasien"
+
+        TambahDiagnosaRequest:
+            type: object
+            required:
+                - kode
+            properties:
+                kode:
+                    type: string
+                    description: Kode ICD-10 (misal I63.9).
+                    example: "I63.9"
+                prioritas:
+                    type: integer
+                    description: Urutan prioritas (opsional, jika tidak diisi akan otomatis auto-increment).
+                    example: 1
+                status_penyakit:
+                    type: string
+                    enum: [Baru, Lama]
+                    description: Status penyakit (opsional, jika kosong dihitung otomatis berdasarkan riwayat kunjungan).
+                    example: "Baru"
+
+        UpdateDiagnosaRequest:
+            type: object
+            properties:
+                prioritas:
+                    type: integer
+                    description: Perubahan urutan prioritas diagnosa (opsional).
+                    example: 2
+                status_penyakit:
+                    type: string
+                    enum: [Baru, Lama]
+                    description: Perubahan status penyakit Baru / Lama (opsional).
+                    example: "Lama"
+
+        TambahProsedurRequest:
+            type: object
+            required:
+                - kode
+            properties:
+                kode:
+                    type: string
+                    description: Kode ICD-9-CM (misal 87.03).
+                    example: "87.03"
+                prioritas:
+                    type: integer
+                    description: Urutan prioritas (opsional, jika tidak diisi akan otomatis auto-increment).
+                    example: 1
+
+        UpdateProsedurRequest:
+            type: object
+            required:
+                - prioritas
+            properties:
+                prioritas:
+                    type: integer
+                    description: Perubahan urutan prioritas prosedur (wajib diisi).
+                    example: 2
+
+        ReorderItemRequest:
+            type: object
+            required:
+                - kode
+                - prioritas
+            properties:
+                kode:
+                    type: string
+                    description: Kode ICD item yang diurutkan.
+                    example: "I63.9"
+                prioritas:
+                    type: integer
+                    description: Nilai urutan prioritas baru (harus >= 1).
+                    example: 1
+
+        ReorderRequest:
+            type: object
+            required:
+                - items
+            properties:
+                items:
+                    type: array
+                    description: Daftar item beserta urutan prioritas barunya.
+                    items:
+                        $ref: "#/components/schemas/ReorderItemRequest"

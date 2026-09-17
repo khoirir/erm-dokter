@@ -7,6 +7,7 @@ import (
 
 	"erm-dokter/internal/auth"
 	"erm-dokter/internal/berkasdigital"
+	"erm-dokter/internal/diagnosa"
 	"erm-dokter/internal/docs"
 	"erm-dokter/internal/health"
 	"erm-dokter/internal/laboratorium"
@@ -44,6 +45,7 @@ func TestRouteConfig_SetupAndBuildHandler(t *testing.T) {
 		berkasdigital.NewHandler(nil, "key"),
 		resumepasien.NewHandler(nil, "key"),
 		pasien.NewHandler(nil, "key"),
+		diagnosa.NewHandler(nil, "key"),
 		"test-jwt-secret",
 		"test-service-api-key",
 	)

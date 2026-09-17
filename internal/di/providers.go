@@ -32,6 +32,7 @@ func ProvideRouteConfig(db *sql.DB, cfg *config.Config, log *logger.Logger) *rou
 		provideBerkasDigital(db, cfg, log),
 		provideResumePasien(db, cfg, log),
 		providePasien(db, cfg, log),
+		provideDiagnosa(db, cfg, log),
 		cfg.JWTSecret,
 		cfg.ServiceAPIKey,
 	)

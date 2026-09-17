@@ -6,6 +6,7 @@ import (
 
 	"erm-dokter/internal/auth"
 	"erm-dokter/internal/berkasdigital"
+	"erm-dokter/internal/diagnosa"
 	"erm-dokter/internal/docs"
 	"erm-dokter/internal/health"
 	"erm-dokter/internal/laboratorium"
@@ -43,6 +44,7 @@ type RouteConfig struct {
 	BerkasDigitalHandler   *berkasdigital.Handler
 	ResumePasienHandler    *resumepasien.Handler
 	PasienHandler          *pasien.Handler
+	DiagnosaHandler        *diagnosa.Handler
 	AuthMiddleware           func(http.HandlerFunc) http.HandlerFunc
 	ServiceAuthMiddleware    func(http.HandlerFunc) http.HandlerFunc
 	TimeoutMiddleware        func(http.HandlerFunc) http.HandlerFunc
@@ -67,6 +69,7 @@ func NewRouteConfig(
 	berkasDigitalHandler *berkasdigital.Handler,
 	resumePasienHandler *resumepasien.Handler,
 	pasienHandler *pasien.Handler,
+	diagnosaHandler *diagnosa.Handler,
 	jwtSecret string,
 	serviceAPIKey string,
 ) *RouteConfig {
@@ -89,6 +92,7 @@ func NewRouteConfig(
 		BerkasDigitalHandler:   berkasDigitalHandler,
 		ResumePasienHandler:    resumePasienHandler,
 		PasienHandler:          pasienHandler,
+		DiagnosaHandler:        diagnosaHandler,
 		AuthMiddleware:         middleware.JWTMiddleware(jwtSecret),
 		ServiceAuthMiddleware:  middleware.ServiceOrJWTMiddleware(jwtSecret, serviceAPIKey),
 		TimeoutMiddleware:      middleware.TimeoutMiddleware(30 * time.Second),
@@ -119,6 +123,7 @@ func (c *RouteConfig) Setup() {
 	c.BerkasDigitalHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.ResumePasienHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 	c.PasienHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
+	c.DiagnosaHandler.RegisterRoutes(c.Mux, c.AuthMiddleware, c.TimeoutMiddleware)
 }
 
 func (c *RouteConfig) BuildHandler(corsOrigin string) http.Handler {

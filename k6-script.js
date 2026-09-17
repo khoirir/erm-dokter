@@ -7,10 +7,13 @@ const USERNAME = __ENV.API_USERNAME || __ENV.DOKTER_USERNAME || "DRHANDI";
 const PASSWORD = __ENV.API_PASSWORD || __ENV.DOKTER_PASSWORD || "1";
 const SERVICE_API_KEY = __ENV.SERVICE_API_KEY || "5c603a34-8254-4e4e-9a25-91fe5a26ff65";
 const AUTH_MODE = (__ENV.AUTH_MODE || "jwt").toLowerCase(); // jwt | api_key
-const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | antrean_compare | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | rawat_inap | riwayat_pasien | rawatinap_riwayat | all
+const ENDPOINT = (__ENV.ENDPOINT || "all").toLowerCase(); // obat | antrean | antrean_compare | pemeriksaan | pemeriksaan_kunjungan | pemeriksaan_pasien | resep | resep_kunjungan | resep_pasien | tindakan_lab | tindakan_lab_detail | tindakan | laboratorium | laboratorium_kunjungan | laboratorium_pasien | permintaan_lab | permintaan_lab_kunjungan | permintaan_lab_pasien | permintaan_lab_detail | rawat_inap | riwayat_pasien | rawatinap_riwayat | icd10 | icd9 | icd | diagnosa | diagnosa_kunjungan | diagnosa_pasien | all
+const PROFILE = (__ENV.PROFILE || "standard").toLowerCase(); // standard | quick | smoke
 
 const errorRate = new Rate("errors");
 const obatDuration = new Trend("obat_duration");
+const icd10Duration = new Trend("icd10_duration");
+const icd9Duration = new Trend("icd9_duration");
 const antreanDuration = new Trend("antrean_duration");
 const antreanDokterDuration = new Trend("antrean_dokter_duration", true);
 const antreanApiKeyDuration = new Trend("antrean_api_key_duration", true);
@@ -30,11 +33,27 @@ const permintaanLabPasienDuration = new Trend("permintaan_lab_pasien_duration");
 const permintaanLabDetailDuration = new Trend("permintaan_lab_detail_duration");
 const rawatInapDuration = new Trend("rawat_inap_duration");
 const riwayatPasienDuration = new Trend("riwayat_pasien_duration");
+const diagnosaKunjunganDuration = new Trend("diagnosa_kunjungan_duration");
+const diagnosaPasienDuration = new Trend("diagnosa_pasien_duration");
 
 let scenariosConfig;
 let thresholdsConfig;
 
-if (ENDPOINT === "antrean_compare") {
+if (PROFILE === "quick" || PROFILE === "smoke") {
+    scenariosConfig = {
+        quick_test: {
+            executor: "constant-vus",
+            exec: (ENDPOINT === "antrean_compare") ? "antreanDokterWorkload" : "mixedWorkload",
+            vus: 10,
+            duration: "10s",
+            tags: { skenario: "quick" },
+        },
+    };
+    thresholdsConfig = {
+        http_req_failed: ["rate<0.01"],
+        http_req_duration: ["p(95)<150"],
+    };
+} else if (ENDPOINT === "antrean_compare") {
     scenariosConfig = {
         skenario_dokter_jwt: {
             executor: "ramping-vus",
@@ -128,6 +147,14 @@ const obatKeywords = ["PARA", "AMOX", "INJ", "TAB", "SYR", "OMEP", "CETIR", "DEX
 const antreanKeywords = ["Ahmad", "Siti", "Budi", "Dewi", "Rina"];
 const kategoriLabList = ["pk", "pa", "mb"];
 const labKeywords = ["Darah", "Urin", "Glukosa", "Kolesterol", "Kultur", "Biopsi", "SGOT", "SGPT", "Ureum", "Kreatinin"];
+const icd10Keywords = [
+    "stroke", "infark", "febris", "diabetes", "hipertensi", "gastritis", "dyspepsia", 
+    "diare", "pneumonia", "asthma", "cephal", "anemia", "I63", "E11", "I10", "A09", "K29", "J18"
+];
+const icd9Keywords = [
+    "tomography", "ultrasound", "radiography", "injection", "infusion", "endoscopy", 
+    "transfusion", "dialysis", "biopsy", "87.0", "88.7", "99.0", "96.0", "99.2", "45.1"
+];
 const today = "2026-04-22,2026-04-22";
 
 export function setup() {
@@ -246,6 +273,44 @@ export function setup() {
         tindakanLabSamples: tindakanLabSamples,
         permintaanLabSamples: permintaanLabSamples,
     };
+}
+
+function requestICD10(params) {
+    const scenario = Math.random();
+    let url = "";
+
+    if (scenario < 0.65) {
+        const keyword = icd10Keywords[Math.floor(Math.random() * icd10Keywords.length)];
+        url = `${BASE_URL}/master/icd10?keyword=${encodeURIComponent(keyword)}&page=1&limit=20`;
+    } else if (scenario < 0.85) {
+        const page = Math.floor(Math.random() * 5) + 1;
+        url = `${BASE_URL}/master/icd10?page=${page}&limit=20`;
+    } else {
+        url = `${BASE_URL}/master/icd10?page=1&limit=50`;
+    }
+
+    const res = http.get(url, params);
+    icd10Duration.add(res.timings.duration);
+    return res;
+}
+
+function requestICD9(params) {
+    const scenario = Math.random();
+    let url = "";
+
+    if (scenario < 0.65) {
+        const keyword = icd9Keywords[Math.floor(Math.random() * icd9Keywords.length)];
+        url = `${BASE_URL}/master/icd9?keyword=${encodeURIComponent(keyword)}&page=1&limit=20`;
+    } else if (scenario < 0.85) {
+        const page = Math.floor(Math.random() * 5) + 1;
+        url = `${BASE_URL}/master/icd9?page=${page}&limit=20`;
+    } else {
+        url = `${BASE_URL}/master/icd9?page=1&limit=50`;
+    }
+
+    const res = http.get(url, params);
+    icd9Duration.add(res.timings.duration);
+    return res;
 }
 
 function requestObat(params) {
@@ -558,6 +623,30 @@ function requestRiwayatPasien(params, data) {
     return res;
 }
 
+function requestDiagnosaKunjungan(params, data) {
+    if (!data.kunjungans || data.kunjungans.length === 0) {
+        return requestAntrean(params);
+    }
+    const idKunjungan = data.kunjungans[Math.floor(Math.random() * data.kunjungans.length)];
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+    const url = `${BASE_URL}/diagnosa/${statusLanjut}/${idKunjungan}`;
+    const res = http.get(url, params);
+    diagnosaKunjunganDuration.add(res.timings.duration);
+    return res;
+}
+
+function requestDiagnosaPasien(params, data) {
+    if (!data.pasiens || data.pasiens.length === 0) {
+        return requestAntrean(params);
+    }
+    const idPasien = data.pasiens[Math.floor(Math.random() * data.pasiens.length)];
+    const statusLanjut = statusLanjutList[Math.floor(Math.random() * statusLanjutList.length)];
+    const url = `${BASE_URL}/diagnosa/${statusLanjut}/pasien/${idPasien}`;
+    const res = http.get(url, params);
+    diagnosaPasienDuration.add(res.timings.duration);
+    return res;
+}
+
 export default function (data) {
     mixedWorkload(data);
 }
@@ -622,6 +711,12 @@ export function mixedWorkload(data) {
     let res;
     if (ENDPOINT === "obat") {
         res = requestObat(params);
+    } else if (ENDPOINT === "icd10") {
+        res = requestICD10(params);
+    } else if (ENDPOINT === "icd9") {
+        res = requestICD9(params);
+    } else if (ENDPOINT === "icd") {
+        res = Math.random() < 0.6 ? requestICD10(params) : requestICD9(params);
     } else if (ENDPOINT === "antrean") {
         res = requestAntrean(params);
     } else if (ENDPOINT === "pemeriksaan_kunjungan") {
@@ -680,26 +775,36 @@ export function mixedWorkload(data) {
         res = requestRiwayatPasien(params, data);
     } else if (ENDPOINT === "rawatinap_riwayat") {
         res = Math.random() < 0.5 ? requestRawatInap(params, data) : requestRiwayatPasien(params, data);
+    } else if (ENDPOINT === "diagnosa_kunjungan") {
+        res = requestDiagnosaKunjungan(params, data);
+    } else if (ENDPOINT === "diagnosa_pasien") {
+        res = requestDiagnosaPasien(params, data);
+    } else if (ENDPOINT === "diagnosa") {
+        res = Math.random() < 0.5 ? requestDiagnosaKunjungan(params, data) : requestDiagnosaPasien(params, data);
     } else {
         // Mode 'all': bagi beban ke seluruh modul backend
         const rand = Math.random();
-        if (rand < 0.10) {
+        if (rand < 0.08) {
             res = requestAntrean(params);
-        } else if (rand < 0.20) {
+        } else if (rand < 0.16) {
             res = requestObat(params);
+        } else if (rand < 0.24) {
+            res = requestICD10(params);
         } else if (rand < 0.30) {
+            res = requestICD9(params);
+        } else if (rand < 0.38) {
             res = requestPemeriksaanKunjungan(params, data);
-        } else if (rand < 0.40) {
+        } else if (rand < 0.46) {
             res = requestPemeriksaanPasien(params, data);
-        } else if (rand < 0.50) {
+        } else if (rand < 0.54) {
             res = requestResepKunjungan(params, data);
-        } else if (rand < 0.60) {
+        } else if (rand < 0.62) {
             res = requestResepPasien(params, data);
-        } else if (rand < 0.70) {
+        } else if (rand < 0.72) {
             res = requestLaboratoriumKunjungan(params, data);
-        } else if (rand < 0.80) {
+        } else if (rand < 0.82) {
             res = requestPermintaanLabKunjungan(params, data);
-        } else if (rand < 0.90) {
+        } else if (rand < 0.91) {
             res = requestRawatInap(params, data);
         } else {
             res = requestRiwayatPasien(params, data);
@@ -734,6 +839,18 @@ export function teardown() {
 }
 
 // Cara menjalankan pengujian k6:
+// # Test khusus master ICD-10 (In-Memory Cache):
+// k6 run -e ENDPOINT=icd10 k6-script.js
+//
+// # Test khusus master ICD-9 (In-Memory Cache):
+// k6 run -e ENDPOINT=icd9 k6-script.js
+//
+// # Test gabungan ICD-10 & ICD-9 (60:40):
+// k6 run -e ENDPOINT=icd k6-script.js
+//
+// # Quick test ICD (10 detik):
+// k6 run -e ENDPOINT=icd -e PROFILE=quick k6-script.js
+//
 // # Test khusus modul Daftar Pasien Rawat Inap:
 // k6 run -e ENDPOINT=rawat_inap k6-script.js
 //

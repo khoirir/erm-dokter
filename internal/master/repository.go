@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"erm-dokter/internal/shared"
 )
@@ -14,6 +15,12 @@ type Repository interface {
 	DaftarPoliklinik(ctx context.Context) ([]Poliklinik, error)
 	DaftarBangsal(ctx context.Context) ([]Bangsal, error)
 	DaftarKelas(ctx context.Context) ([]KelasKamar, error)
+	DaftarICD10(ctx context.Context, filter FilterMasterICD) ([]ICD10, int, error)
+	DaftarICD9(ctx context.Context, filter FilterMasterICD) ([]ICD9, int, error)
+	FetchAllICD10(ctx context.Context) ([]ICD10, error)
+	FetchAllICD9(ctx context.Context) ([]ICD9, error)
+	CekKeberadaanICD10(ctx context.Context, listKode []string) (map[string]bool, error)
+	CekKeberadaanICD9(ctx context.Context, listKode []string) (map[string]bool, error)
 }
 
 type repository struct {
@@ -160,3 +167,247 @@ func (r *repository) DaftarKelas(ctx context.Context) ([]KelasKamar, error) {
 
 	return list, nil
 }
+
+func (r *repository) DaftarICD10(ctx context.Context, filter FilterMasterICD) ([]ICD10, int, error) {
+	baseWhere := "WHERE tampil = 'YA' AND kd_penyakit NOT IN ('-', '00')"
+	var args []any
+	var countArgs []any
+
+	whereClause := baseWhere
+	if filter.Keyword != "" {
+		whereClause += " AND (kd_penyakit LIKE ? OR nm_penyakit LIKE ?)"
+		pattern := "%" + filter.Keyword + "%"
+		args = append(args, pattern, pattern)
+		countArgs = append(countArgs, pattern, pattern)
+	}
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM penyakit %s", whereClause)
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []ICD10{}, 0, nil
+	}
+
+	query := fmt.Sprintf(`SELECT kd_penyakit AS kode, nm_penyakit AS nama 
+		FROM penyakit 
+		%s 
+		ORDER BY kd_penyakit ASC 
+		LIMIT ? OFFSET ?`, whereClause)
+	args = append(args, filter.Limit, filter.Offset())
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	list := make([]ICD10, 0, filter.Limit)
+	for rows.Next() {
+		var item ICD10
+		if err := rows.Scan(&item.Kode, &item.Nama); err != nil {
+			return nil, 0, err
+		}
+		list = append(list, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) DaftarICD9(ctx context.Context, filter FilterMasterICD) ([]ICD9, int, error) {
+	whereClause := ""
+	var args []any
+	var countArgs []any
+
+	if filter.Keyword != "" {
+		whereClause = "WHERE (kode LIKE ? OR deskripsi_panjang LIKE ?)"
+		pattern := "%" + filter.Keyword + "%"
+		args = append(args, pattern, pattern)
+		countArgs = append(countArgs, pattern, pattern)
+	}
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM icd9 %s", whereClause)
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []ICD9{}, 0, nil
+	}
+
+	query := fmt.Sprintf(`SELECT kode, deskripsi_panjang AS nama 
+		FROM icd9 
+		%s 
+		ORDER BY kode ASC 
+		LIMIT ? OFFSET ?`, whereClause)
+	args = append(args, filter.Limit, filter.Offset())
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	list := make([]ICD9, 0, filter.Limit)
+	for rows.Next() {
+		var item ICD9
+		if err := rows.Scan(&item.Kode, &item.Nama); err != nil {
+			return nil, 0, err
+		}
+		list = append(list, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
+}
+
+func (r *repository) CekKeberadaanICD10(ctx context.Context, listKode []string) (map[string]bool, error) {
+	result := make(map[string]bool)
+	if len(listKode) == 0 {
+		return result, nil
+	}
+
+	for _, kode := range listKode {
+		result[kode] = false
+	}
+
+	placeholders := make([]string, len(listKode))
+	args := make([]any, len(listKode))
+	for i, kode := range listKode {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	query := fmt.Sprintf(`SELECT kd_penyakit 
+		FROM penyakit 
+		WHERE tampil = 'YA' AND kd_penyakit NOT IN ('-', '00') AND kd_penyakit IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var kode string
+		if err := rows.Scan(&kode); err != nil {
+			return nil, err
+		}
+		result[kode] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *repository) CekKeberadaanICD9(ctx context.Context, listKode []string) (map[string]bool, error) {
+	result := make(map[string]bool)
+	if len(listKode) == 0 {
+		return result, nil
+	}
+
+	for _, kode := range listKode {
+		result[kode] = false
+	}
+
+	placeholders := make([]string, len(listKode))
+	args := make([]any, len(listKode))
+	for i, kode := range listKode {
+		placeholders[i] = "?"
+		args[i] = kode
+	}
+
+	query := fmt.Sprintf(`SELECT kode 
+		FROM icd9 
+		WHERE kode IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var kode string
+		if err := rows.Scan(&kode); err != nil {
+			return nil, err
+		}
+		result[kode] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *repository) FetchAllICD10(ctx context.Context) ([]ICD10, error) {
+	query := `SELECT kd_penyakit AS kode, nm_penyakit AS nama 
+		FROM penyakit 
+		WHERE tampil = 'YA' AND kd_penyakit NOT IN ('-', '00') 
+		ORDER BY kd_penyakit ASC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]ICD10, 0, 15000)
+	for rows.Next() {
+		var item ICD10
+		if err := rows.Scan(&item.Kode, &item.Nama); err != nil {
+			return nil, err
+		}
+		list = append(list, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (r *repository) FetchAllICD9(ctx context.Context) ([]ICD9, error) {
+	query := `SELECT kode, deskripsi_panjang AS nama 
+		FROM icd9 
+		ORDER BY kode ASC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := make([]ICD9, 0, 4000)
+	for rows.Next() {
+		var item ICD9
+		if err := rows.Scan(&item.Kode, &item.Nama); err != nil {
+			return nil, err
+		}
+		list = append(list, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+
