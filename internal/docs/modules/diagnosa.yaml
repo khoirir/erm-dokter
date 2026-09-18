@@ -274,6 +274,59 @@ paths:
                 "500":
                     $ref: "#/components/responses/InternalServerError"
 
+    /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/simulasi-eklaim:
+        post:
+            tags: [Diagnosa & Prosedur]
+            summary: Simulasi Biaya E-Klaim (INA-CBGs)
+            description: Melakukan simulasi pengelompokan kasus INA-CBGs dan estimasi tarif klaim BPJS secara real-time berdasarkan diagnosa (ICD-10) dan prosedur (ICD-9-CM). Menerima kombinasi draft sebelum disimpan atau otomatis membaca diagnosa tersimpan pada kunjungan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pelayanan (ralan atau ranap)
+                  schema:
+                      type: string
+                      enum: [ralan, ranap]
+                      example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi no_rawat kunjungan pasien.
+                  schema:
+                      type: string
+                      example: "U2FsdGVkX19x..."
+            requestBody:
+                required: false
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimulasiEklaimRequest"
+            responses:
+                "200":
+                    description: Simulasi biaya E-Klaim berhasil
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [success, message, data]
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Simulasi biaya E-Klaim berhasil
+                                    data:
+                                        $ref: "#/components/schemas/SimulasiEklaimResponse"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+
     /api/v1/diagnosa/{status_lanjut}/pasien/{id_pasien}:
         get:
             tags: [Diagnosa & Prosedur]
@@ -815,3 +868,66 @@ components:
                     description: Daftar item beserta urutan prioritas barunya.
                     items:
                         $ref: "#/components/schemas/ReorderItemRequest"
+
+        SimulasiEklaimRequest:
+            type: object
+            properties:
+                diagnosa:
+                    type: array
+                    description: Daftar kode ICD-10 (indeks ke-0 primer, selanjutnya sekunder). Opsional, jika kosong mengambil data tersimpan.
+                    items:
+                        type: string
+                    example: ["I50.9", "I10"]
+                prosedur:
+                    type: array
+                    description: Daftar kode ICD-9-CM (indeks ke-0 primer, selanjutnya sekunder). Opsional, jika kosong mengambil data tersimpan.
+                    items:
+                        type: string
+                    example: ["88.72"]
+
+        SpecialCMGDetail:
+            type: object
+            properties:
+                kode:
+                    type: string
+                    example: "YY-01-I"
+                deskripsi:
+                    type: string
+                    example: "Special Procedure"
+                tarif:
+                    type: integer
+                    example: 500000
+                tipe:
+                    type: string
+                    example: "Special Procedure"
+
+        SimulasiEklaimResponse:
+            type: object
+            required: [kode_cbg, deskripsi_cbg, tarif, base_tarif, kelas, jenis_rawat, severity_level]
+            properties:
+                kode_cbg:
+                    type: string
+                    example: "I-4-17-I"
+                deskripsi_cbg:
+                    type: string
+                    example: "GAGAL JANTUNG & SYOK KARDIOGENIK RINGAN"
+                tarif:
+                    type: integer
+                    example: 4250000
+                base_tarif:
+                    type: integer
+                    example: 4250000
+                kelas:
+                    type: string
+                    example: "rawat_jalan"
+                jenis_rawat:
+                    type: string
+                    example: "Rawat Jalan"
+                severity_level:
+                    type: string
+                    example: "I"
+                special_cmg:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/SpecialCMGDetail"
+

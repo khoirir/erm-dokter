@@ -36,6 +36,10 @@ func (m *mockRepository) DetailPasienRawatInap(ctx context.Context, noRawat stri
 	return nil, nil
 }
 
+func (m *mockRepository) GetKelasRawat(ctx context.Context, noRawat string) (string, error) {
+	return "", nil
+}
+
 func TestService_CekStatusKamarInap(t *testing.T) {
 	log := logger.New()
 

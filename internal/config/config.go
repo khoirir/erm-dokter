@@ -36,6 +36,11 @@ type Config struct {
 	LoginRateLimitEnabled       bool
 	LoginRateLimitRate          int
 	LoginRateLimitWindowMinutes int
+	EKLAIMBaseURL               string
+	EKLAIMEncryptionKey         string
+	EKLAIMKodeRS                string
+	EKLAIMKodeTarif             string
+	EKLAIMDefaultCoderNIK       string
 }
 
 func Load() *Config {
@@ -100,10 +105,15 @@ func Load() *Config {
 		KodeBerkasLabMB:      parseKodeSlice("KODE_BERKAS_LAB_MB"),
 		LogFormat:            getEnvOrDefault("LOG_FORMAT", "json"),
 		LogLevel:             getEnvOrDefault("LOG_LEVEL", "info"),
-		LogFilePath:                 getEnvOrDefault("LOG_FILE_PATH", "logs/app.log"),
+		LogFilePath:          getEnvOrDefault("LOG_FILE_PATH", "logs/app.log"),
 		LoginRateLimitEnabled:       loginRateLimitEnabled,
 		LoginRateLimitRate:          loginRateLimitRate,
 		LoginRateLimitWindowMinutes: loginRateLimitWindow,
+		EKLAIMBaseURL:               strings.TrimSpace(os.Getenv("EKLAIM_BASE_URL")),
+		EKLAIMEncryptionKey:         strings.TrimSpace(os.Getenv("EKLAIM_ENCRYPTION_KEY")),
+		EKLAIMKodeRS:                strings.TrimSpace(os.Getenv("EKLAIM_KODE_RS")),
+		EKLAIMKodeTarif:             getEnvOrDefault("EKLAIM_KODE_TARIF", "BP"),
+		EKLAIMDefaultCoderNIK:       getEnvOrDefault("EKLAIM_NIK_CODER", "1234567890123456"),
 	}
 	return cfg
 }

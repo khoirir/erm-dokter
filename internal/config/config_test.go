@@ -77,3 +77,38 @@ func TestConfigLoad_CustomRateLimit(t *testing.T) {
 		t.Errorf("Expected LoginRateLimitWindowMinutes 2, got %d", cfg.LoginRateLimitWindowMinutes)
 	}
 }
+
+func TestConfigLoad_EKLAIM(t *testing.T) {
+	os.Setenv("EKLAIM_BASE_URL", "http://192.168.200.188/e-klaim/ws.php")
+	os.Setenv("EKLAIM_ENCRYPTION_KEY", "126658800f3b5001d69c76e07be729797a9746714c1b1e277fc4b23d8c9f7a34")
+	os.Setenv("EKLAIM_KODE_RS", "3579030")
+	os.Setenv("EKLAIM_KODE_TARIF", "DP")
+	os.Setenv("EKLAIM_NIK_CODER", "9876543210123456")
+
+	defer func() {
+		os.Unsetenv("EKLAIM_BASE_URL")
+		os.Unsetenv("EKLAIM_ENCRYPTION_KEY")
+		os.Unsetenv("EKLAIM_KODE_RS")
+		os.Unsetenv("EKLAIM_KODE_TARIF")
+		os.Unsetenv("EKLAIM_NIK_CODER")
+	}()
+
+	cfg := config.Load()
+
+	if cfg.EKLAIMBaseURL != "http://192.168.200.188/e-klaim/ws.php" {
+		t.Errorf("Expected EKLAIMBaseURL match, got '%s'", cfg.EKLAIMBaseURL)
+	}
+	if cfg.EKLAIMEncryptionKey != "126658800f3b5001d69c76e07be729797a9746714c1b1e277fc4b23d8c9f7a34" {
+		t.Errorf("Expected EKLAIMEncryptionKey match, got '%s'", cfg.EKLAIMEncryptionKey)
+	}
+	if cfg.EKLAIMKodeRS != "3579030" {
+		t.Errorf("Expected EKLAIMKodeRS match, got '%s'", cfg.EKLAIMKodeRS)
+	}
+	if cfg.EKLAIMKodeTarif != "DP" {
+		t.Errorf("Expected EKLAIMKodeTarif match, got '%s'", cfg.EKLAIMKodeTarif)
+	}
+	if cfg.EKLAIMDefaultCoderNIK != "9876543210123456" {
+		t.Errorf("Expected EKLAIMDefaultCoderNIK match, got '%s'", cfg.EKLAIMDefaultCoderNIK)
+	}
+}
+

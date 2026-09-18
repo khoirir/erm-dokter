@@ -276,3 +276,66 @@ func (r *ReorderRequest) Validate() apperror.ValidationError {
 	}
 	return nil
 }
+
+type SimulasiEklaimRequest struct {
+	Diagnosa []string `json:"diagnosa,omitempty"`
+	Prosedur []string `json:"prosedur,omitempty"`
+}
+
+func (r *SimulasiEklaimRequest) Sanitize() {
+	var cleanDiagnosa []string
+	for _, d := range r.Diagnosa {
+		if trimmed := strings.TrimSpace(d); trimmed != "" {
+			cleanDiagnosa = append(cleanDiagnosa, trimmed)
+		}
+	}
+	r.Diagnosa = cleanDiagnosa
+
+	var cleanProsedur []string
+	for _, p := range r.Prosedur {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			cleanProsedur = append(cleanProsedur, trimmed)
+		}
+	}
+	r.Prosedur = cleanProsedur
+}
+
+func (r *SimulasiEklaimRequest) Validate() apperror.ValidationError {
+	errs := make(apperror.ValidationError)
+
+	for i, d := range r.Diagnosa {
+		if strings.TrimSpace(d) == "" {
+			errs[fmt.Sprintf("diagnosa[%d]", i)] = fmt.Sprintf("Diagnosa ke-%d: Kode ICD-10 wajib diisi", i+1)
+		}
+	}
+
+	for i, p := range r.Prosedur {
+		if strings.TrimSpace(p) == "" {
+			errs[fmt.Sprintf("prosedur[%d]", i)] = fmt.Sprintf("Prosedur ke-%d: Kode ICD-9 wajib diisi", i+1)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
+}
+
+type SpecialCMGResponse struct {
+	Kode      string `json:"kode"`
+	Deskripsi string `json:"deskripsi"`
+	Tarif     int64  `json:"tarif"`
+	Tipe      string `json:"tipe"`
+}
+
+type SimulasiEklaimResponse struct {
+	KodeCBG       string               `json:"kode_cbg"`
+	DeskripsiCBG  string               `json:"deskripsi_cbg"`
+	Tarif         int64                `json:"tarif"`
+	BaseTarif     int64                `json:"base_tarif"`
+	Kelas         string               `json:"kelas"`
+	JenisRawat    string               `json:"jenis_rawat"`
+	SeverityLevel string               `json:"severity_level"`
+	SpecialCMG    []SpecialCMGResponse `json:"special_cmg,omitempty"`
+}
+

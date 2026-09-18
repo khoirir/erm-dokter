@@ -27,6 +27,7 @@ type mockService struct {
 	updateProsedurFunc         func(ctx context.Context, id diagnosa.IdProsedur, req diagnosa.UpdateProsedurRequest) error
 	hapusProsedurFunc          func(ctx context.Context, id diagnosa.IdProsedur) error
 	reorderProsedurFunc        func(ctx context.Context, noRawat string, status shared.StatusLanjut, req diagnosa.ReorderRequest) error
+	simulasiEklaimFunc         func(ctx context.Context, noRawat string, req diagnosa.SimulasiEklaimRequest) (*diagnosa.SimulasiEklaimResponse, error)
 }
 
 func (m *mockService) DaftarDiagnosaProsedur(ctx context.Context, noRawat string, status shared.StatusLanjut) (*diagnosa.DaftarDiagnosaProsedurResponse, error) {
@@ -97,6 +98,17 @@ func (m *mockService) ReorderProsedur(ctx context.Context, noRawat string, statu
 		return m.reorderProsedurFunc(ctx, noRawat, status, req)
 	}
 	return nil
+}
+
+func (m *mockService) SimulasiEklaim(ctx context.Context, noRawat string, req diagnosa.SimulasiEklaimRequest) (*diagnosa.SimulasiEklaimResponse, error) {
+	if m.simulasiEklaimFunc != nil {
+		return m.simulasiEklaimFunc(ctx, noRawat, req)
+	}
+	return &diagnosa.SimulasiEklaimResponse{
+		KodeCBG:      "I-4-17-I",
+		DeskripsiCBG: "GAGAL JANTUNG & SYOK KARDIOGENIK RINGAN",
+		Tarif:        4250000,
+	}, nil
 }
 
 func noopMw(next http.HandlerFunc) http.HandlerFunc {
@@ -449,3 +461,55 @@ func TestHandler_ProsedurCRUD(t *testing.T) {
 		}
 	})
 }
+
+func TestSimulasiEklaim_Handler(t *testing.T) {
+	encKunjungan, _ := crypto.Encrypt("2026/09/18/000001", testEncKey)
+
+	t.Run("Sukses simulasi E-Klaim via handler", func(t *testing.T) {
+		svc := &mockService{
+			simulasiEklaimFunc: func(ctx context.Context, noRawat string, req diagnosa.SimulasiEklaimRequest) (*diagnosa.SimulasiEklaimResponse, error) {
+				if noRawat != "2026/09/18/000001" {
+					t.Errorf("Unexpected noRawat: %s", noRawat)
+				}
+				return &diagnosa.SimulasiEklaimResponse{
+					KodeCBG:      "I-4-17-I",
+					DeskripsiCBG: "GAGAL JANTUNG & SYOK KARDIOGENIK RINGAN",
+					Tarif:        4250000,
+				}, nil
+			},
+		}
+
+		mux := setupTestServer(svc)
+		body := bytes.NewBufferString(`{"diagnosa":["I50.9"],"prosedur":["88.72"]}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/diagnosa/ralan/"+encKunjungan+"/simulasi-eklaim", body)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("Expected status 200, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+
+		var resp map[string]any
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+
+		if resp["message"] != "Simulasi biaya E-Klaim berhasil" {
+			t.Errorf("Unexpected message: %v", resp["message"])
+		}
+	})
+
+	t.Run("Gagal jika ID kunjungan tidak valid", func(t *testing.T) {
+		svc := &mockService{}
+		mux := setupTestServer(svc)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/diagnosa/ralan/invalid-token/simulasi-eklaim", nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("Expected status 400, got %d", rec.Code)
+		}
+	})
+}
+

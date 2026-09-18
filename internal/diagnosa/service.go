@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"erm-dokter/internal/master"
+	"erm-dokter/internal/pkg/eklaim"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
@@ -26,6 +27,7 @@ type Service interface {
 	UpdateProsedur(ctx context.Context, id IdProsedur, req UpdateProsedurRequest) error
 	HapusProsedur(ctx context.Context, id IdProsedur) error
 	ReorderProsedur(ctx context.Context, noRawat string, status shared.StatusLanjut, req ReorderRequest) error
+	SimulasiEklaim(ctx context.Context, noRawat string, req SimulasiEklaimRequest) (*SimulasiEklaimResponse, error)
 }
 
 type service struct {
@@ -33,6 +35,7 @@ type service struct {
 	rawatJalanService rawatjalan.Service
 	rawatInapService  rawatinap.Service
 	masterService     master.Service
+	eklaimClient      eklaim.Client
 	maxEditJam        int
 	log               *logger.Logger
 }
@@ -42,6 +45,7 @@ func NewService(
 	rawatJalanService rawatjalan.Service,
 	rawatInapService rawatinap.Service,
 	masterService master.Service,
+	eklaimClient eklaim.Client,
 	maxEditJam int,
 	log *logger.Logger,
 ) Service {
@@ -53,6 +57,7 @@ func NewService(
 		rawatJalanService: rawatJalanService,
 		rawatInapService:  rawatInapService,
 		masterService:     masterService,
+		eklaimClient:      eklaimClient,
 		maxEditJam:        maxEditJam,
 		log:               log,
 	}
@@ -408,3 +413,139 @@ func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat strin
 
 	return nil
 }
+
+func (s *service) SimulasiEklaim(ctx context.Context, noRawat string, req SimulasiEklaimRequest) (*SimulasiEklaimResponse, error) {
+	cleanNoRawat := strings.TrimSpace(noRawat)
+	if cleanNoRawat == "" {
+		return nil, apperror.NewBusinessError("Nomor rawat wajib diisi")
+	}
+
+	if s.eklaimClient == nil {
+		return nil, apperror.NewBusinessError("Layanan integrasi E-Klaim tidak tersedia")
+	}
+
+	kunjungan, err := s.rawatJalanService.DetailKunjungan(ctx, cleanNoRawat, "")
+	if err != nil {
+		s.log.Error("Gagal mengambil detail kunjungan no_rawat '%s': %v", cleanNoRawat, err)
+		return nil, err
+	}
+	if kunjungan == nil {
+		return nil, apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
+	}
+
+	statusLanjut := kunjungan.StatusLanjut
+	isRanap := strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap))
+
+	diagnosaList := req.Diagnosa
+	if len(diagnosaList) == 0 {
+		savedDiagnosa, err := s.repo.GetDiagnosaByNoRawat(ctx, cleanNoRawat, statusLanjut)
+		if err != nil {
+			s.log.Error("Gagal mengambil diagnosa tersimpan no_rawat '%s': %v", cleanNoRawat, err)
+			return nil, err
+		}
+		for _, d := range savedDiagnosa {
+			diagnosaList = append(diagnosaList, d.Kode)
+		}
+	}
+
+	if len(diagnosaList) == 0 {
+		return nil, apperror.NewBusinessError("Minimal satu diagnosa (ICD-10) wajib diisi untuk simulasi E-Klaim")
+	}
+
+	prosedurList := req.Prosedur
+	if len(prosedurList) == 0 {
+		savedProsedur, err := s.repo.GetProsedurByNoRawat(ctx, cleanNoRawat, statusLanjut)
+		if err != nil {
+			s.log.Error("Gagal mengambil prosedur tersimpan no_rawat '%s': %v", cleanNoRawat, err)
+			return nil, err
+		}
+		for _, p := range savedProsedur {
+			prosedurList = append(prosedurList, p.Kode)
+		}
+	}
+
+	gender := "1"
+	if strings.EqualFold(kunjungan.JenisKelamin, "P") || strings.EqualFold(kunjungan.JenisKelamin, "Perempuan") {
+		gender = "2"
+	}
+
+	jenisRawatStr := "2"
+	kelasRawatStr := "3"
+	if isRanap {
+		jenisRawatStr = "1"
+		kelasKamar, err := s.rawatInapService.GetKelasRawat(ctx, cleanNoRawat)
+		if err == nil && kelasKamar != "" {
+			switch strings.TrimSpace(kelasKamar) {
+			case "Kelas 1", "kelas 1", "1":
+				kelasRawatStr = "1"
+			case "Kelas 2", "kelas 2", "2":
+				kelasRawatStr = "2"
+			default:
+				kelasRawatStr = "3"
+			}
+		}
+	}
+
+	cleanNoRawatAlnum := strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return '-'
+	}, cleanNoRawat)
+	nomorSEP := fmt.Sprintf("SIM-%s", cleanNoRawatAlnum)
+
+	tglMasuk := kunjungan.TanggalRegistrasi
+	tglPulang := kunjungan.TanggalRegistrasi
+	if tglMasuk == "" {
+		tglMasuk = time.Now().Format("2006-01-02")
+		tglPulang = tglMasuk
+	}
+
+	param := eklaim.ParameterSimulasi{
+		NomorSEP:      nomorSEP,
+		NomorKartu:    kunjungan.NoPeserta,
+		NomorRM:       kunjungan.NoRekamMedis,
+		NamaPasien:    kunjungan.NamaPasien,
+		TanggalLahir:  kunjungan.TanggalLahir,
+		Gender:        gender,
+		JenisRawat:    jenisRawatStr,
+		KelasRawat:    kelasRawatStr,
+		TanggalMasuk:  tglMasuk,
+		TanggalPulang: tglPulang,
+		CaraPulang:    "1",
+		Diagnosa:      diagnosaList,
+		Prosedur:      prosedurList,
+		NamaDokter:    kunjungan.NamaDokterAsal,
+	}
+
+	simulasiCtx, simulasiCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer simulasiCancel()
+
+	hasil, err := s.eklaimClient.SimulasiGrouper(simulasiCtx, param)
+	if err != nil {
+		s.log.Error("Gagal menjalankan simulasi grouper E-Klaim no_rawat '%s': %v", cleanNoRawat, err)
+		return nil, apperror.NewBusinessError(fmt.Sprintf("Simulasi E-Klaim gagal: %v", err))
+	}
+
+	var specialCMGResp []SpecialCMGResponse
+	for _, sc := range hasil.SpecialCMG {
+		specialCMGResp = append(specialCMGResp, SpecialCMGResponse{
+			Kode:      sc.Code,
+			Deskripsi: sc.Description,
+			Tarif:     sc.Tariff,
+			Tipe:      sc.Type,
+		})
+	}
+
+	return &SimulasiEklaimResponse{
+		KodeCBG:       hasil.KodeCBG,
+		DeskripsiCBG:  hasil.DeskripsiCBG,
+		Tarif:         hasil.Tarif,
+		BaseTarif:     hasil.BaseTarif,
+		Kelas:         hasil.Kelas,
+		JenisRawat:    hasil.JenisRawat,
+		SeverityLevel: hasil.SeverityLevel,
+		SpecialCMG:    specialCMGResp,
+	}, nil
+}
+

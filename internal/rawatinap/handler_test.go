@@ -52,6 +52,10 @@ func (m *mockRawatInapService) DetailPasienRawatInap(ctx context.Context, noRawa
 	return nil, nil
 }
 
+func (m *mockRawatInapService) GetKelasRawat(ctx context.Context, noRawat string) (string, error) {
+	return "", nil
+}
+
 func authMwForTest(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), middleware.UserClaimKey, &token.Claims{KodeDokter: "DR01"})

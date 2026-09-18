@@ -33,6 +33,7 @@ func (h *Handler) RegisterRoutes(
 	mux.HandleFunc("PUT /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/reorder", authMiddleware(timeoutMiddleware(h.ReorderDiagnosa)))
 	mux.HandleFunc("PUT /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/{id}", authMiddleware(timeoutMiddleware(h.UpdateDiagnosa)))
 	mux.HandleFunc("DELETE /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/{id}", authMiddleware(timeoutMiddleware(h.HapusDiagnosa)))
+	mux.HandleFunc("POST /api/v1/diagnosa/{status_lanjut}/{id_kunjungan}/simulasi-eklaim", authMiddleware(timeoutMiddleware(h.SimulasiEklaim)))
 
 	mux.HandleFunc("POST /api/v1/prosedur/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.TambahProsedur)))
 	mux.HandleFunc("PUT /api/v1/prosedur/{status_lanjut}/{id_kunjungan}/reorder", authMiddleware(timeoutMiddleware(h.ReorderProsedur)))
@@ -473,3 +474,36 @@ func (h *Handler) ReorderProsedur(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, "Berhasil mengurutkan data prosedur", nil)
 }
+
+func (h *Handler) SimulasiEklaim(w http.ResponseWriter, r *http.Request) {
+	idKunjungan := r.PathValue("id_kunjungan")
+
+	noRawat, err := crypto.Decrypt(idKunjungan, h.encryptionKey)
+	if err != nil {
+		apperror.HandleError(w, apperror.NewBusinessError("ID kunjungan tidak valid"))
+		return
+	}
+
+	var req SimulasiEklaimRequest
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			apperror.HandleError(w, apperror.NewBusinessError("Format payload tidak valid"))
+			return
+		}
+	}
+
+	req.Sanitize()
+	if errs := req.Validate(); errs != nil {
+		apperror.HandleError(w, errs)
+		return
+	}
+
+	result, err := h.service.SimulasiEklaim(r.Context(), noRawat, req)
+	if err != nil {
+		apperror.HandleError(w, err)
+		return
+	}
+
+	response.Success(w, "Simulasi biaya E-Klaim berhasil", result)
+}
+

@@ -9,6 +9,7 @@ import (
 
 	"erm-dokter/internal/diagnosa"
 	"erm-dokter/internal/master"
+	"erm-dokter/internal/pkg/eklaim"
 	"erm-dokter/internal/pkg/logger"
 	"erm-dokter/internal/rawatinap"
 	"erm-dokter/internal/rawatjalan"
@@ -228,13 +229,45 @@ func (m *mockMasterService) CekKeberadaanICD9(ctx context.Context, kodeList []st
 	return res, nil
 }
 
+type mockEklaimClient struct {
+	simulasiGrouperFunc func(ctx context.Context, param eklaim.ParameterSimulasi) (*eklaim.HasilSimulasi, error)
+}
+
+func (m *mockEklaimClient) SimulasiGrouper(ctx context.Context, param eklaim.ParameterSimulasi) (*eklaim.HasilSimulasi, error) {
+	if m.simulasiGrouperFunc != nil {
+		return m.simulasiGrouperFunc(ctx, param)
+	}
+	return &eklaim.HasilSimulasi{
+		KodeCBG:       "I-4-17-I",
+		DeskripsiCBG:  "GAGAL JANTUNG & SYOK KARDIOGENIK RINGAN",
+		Tarif:         4250000,
+		BaseTarif:     4250000,
+		Kelas:         "rawat_jalan",
+		JenisRawat:    "Rawat Jalan",
+		SeverityLevel: "I",
+	}, nil
+}
+
 func setupTestService(
 	repo diagnosa.Repository,
 	rj rawatjalan.Service,
 	ri rawatinap.Service,
 	mst master.Service,
 ) diagnosa.Service {
-	return diagnosa.NewService(repo, rj, ri, mst, 48, logger.New())
+	return setupTestServiceWithEklaim(repo, rj, ri, mst, &mockEklaimClient{})
+}
+
+func setupTestServiceWithEklaim(
+	repo diagnosa.Repository,
+	rj rawatjalan.Service,
+	ri rawatinap.Service,
+	mst master.Service,
+	ek eklaim.Client,
+) diagnosa.Service {
+	if ek == nil {
+		ek = &mockEklaimClient{}
+	}
+	return diagnosa.NewService(repo, rj, ri, mst, ek, 48, logger.New())
 }
 
 func TestDaftarDiagnosaProsedur(t *testing.T) {
@@ -814,3 +847,187 @@ func TestReorderProsedur(t *testing.T) {
 		}
 	})
 }
+
+func TestSimulasiEklaim(t *testing.T) {
+	t.Run("Sukses simulasi dengan draft diagnosa dan prosedur", func(t *testing.T) {
+		rj := &mockRawatJalanService{
+			detailKunjunganFunc: func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error) {
+				return &rawatjalan.KunjunganRawatJalan{
+					NoRawat:           noRawat,
+					NoRekamMedis:      "123456",
+					NamaPasien:        "Budi Santoso",
+					JenisKelamin:      "L",
+					TanggalLahir:      "1990-01-01",
+					TanggalRegistrasi: "2026-09-18",
+					NoPeserta:         "0001234567890",
+					StatusLanjut:      shared.StatusLanjutRawatJalan,
+					NamaDokterAsal:    "dr. Ahmad",
+				}, nil
+			},
+		}
+
+		mockEk := &mockEklaimClient{
+			simulasiGrouperFunc: func(ctx context.Context, param eklaim.ParameterSimulasi) (*eklaim.HasilSimulasi, error) {
+				if len(param.Diagnosa) != 2 || param.Diagnosa[0] != "I50.9" {
+					t.Errorf("Unexpected param.Diagnosa: %v", param.Diagnosa)
+				}
+				if len(param.Prosedur) != 1 || param.Prosedur[0] != "88.72" {
+					t.Errorf("Unexpected param.Prosedur: %v", param.Prosedur)
+				}
+				return &eklaim.HasilSimulasi{
+					KodeCBG:       "I-4-17-I",
+					DeskripsiCBG:  "GAGAL JANTUNG & SYOK KARDIOGENIK RINGAN",
+					Tarif:         4250000,
+					BaseTarif:     4250000,
+					Kelas:         "rawat_jalan",
+					JenisRawat:    "Rawat Jalan",
+					SeverityLevel: "I",
+				}, nil
+			},
+		}
+
+		svc := setupTestServiceWithEklaim(&mockRepository{}, rj, &mockRawatInapService{}, &mockMasterService{}, mockEk)
+
+		req := diagnosa.SimulasiEklaimRequest{
+			Diagnosa: []string{"I50.9", "I10"},
+			Prosedur: []string{"88.72"},
+		}
+
+		res, err := svc.SimulasiEklaim(context.Background(), "2026/09/18/000001", req)
+		if err != nil {
+			t.Fatalf("Expected nil error, got %v", err)
+		}
+
+		if res.KodeCBG != "I-4-17-I" {
+			t.Errorf("Expected KodeCBG 'I-4-17-I', got '%s'", res.KodeCBG)
+		}
+		if res.Tarif != 4250000 {
+			t.Errorf("Expected Tarif 4250000, got %d", res.Tarif)
+		}
+	})
+
+	t.Run("Sukses simulasi dengan diagnosa tersimpan", func(t *testing.T) {
+		rj := &mockRawatJalanService{
+			detailKunjunganFunc: func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error) {
+				return &rawatjalan.KunjunganRawatJalan{
+					NoRawat:           noRawat,
+					NoRekamMedis:      "123456",
+					NamaPasien:        "Siti Aminah",
+					JenisKelamin:      "P",
+					TanggalLahir:      "1985-05-15",
+					TanggalRegistrasi: "2026-09-18",
+					NoPeserta:         "0009876543210",
+					StatusLanjut:      shared.StatusLanjutRawatJalan,
+				}, nil
+			},
+		}
+
+		repo := &mockRepository{
+			getDiagnosaByNoRawatFunc: func(ctx context.Context, noRawat string, status shared.StatusLanjut) ([]diagnosa.DiagnosaPasien, error) {
+				return []diagnosa.DiagnosaPasien{
+					{Kode: "E11.9", Status: status},
+				}, nil
+			},
+			getProsedurByNoRawatFunc: func(ctx context.Context, noRawat string, status shared.StatusLanjut) ([]diagnosa.ProsedurPasien, error) {
+				return []diagnosa.ProsedurPasien{}, nil
+			},
+		}
+
+		mockEk := &mockEklaimClient{
+			simulasiGrouperFunc: func(ctx context.Context, param eklaim.ParameterSimulasi) (*eklaim.HasilSimulasi, error) {
+				if param.Gender != "2" {
+					t.Errorf("Expected Gender '2' (Perempuan), got '%s'", param.Gender)
+				}
+				if len(param.Diagnosa) != 1 || param.Diagnosa[0] != "E11.9" {
+					t.Errorf("Unexpected param.Diagnosa: %v", param.Diagnosa)
+				}
+				return &eklaim.HasilSimulasi{
+					KodeCBG:       "E-4-10-I",
+					DeskripsiCBG:  "DIABETES MELLITUS RINGAN",
+					Tarif:         3200000,
+					BaseTarif:     3200000,
+					Kelas:         "rawat_jalan",
+					JenisRawat:    "Rawat Jalan",
+					SeverityLevel: "I",
+				}, nil
+			},
+		}
+
+		svc := setupTestServiceWithEklaim(repo, rj, &mockRawatInapService{}, &mockMasterService{}, mockEk)
+
+		// Request tanpa diagnosa/prosedur -> membaca data tersimpan
+		req := diagnosa.SimulasiEklaimRequest{}
+
+		res, err := svc.SimulasiEklaim(context.Background(), "2026/09/18/000001", req)
+		if err != nil {
+			t.Fatalf("Expected nil error, got %v", err)
+		}
+
+		if res.KodeCBG != "E-4-10-I" {
+			t.Errorf("Expected KodeCBG 'E-4-10-I', got '%s'", res.KodeCBG)
+		}
+	})
+
+	t.Run("Gagal simulasi jika tidak ada diagnosa sama sekali", func(t *testing.T) {
+		rj := &mockRawatJalanService{
+			detailKunjunganFunc: func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error) {
+				return &rawatjalan.KunjunganRawatJalan{
+					NoRawat:      noRawat,
+					StatusLanjut: shared.StatusLanjutRawatJalan,
+				}, nil
+			},
+		}
+
+		repo := &mockRepository{
+			getDiagnosaByNoRawatFunc: func(ctx context.Context, noRawat string, status shared.StatusLanjut) ([]diagnosa.DiagnosaPasien, error) {
+				return []diagnosa.DiagnosaPasien{}, nil
+			},
+		}
+
+		svc := setupTestService(repo, rj, &mockRawatInapService{}, &mockMasterService{})
+
+		_, err := svc.SimulasiEklaim(context.Background(), "2026/09/18/000001", diagnosa.SimulasiEklaimRequest{})
+		if err == nil {
+			t.Fatal("Expected error for empty diagnoses, got nil")
+		}
+
+		var bErr *apperror.BusinessError
+		if !errors.As(err, &bErr) {
+			t.Fatalf("Expected BusinessError, got %v", err)
+		}
+	})
+
+	t.Run("Gagal simulasi jika E-Klaim client mengembalikan error", func(t *testing.T) {
+		rj := &mockRawatJalanService{
+			detailKunjunganFunc: func(ctx context.Context, noRawat string, kodeDokter string) (*rawatjalan.KunjunganRawatJalan, error) {
+				return &rawatjalan.KunjunganRawatJalan{
+					NoRawat:      noRawat,
+					StatusLanjut: shared.StatusLanjutRawatJalan,
+				}, nil
+			},
+		}
+
+		mockEk := &mockEklaimClient{
+			simulasiGrouperFunc: func(ctx context.Context, param eklaim.ParameterSimulasi) (*eklaim.HasilSimulasi, error) {
+				return nil, errors.New("connection timed out")
+			},
+		}
+
+		svc := setupTestServiceWithEklaim(&mockRepository{}, rj, &mockRawatInapService{}, &mockMasterService{}, mockEk)
+
+		req := diagnosa.SimulasiEklaimRequest{
+			Diagnosa: []string{"I50.9"},
+		}
+
+		_, err := svc.SimulasiEklaim(context.Background(), "2026/09/18/000001", req)
+		if err == nil {
+			t.Fatal("Expected error when eklaim fails, got nil")
+		}
+
+		var bErr *apperror.BusinessError
+		if !errors.As(err, &bErr) {
+			t.Fatalf("Expected BusinessError, got %v", err)
+		}
+	})
+}
+

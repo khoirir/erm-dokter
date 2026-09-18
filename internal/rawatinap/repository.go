@@ -13,6 +13,7 @@ import (
 
 type Repository interface {
 	CekStatusKamarInap(ctx context.Context, noRawat string) (isKamarAktif bool, hasRecordKamar bool, err error)
+	GetKelasRawat(ctx context.Context, noRawat string) (string, error)
 	DaftarPasienRawatInap(ctx context.Context, kodeDokterLogin string, filter FilterPasienRawatInap) ([]KunjunganRawatInap, int, error)
 	DetailPasienRawatInap(ctx context.Context, noRawat string, tglMasuk string, jamMasuk string) (*KunjunganRawatInap, error)
 }
@@ -49,6 +50,26 @@ func (r *repository) CekStatusKamarInap(ctx context.Context, noRawat string) (bo
 	}
 
 	return false, true, nil
+}
+
+func (r *repository) GetKelasRawat(ctx context.Context, noRawat string) (string, error) {
+	query := `
+		SELECT k.kelas
+		FROM kamar_inap ki
+		INNER JOIN kamar k ON ki.kd_kamar = k.kd_kamar
+		WHERE ki.no_rawat = ?
+		ORDER BY ki.tgl_masuk DESC, ki.jam_masuk DESC
+		LIMIT 1
+	`
+	var kelas string
+	err := r.db.QueryRowContext(ctx, query, noRawat).Scan(&kelas)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("gagal query kelas rawat inap: %w", err)
+	}
+	return strings.TrimSpace(kelas), nil
 }
 
 const (

@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	CekStatusKamarInap(ctx context.Context, noRawat string) (isKamarAktif bool, hasRecordKamar bool, err error)
+	GetKelasRawat(ctx context.Context, noRawat string) (string, error)
 	DaftarPasienRawatInap(ctx context.Context, kodeDokterLogin string, filter FilterPasienRawatInap) ([]KunjunganRawatInap, shared.PaginationMeta, error)
 	DaftarStatusPulang(ctx context.Context) []OpsiReferensi
 	DetailPasienRawatInap(ctx context.Context, noRawat string, tglMasuk string, jamMasuk string) (*KunjunganRawatInap, error)
@@ -41,6 +42,21 @@ func (s *service) CekStatusKamarInap(ctx context.Context, noRawat string) (bool,
 	}
 
 	return isAktif, hasRecord, nil
+}
+
+func (s *service) GetKelasRawat(ctx context.Context, noRawat string) (string, error) {
+	cleanNoRawat := strings.TrimSpace(noRawat)
+	if cleanNoRawat == "" {
+		return "", nil
+	}
+
+	kelas, err := s.repo.GetKelasRawat(ctx, cleanNoRawat)
+	if err != nil {
+		s.log.Error("Gagal mengambil kelas rawat inap pasien %s: %v", cleanNoRawat, err)
+		return "", err
+	}
+
+	return kelas, nil
 }
 
 func (s *service) DaftarPasienRawatInap(ctx context.Context, kodeDokterLogin string, filter FilterPasienRawatInap) ([]KunjunganRawatInap, shared.PaginationMeta, error) {
