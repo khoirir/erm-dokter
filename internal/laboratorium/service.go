@@ -25,21 +25,21 @@ type Service interface {
 	SimpanPermintaanLabPK(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error)
 	GetDaftarPermintaanLabPK(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabPK, error)
 	GetRiwayatPermintaanLabPKByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabPK, shared.PaginationMeta, error)
-	GetDetailPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabPK, error)
+	GetDetailPermintaanLabPK(ctx context.Context, noPermintaan string) (*DetailPermintaanLabPK, error)
 	UpdatePermintaanLabPK(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPKRequest) (*DetailPermintaanLabPK, error)
 	HapusPermintaanLabPK(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
 
 	SimpanPermintaanLabPA(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error)
 	GetDaftarPermintaanLabPA(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabPA, error)
 	GetRiwayatPermintaanLabPAByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabPA, shared.PaginationMeta, error)
-	GetDetailPermintaanLabPA(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabPA, error)
+	GetDetailPermintaanLabPA(ctx context.Context, noPermintaan string) (*DetailPermintaanLabPA, error)
 	UpdatePermintaanLabPA(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabPARequest) (*DetailPermintaanLabPA, error)
 	HapusPermintaanLabPA(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
 
 	SimpanPermintaanLabMB(ctx context.Context, kodeDokterLogin string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabMBRequest) (*DetailPermintaanLabMB, error)
 	GetDaftarPermintaanLabMB(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut) ([]PermintaanLabMB, error)
 	GetRiwayatPermintaanLabMBByRM(ctx context.Context, noRM string, statusLanjut shared.StatusLanjut, filter FilterRiwayatLab) ([]PermintaanLabMB, shared.PaginationMeta, error)
-	GetDetailPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut) (*DetailPermintaanLabMB, error)
+	GetDetailPermintaanLabMB(ctx context.Context, noPermintaan string) (*DetailPermintaanLabMB, error)
 	UpdatePermintaanLabMB(ctx context.Context, kodeDokterLogin, noRawat, noPermintaan string, statusLanjut shared.StatusLanjut, req SimpanPermintaanLabMBRequest) (*DetailPermintaanLabMB, error)
 	HapusPermintaanLabMB(ctx context.Context, noRawat string, noPermintaan string, statusLanjut shared.StatusLanjut, kodeDokterLogin string) error
 }
@@ -193,72 +193,90 @@ func (s *service) fetchBerkasDigitalKunjungan(ctx context.Context, noRawat strin
 	}
 	return berkasDigital
 }
+func (s *service) validasiAksesDanStatusPermintaanLab(header PermintaanLabHeader, noRawat, kodeDokter string, statusLanjut shared.StatusLanjut, aksi string) error {
+	if header.NoRawat != noRawat {
+		return apperror.NewNotFoundError(
+			"Permintaan laboratorium tidak ditemukan",
+			fmt.Sprintf("Data permintaan laboratorium no_permintaan '%s' tidak ditemukan untuk no_rawat '%s'", header.NoPermintaan, noRawat),
+		)
+	}
 
-func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tglPermintaan, jamPermintaan string, statusLanjut shared.StatusLanjut, action string) error {
-	infoReg, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
+	if statusLanjut != "Semua" && statusLanjut != "" && !strings.EqualFold(header.Status, string(statusLanjut)) {
+		return apperror.NewNotFoundError("Data permintaan laboratorium tidak ditemukan")
+	}
+
+	if header.KodeDokterPerujuk != kodeDokter {
+		s.log.Warn("Percobaan %s permintaan laboratorium %s oleh dokter %s ditolak: dibuat oleh %s (%s)", aksi, header.NoPermintaan, kodeDokter, header.KodeDokterPerujuk, header.NamaDokterPerujuk)
+		return apperror.NewForbiddenError(fmt.Sprintf("Permintaan laboratorium dokter lain tidak dapat %s", aksi))
+	}
+
+	isSampelDiambil := header.TanggalSampel != "0000-00-00" && header.TanggalSampel != ""
+	isHasilKeluar := header.TanggalHasil != "0000-00-00" && header.TanggalHasil != ""
+
+	if isSampelDiambil || isHasilKeluar {
+		s.log.Warn("Percobaan %s permintaan laboratorium %s ditolak: sudah diproses petugas (sampel: %s, hasil: %s)", aksi, header.NoPermintaan, header.TanggalSampel, header.TanggalHasil)
+		return apperror.NewForbiddenError(fmt.Sprintf("Permintaan laboratorium sudah diproses oleh petugas, tidak dapat %s", aksi))
+	}
+
+	return nil
+}
+
+func (s *service) validasiRegistrasiDanStatus(ctx context.Context, noRawat, tanggalPermintaan, jamPermintaan string, statusLanjut shared.StatusLanjut, aksi string) error {
+	infoRegistrasi, err := s.rawatJalanService.GetInfoRegistrasi(ctx, noRawat)
 	if err != nil {
+		s.log.Error("Gagal mengambil data registrasi no_rawat '%s': %v", noRawat, err)
 		return err
 	}
 
-	if infoReg.StatusBayar == "Sudah Bayar" && infoReg.KodePenjamin == "BPJ" {
-		passive := "membuat atau mengubah"
-		if action == "menghapus" || action == "membatalkan" {
-			passive = "membatalkan"
-		}
-		return apperror.NewBusinessError(fmt.Sprintf("Pasien BPJS yang sudah menyelesaikan pembayaran / administrasi tidak dapat %s permintaan laboratorium", passive))
+	if infoRegistrasi.StatusBayar == "Sudah Bayar" && infoRegistrasi.KodePenjamin == "BPJ" {
+		return apperror.NewBusinessError(fmt.Sprintf("Pasien BPJS sudah bayar, permintaan laboratorium tidak dapat %s", aksi))
 	}
 
-	tglRegStr := infoReg.TanggalRegistrasi
-	jamRegStr := infoReg.JamRegistrasi
+	tanggalRegistrasi := infoRegistrasi.TanggalRegistrasi
+	jamRegistrasi := infoRegistrasi.JamRegistrasi
 
-	waktuRegistrasi, err := shared.ParseWaktu(tglRegStr, jamRegStr)
+	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasi, jamRegistrasi)
 	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tglRegStr, jamRegStr, err)
+		s.log.Error("Gagal parse waktu registrasi no_rawat '%s' (%s %s): %v", noRawat, tanggalRegistrasi, jamRegistrasi, err)
 		return err
 	}
 
-	if tglPermintaan != "" && jamPermintaan != "" {
-		waktuPermintaan, err := shared.ParseWaktu(tglPermintaan, jamPermintaan)
+	if tanggalPermintaan != "" && jamPermintaan != "" {
+		waktuPermintaan, err := shared.ParseWaktu(tanggalPermintaan, jamPermintaan)
 		if err != nil {
 			return apperror.NewBusinessError(err.Error())
 		}
 
 		if waktuPermintaan.Before(waktuRegistrasi) {
-			errs := apperror.ValidationError{
-				"tanggal_permintaan": fmt.Sprintf("Waktu permintaan laboratorium (%s %s) tidak boleh lebih awal dari waktu registrasi pasien (%s %s)", tglPermintaan, jamPermintaan, tglRegStr, jamRegStr),
+			return apperror.ValidationError{
+				"tanggal_permintaan": fmt.Sprintf("Waktu permintaan laboratorium (%s %s) tidak boleh sebelum waktu registrasi (%s %s)", tanggalPermintaan, jamPermintaan, tanggalRegistrasi, jamRegistrasi),
 			}
-			s.log.Warn("Validasi waktu permintaan lab gagal untuk no_rawat %s: %+v", noRawat, errs)
-			return errs
 		}
 	}
 
-	return s.validasiStatusKamarDanBatasWaktu(ctx, noRawat, statusLanjut, waktuRegistrasi, tglRegStr, jamRegStr)
-}
-
-func (s *service) validasiStatusKamarDanBatasWaktu(ctx context.Context, noRawat string, statusLanjut shared.StatusLanjut, waktuRegistrasi time.Time, tglRegStr, jamRegStr string) error {
-	isKamarAktif, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
+	isAktifRanap, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
 	if err != nil {
-		s.log.Error("Gagal memeriksa status kamar inap pasien %s: %v", noRawat, err)
+		s.log.Error("Gagal cek status kamar inap untuk no_rawat '%s': %v", noRawat, err)
 		return err
 	}
 
 	if hasRecordKamar {
-		if !isKamarAktif {
-			return apperror.NewBusinessError("Pasien rawat inap sudah keluar / checkout dari kamar inap")
+		if !isAktifRanap {
+			return apperror.NewBusinessError("Pasien sudah keluar dari kamar inap")
 		}
-
 		return nil
 	}
 
 	if strings.EqualFold(string(statusLanjut), string(shared.StatusLanjutRawatInap)) {
-		return apperror.NewBusinessError("Pasien belum/tidak terdaftar di kamar inap. Permintaan laboratorium harus menggunakan status 'Ralan'.")
+		return apperror.NewBusinessError("Pasien belum terdaftar di kamar inap, gunakan status 'ralan'")
 	}
 
 	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
 	if time.Now().After(batasWaktu) {
-		errMsg := fmt.Sprintf("Batas waktu permintaan laboratorium untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tglRegStr, jamRegStr)
-		s.log.Warn("Permintaan laboratorium ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
-		return apperror.NewForbiddenError(errMsg)
+		return apperror.NewForbiddenError(
+			fmt.Sprintf("Permintaan laboratorium tidak dapat %s, melewati batas %d jam", aksi, s.maxEditJam),
+			fmt.Sprintf("Permintaan laboratorium no_rawat '%s' ditolak untuk %s karena melewati batas %d jam dari registrasi (%s)", noRawat, aksi, s.maxEditJam, waktuRegistrasi.Format("2006-01-02 15:04:05")),
+		)
 	}
 
 	return nil

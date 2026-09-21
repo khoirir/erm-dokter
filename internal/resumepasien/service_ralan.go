@@ -4,47 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"time"
 
 	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
-
-func (s *service) validasiRegistrasiDanStatusRalan(ctx context.Context, noRawat string) error {
-	tanggalRegistrasiStr, jamRegistrasiStr, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
-	if err != nil {
-		s.log.Error("Gagal mengambil waktu registrasi no_rawat %s: %v", noRawat, err)
-		return err
-	}
-	if !exists {
-		return apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
-	}
-
-	waktuRegistrasi, err := shared.ParseWaktu(tanggalRegistrasiStr, jamRegistrasiStr)
-	if err != nil {
-		s.log.Error("Gagal parse waktu registrasi no_rawat %s (%s %s): %v", noRawat, tanggalRegistrasiStr, jamRegistrasiStr, err)
-		return err
-	}
-
-	_, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
-	if err != nil {
-		s.log.Error("Gagal cek status kamar inap untuk no_rawat %s: %v", noRawat, err)
-		return err
-	}
-	if hasRecordKamar {
-		return apperror.NewBusinessError("Pasien sudah terdaftar di rawat inap. Resume medis rawat jalan hanya untuk kunjungan rawat jalan.")
-	}
-
-	batasWaktu := waktuRegistrasi.Add(time.Duration(s.maxEditJam) * time.Hour)
-	if time.Now().After(batasWaktu) {
-		errMsg := fmt.Sprintf("Batas waktu resume pasien untuk kunjungan rawat jalan ini telah berakhir (maksimal %d jam dari waktu registrasi: %s %s)", s.maxEditJam, tanggalRegistrasiStr, jamRegistrasiStr)
-		s.log.Warn("Resume pasien ditolak karena lewat batas %d jam untuk no_rawat %s: %s", s.maxEditJam, noRawat, errMsg)
-		return apperror.NewForbiddenError(errMsg)
-	}
-
-	return nil
-}
 
 func (s *service) DetailResumePasienRalan(ctx context.Context, noRawat string) (*ResumePasienRalan, error) {
 	item, err := s.repo.DetailResumePasienRalan(ctx, noRawat)
@@ -68,7 +31,7 @@ func (s *service) RiwayatResumePasienRalanByNoRM(ctx context.Context, noRM strin
 }
 
 func (s *service) SimpanResumePasienRalan(ctx context.Context, noRawat, kodeDokter string, req SimpanResumePasienRalanRequest) (*ResumePasienRalan, error) {
-	if err := s.validasiRegistrasiDanStatusRalan(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatJalan, "disimpan"); err != nil {
 		return nil, err
 	}
 
@@ -101,12 +64,11 @@ func (s *service) UpdateResumePasienRalan(ctx context.Context, kodeDokterLogin, 
 		return nil, err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Dokter %s mencoba mengubah resume pasien ralan milik dokter %s (no_rawat: %s)", kodeDokterLogin, existing.KodeDokter, noRawat)
-		return nil, apperror.NewForbiddenError("Anda tidak memiliki akses untuk mengubah resume pasien milik dokter lain")
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "mengubah"); err != nil {
+		return nil, err
 	}
 
-	if err := s.validasiRegistrasiDanStatusRalan(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatJalan, "diubah"); err != nil {
 		return nil, err
 	}
 
@@ -130,12 +92,11 @@ func (s *service) HapusResumePasienRalan(ctx context.Context, kodeDokterLogin, n
 		return err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Dokter %s mencoba menghapus resume pasien ralan milik dokter %s (no_rawat: %s)", kodeDokterLogin, existing.KodeDokter, noRawat)
-		return apperror.NewForbiddenError("Anda tidak memiliki akses untuk menghapus resume pasien milik dokter lain")
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "menghapus"); err != nil {
+		return err
 	}
 
-	if err := s.validasiRegistrasiDanStatusRalan(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatJalan, "dihapus"); err != nil {
 		return err
 	}
 
@@ -147,6 +108,7 @@ func (s *service) HapusResumePasienRalan(ctx context.Context, kodeDokterLogin, n
 	s.log.Info("Berhasil menghapus resume pasien ralan no_rawat %s oleh dokter %s", noRawat, kodeDokterLogin)
 	return nil
 }
+
 
 func (s *service) ReferensiRalan(ctx context.Context) ReferensiResumeRalan {
 	return ReferensiResumeRalan{

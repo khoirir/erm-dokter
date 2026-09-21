@@ -487,7 +487,7 @@ func (h *Handler) SimulasiEklaim(w http.ResponseWriter, r *http.Request) {
 	var req SimulasiEklaimRequest
 	if r.Body != nil && r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			apperror.HandleError(w, apperror.NewBusinessError("Format payload tidak valid"))
+			apperror.HandleError(w, apperror.NewBusinessError("Format data simulasi tidak valid"))
 			return
 		}
 	}

@@ -62,12 +62,12 @@ func (h *Handler) SimpanPenilaianMedisRalanKandungan(w http.ResponseWriter, r *h
 
 	var req SimpanPenilaianMedisRalanKandunganRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data penilaian medis tidak valid"))
 		return
 	}
 
 	if req.NoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada penilaian medis tidak sesuai dengan ID kunjungan"))
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *Handler) UpdatePenilaianMedisRalanKandungan(w http.ResponseWriter, r *h
 
 	var req UpdatePenilaianMedisRalanKandunganRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data penilaian medis tidak valid"))
 		return
 	}
 

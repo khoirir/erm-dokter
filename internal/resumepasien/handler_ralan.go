@@ -66,12 +66,12 @@ func (h *Handler) SimpanResumePasienRalan(w http.ResponseWriter, r *http.Request
 
 	var req SimpanResumePasienRalanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data resume tidak valid"))
 		return
 	}
 
 	if req.NoRawat != noRawat {
-		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada payload tidak cocok dengan ID kunjungan"))
+		apperror.HandleError(w, apperror.NewBusinessError("Nomor rawat pada resume tidak sesuai dengan ID kunjungan"))
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *Handler) UpdateResumePasienRalan(w http.ResponseWriter, r *http.Request
 
 	var req UpdateResumePasienRalanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		apperror.HandleError(w, apperror.NewBusinessError("Format request JSON tidak valid"))
+		apperror.HandleError(w, apperror.NewBusinessError("Format data resume tidak valid"))
 		return
 	}
 

@@ -246,18 +246,7 @@ func (m *mockRawatJalanService) GetWaktuRegistrasi(ctx context.Context, noRawat 
 	return m.tglReg, m.jamReg, m.exists, m.err
 }
 func (m *mockRawatJalanService) GetInfoRegistrasi(ctx context.Context, noRawat string) (*rawatjalan.InfoRegistrasiPasien, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-	if !m.exists {
-		return nil, nil
-	}
-	return &rawatjalan.InfoRegistrasiPasien{
-		TanggalRegistrasi: m.tglReg,
-		JamRegistrasi:     m.jamReg,
-		KodePenjamin:      "UMU",
-		StatusBayar:       "Belum Bayar",
-	}, nil
+	return nil, nil
 }
 func (m *mockRawatJalanService) DaftarStatusPemeriksaan(ctx context.Context) []rawatjalan.OpsiReferensi {
 	return nil
@@ -854,7 +843,7 @@ func TestService_SimpanPenilaianMedisRalan_RanapCheckout_Ditolak(t *testing.T) {
 	if !errors.As(err, &busErr) {
 		t.Fatalf("expected BusinessError, got %v", err)
 	}
-	if busErr.Message != "Pasien rawat inap sudah keluar / checkout dari kamar inap" {
+	if busErr.Message != "Pasien sudah keluar dari kamar inap" {
 		t.Errorf("unexpected error message: %s", busErr.Message)
 	}
 }
@@ -2066,6 +2055,111 @@ func TestService_HapusPenilaianMedisRanapKandungan_DokterLain(t *testing.T) {
 	if !errors.As(err, &fErr) {
 		t.Fatalf("expected ForbiddenError, got %v", err)
 	}
+}
+
+// ==========================================
+// KEPEMILIKAN DOKTER TESTS
+// ==========================================
+
+func TestService_ValidasiKepemilikanDokter_StandardizedMessage(t *testing.T) {
+	log := logger.New()
+	today := time.Now().Format("2006-01-02")
+
+	t.Run("Update Ralan by different doctor", func(t *testing.T) {
+		repo := &mockRepository{
+			detailData: &PenilaianMedisRalan{
+				NoRawat:    "2026/04/22/000001",
+				KodeDokter: "DR001",
+				NamaDokter: "dr. Handi",
+			},
+		}
+		rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+		svc := NewService(repo, rjSvc, &mockRawatInapService{}, 48, log)
+
+		_, err := svc.UpdatePenilaianMedisRalan(context.Background(), "DR002", "2026/04/22/000001", UpdatePenilaianMedisRalanRequest{})
+		if err == nil {
+			t.Fatal("expected forbidden error, got nil")
+		}
+		var fErr *apperror.ForbiddenError
+		if !errors.As(err, &fErr) {
+			t.Fatalf("expected ForbiddenError, got %v", err)
+		}
+		if fErr.Message != "Penilaian medis dokter lain tidak dapat diubah" {
+			t.Errorf("expected 'Penilaian medis dokter lain tidak dapat diubah', got: %s", fErr.Message)
+		}
+	})
+
+	t.Run("Hapus Ralan by different doctor", func(t *testing.T) {
+		repo := &mockRepository{
+			detailData: &PenilaianMedisRalan{
+				NoRawat:    "2026/04/22/000001",
+				KodeDokter: "DR001",
+				NamaDokter: "dr. Handi",
+			},
+		}
+		rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+		svc := NewService(repo, rjSvc, &mockRawatInapService{}, 48, log)
+
+		err := svc.HapusPenilaianMedisRalan(context.Background(), "DR002", "2026/04/22/000001")
+		if err == nil {
+			t.Fatal("expected forbidden error, got nil")
+		}
+		var fErr *apperror.ForbiddenError
+		if !errors.As(err, &fErr) {
+			t.Fatalf("expected ForbiddenError, got %v", err)
+		}
+		if fErr.Message != "Penilaian medis dokter lain tidak dapat dihapus" {
+			t.Errorf("expected 'Penilaian medis dokter lain tidak dapat dihapus', got: %s", fErr.Message)
+		}
+	})
+
+	t.Run("Update IGD by different doctor", func(t *testing.T) {
+		repo := &mockRepository{
+			detailIGDData: &PenilaianMedisIGD{
+				NoRawat:    "2026/04/22/000002",
+				KodeDokter: "DR001",
+				NamaDokter: "dr. Handi",
+			},
+		}
+		rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+		svc := NewService(repo, rjSvc, &mockRawatInapService{}, 48, log)
+
+		_, err := svc.UpdatePenilaianMedisIGD(context.Background(), "DR002", "2026/04/22/000002", UpdatePenilaianMedisIGDRequest{})
+		if err == nil {
+			t.Fatal("expected forbidden error, got nil")
+		}
+		var fErr *apperror.ForbiddenError
+		if !errors.As(err, &fErr) {
+			t.Fatalf("expected ForbiddenError, got %v", err)
+		}
+		if fErr.Message != "Penilaian medis dokter lain tidak dapat diubah" {
+			t.Errorf("expected 'Penilaian medis dokter lain tidak dapat diubah', got: %s", fErr.Message)
+		}
+	})
+
+	t.Run("Hapus IGD by different doctor", func(t *testing.T) {
+		repo := &mockRepository{
+			detailIGDData: &PenilaianMedisIGD{
+				NoRawat:    "2026/04/22/000002",
+				KodeDokter: "DR001",
+				NamaDokter: "dr. Handi",
+			},
+		}
+		rjSvc := &mockRawatJalanService{tglReg: today, jamReg: "08:00:00", exists: true}
+		svc := NewService(repo, rjSvc, &mockRawatInapService{}, 48, log)
+
+		err := svc.HapusPenilaianMedisIGD(context.Background(), "DR002", "2026/04/22/000002")
+		if err == nil {
+			t.Fatal("expected forbidden error, got nil")
+		}
+		var fErr *apperror.ForbiddenError
+		if !errors.As(err, &fErr) {
+			t.Fatalf("expected ForbiddenError, got %v", err)
+		}
+		if fErr.Message != "Penilaian medis dokter lain tidak dapat dihapus" {
+			t.Errorf("expected 'Penilaian medis dokter lain tidak dapat dihapus', got: %s", fErr.Message)
+		}
+	})
 }
 
 

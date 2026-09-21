@@ -4,7 +4,7 @@ paths:
             summary: Master Kategori Berkas Digital
             description: Mengambil seluruh daftar referensi kategori berkas digital aktif di rumah sakit dari master_berkas_digital.
             tags:
-                - Master Data
+                - Berkas Digital
             security:
                 - BearerAuth: []
             responses:

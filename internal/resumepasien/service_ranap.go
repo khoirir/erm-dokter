@@ -5,31 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
+	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
-
-func (s *service) validasiRegistrasiDanStatusRanap(ctx context.Context, noRawat string) error {
-	_, _, exists, err := s.rawatJalanService.GetWaktuRegistrasi(ctx, noRawat)
-	if err != nil {
-		s.log.Error("Gagal mengambil waktu registrasi no_rawat %s: %v", noRawat, err)
-		return err
-	}
-	if !exists {
-		return apperror.NewNotFoundError("Data kunjungan pasien tidak ditemukan")
-	}
-
-	_, hasRecordKamar, err := s.rawatInapService.CekStatusKamarInap(ctx, noRawat)
-	if err != nil {
-		s.log.Error("Gagal cek status kamar inap untuk no_rawat %s: %v", noRawat, err)
-		return err
-	}
-
-	if !hasRecordKamar {
-		return apperror.NewBusinessError("Pasien belum/tidak terdaftar di rawat inap. Resume medis rawat inap hanya untuk pasien rawat inap.")
-	}
-
-	return nil
-}
 
 func (s *service) DetailResumePasienRanap(ctx context.Context, noRawat string) (*ResumePasienRanap, error) {
 	item, err := s.repo.DetailResumePasienRanap(ctx, noRawat)
@@ -53,7 +31,7 @@ func (s *service) RiwayatResumePasienRanapByNoRM(ctx context.Context, noRM strin
 }
 
 func (s *service) SimpanResumePasienRanap(ctx context.Context, noRawat, kodeDokter string, req SimpanResumePasienRanapRequest) (*ResumePasienRanap, error) {
-	if err := s.validasiRegistrasiDanStatusRanap(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatInap, "disimpan"); err != nil {
 		return nil, err
 	}
 
@@ -86,12 +64,11 @@ func (s *service) UpdateResumePasienRanap(ctx context.Context, kodeDokterLogin, 
 		return nil, err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Dokter %s mencoba mengubah resume pasien ranap milik dokter %s (no_rawat: %s)", kodeDokterLogin, existing.KodeDokter, noRawat)
-		return nil, apperror.NewForbiddenError("Anda tidak memiliki akses untuk mengubah resume pasien milik dokter lain")
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "mengubah"); err != nil {
+		return nil, err
 	}
 
-	if err := s.validasiRegistrasiDanStatusRanap(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatInap, "diubah"); err != nil {
 		return nil, err
 	}
 
@@ -115,12 +92,11 @@ func (s *service) HapusResumePasienRanap(ctx context.Context, kodeDokterLogin, n
 		return err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Dokter %s mencoba menghapus resume pasien ranap milik dokter %s (no_rawat: %s)", kodeDokterLogin, existing.KodeDokter, noRawat)
-		return apperror.NewForbiddenError("Anda tidak memiliki akses untuk menghapus resume pasien milik dokter lain")
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "menghapus"); err != nil {
+		return err
 	}
 
-	if err := s.validasiRegistrasiDanStatusRanap(ctx, noRawat); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, shared.StatusLanjutRawatInap, "dihapus"); err != nil {
 		return err
 	}
 
@@ -140,4 +116,5 @@ func (s *service) ReferensiRanap(ctx context.Context) ReferensiResumeRanap {
 		Dilanjutkan:   DaftarOpsiDilanjutkan(),
 	}
 }
+
 

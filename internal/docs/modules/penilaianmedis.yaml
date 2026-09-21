@@ -1,19 +1,22 @@
 paths:
     /api/v1/penilaian-medis/referensi:
         get:
+            tags: [Penilaian Medis]
             summary: Daftar Opsi Dropdown Penilaian Medis
-            description: Mengambil seluruh daftar opsi dropdown (anamnesis, keadaan umum, tingkat kesadaran, dan status pemeriksaan fisik) untuk formulir asesmen medis.
-            tags:
-                - Penilaian Medis
+            description: Mengambil seluruh daftar opsi dropdown referensi (anamnesis, keadaan umum, tingkat kesadaran, dan status pemeriksaan fisik) untuk formulir asesmen medis dokter.
             security:
                 - BearerAuth: []
             responses:
                 "200":
-                    description: Berhasil mengambil opsi referensi
+                    description: Berhasil mengambil opsi referensi penilaian medis
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -23,28 +26,63 @@ paths:
                                         example: Berhasil mengambil opsi referensi penilaian medis
                                     data:
                                         $ref: "#/components/schemas/ReferensiPenilaianMedis"
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ralan/{id_kunjungan}:
         get:
+            tags: [Penilaian Medis]
             summary: Detail Penilaian Awal Medis Rawat Jalan
-            description: Mengambil data asesmen awal medis dokter umum rawat jalan berdasarkan ID kunjungan terenkripsi.
-            tags:
-                - Penilaian Medis
+            description: Mengambil data asesmen awal medis Rawat Jalan (Dokter Umum) lengkap berdasarkan token terenkripsi ID kunjungan (nomor rawat).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil detail penilaian medis
+                    description: Berhasil mengambil detail penilaian awal medis Rawat Jalan
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -54,20 +92,88 @@ paths:
                                         example: Berhasil mengambil detail penilaian awal medis rawat jalan
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalan"
+                "400":
+                    description: Token ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data penilaian awal medis tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
+            tags: [Penilaian Medis]
             summary: Simpan Penilaian Awal Medis Rawat Jalan
-            description: Menyimpan data asesmen awal medis dokter umum baru dengan proteksi 48 jam dan pencegahan duplikasi.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menyimpan data asesmen awal medis Rawat Jalan (Dokter Umum) baru untuk kunjungan pasien.
+                - `no_rawat` pada request body harus cocok dengan token `id_kunjungan` di path URL.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Batas waktu pengisian maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak.
+                - Pasien BPJS tetap dapat diinputkan asesmen awalnya walaupun billing klaim sudah berstatus lunas bayar.
+                - Pencegahan duplikasi: hanya diizinkan 1 asesmen awal medis rawat jalan per nomor rawat.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -78,11 +184,15 @@ paths:
                             $ref: "#/components/schemas/SimpanPenilaianMedisRalanRequest"
             responses:
                 "201":
-                    description: Berhasil menyimpan penilaian awal medis
+                    description: Berhasil menyimpan penilaian awal medis Rawat Jalan
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -93,21 +203,101 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalan"
                 "400":
-                    description: Validasi input gagal atau data sudah ada
+                    description: Validasi input gagal, nomor rawat tidak cocok, duplikasi data, atau aturan kamar inap dilanggar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis rawat jalan untuk kunjungan ini sudah ada
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Melebihi batas waktu 48 jam
+                    description: Melewati batas waktu 48 jam dari waktu registrasi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
+            tags: [Penilaian Medis]
             summary: Update Penilaian Awal Medis Rawat Jalan
-            description: Memperbarui data asesmen awal medis dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Memperbarui data asesmen awal medis Rawat Jalan (Dokter Umum).
+                - Hanya dokter pembuat yang berhak memperbarui data asesmen.
+                - Batas waktu perubahan maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari perubahan.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -118,11 +308,15 @@ paths:
                             $ref: "#/components/schemas/UpdatePenilaianMedisRalanRequest"
             responses:
                 "200":
-                    description: Berhasil memperbarui penilaian awal medis
+                    description: Berhasil memperbarui penilaian awal medis Rawat Jalan
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -133,32 +327,112 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalan"
                 "400":
-                    description: Validasi input gagal
+                    description: Parameter URL tidak valid, validasi input gagal, atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data penilaian medis tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat diubah
                 "404":
-                    description: Data penilaian awal medis tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
+            tags: [Penilaian Medis]
             summary: Hapus Penilaian Awal Medis Rawat Jalan
-            description: Menghapus data asesmen awal medis dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menghapus data asesmen awal medis Rawat Jalan (Dokter Umum) dari database.
+                - Hanya dokter pembuat yang berhak menghapus data asesmen.
+                - Batas waktu penghapusan maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari penghapusan.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil menghapus penilaian awal medis
+                    description: Berhasil menghapus penilaian awal medis Rawat Jalan
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
@@ -166,32 +440,111 @@ paths:
                                     message:
                                         type: string
                                         example: Berhasil menghapus penilaian awal medis rawat jalan
+                "400":
+                    description: Token ID kunjungan tidak valid atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat dihapus
                 "404":
-                    description: Data penilaian awal medis tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ralan/pasien/{id_pasien}:
         get:
+            tags: [Penilaian Medis]
             summary: Riwayat Penilaian Awal Medis Rawat Jalan Pasien
-            description: Mengambil seluruh riwayat asesmen awal medis rawat jalan pasien berdasarkan nomor rekam medis terenkripsi.
-            tags:
-                - Penilaian Medis
+            description: Mengambil seluruh riwayat asesmen awal medis Rawat Jalan (Dokter Umum) pasien lintas kunjungan berdasarkan nomor rekam medis terenkripsi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  description: Token terenkripsi ID Pasien (Nomor Rekam Medis)
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat penilaian awal medis pasien
+                    description: Berhasil mengambil riwayat penilaian awal medis Rawat Jalan pasien
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -203,51 +556,170 @@ paths:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisRalan"
+                "400":
+                    description: Token ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/igd/{id_kunjungan}:
         get:
+            tags: [Penilaian Medis]
             summary: Detail Penilaian Awal Medis Gawat Darurat (IGD)
-            description: Mengambil data asesmen awal medis IGD lengkap per kunjungan pasien.
-            tags:
-                - Penilaian Medis
+            description: Mengambil data asesmen awal medis Gawat Darurat (IGD) lengkap berdasarkan token terenkripsi ID kunjungan (nomor rawat).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil detail penilaian awal medis IGD
+                    description: Berhasil mengambil detail penilaian awal medis Gawat Darurat (IGD)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil detail penilaian awal medis IGD
+                                        example: Berhasil mengambil detail penilaian awal medis gawat darurat (igd)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisIGD"
+                "400":
+                    description: Token ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data penilaian awal medis IGD tidak ditemukan
+                    description: Data penilaian awal medis Gawat Darurat (IGD) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis gawat darurat (igd) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
+            tags: [Penilaian Medis]
             summary: Simpan Penilaian Awal Medis Gawat Darurat (IGD)
-            description: Menyimpan data asesmen awal medis IGD baru dengan proteksi 48 jam dan pencegahan duplikasi per kunjungan.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menyimpan data asesmen awal medis Gawat Darurat (IGD) baru untuk kunjungan pasien.
+                - `no_rawat` pada request body harus cocok dengan token `id_kunjungan` di path URL.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Batas waktu pengisian maksimal 48 jam sejak waktu registrasi IGD.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak.
+                - Pasien BPJS tetap dapat diinputkan asesmen awalnya walaupun billing klaim sudah berstatus lunas bayar.
+                - Pencegahan duplikasi: hanya diizinkan 1 asesmen awal medis gawat darurat (igd) per nomor rawat.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -258,36 +730,120 @@ paths:
                             $ref: "#/components/schemas/SimpanPenilaianMedisIGDRequest"
             responses:
                 "201":
-                    description: Berhasil menyimpan penilaian awal medis IGD
+                    description: Berhasil menyimpan penilaian awal medis Gawat Darurat (IGD)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menyimpan penilaian awal medis IGD
+                                        example: Berhasil menyimpan penilaian awal medis gawat darurat (igd)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisIGD"
                 "400":
-                    description: Validasi input gagal atau data sudah ada
+                    description: Validasi input gagal, nomor rawat tidak cocok, duplikasi data, atau aturan kamar inap dilanggar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis gawat darurat (igd) untuk kunjungan ini sudah ada
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Melebihi batas waktu 48 jam
+                    description: Melewati batas waktu 48 jam dari waktu registrasi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
+            tags: [Penilaian Medis]
             summary: Update Penilaian Awal Medis Gawat Darurat (IGD)
-            description: Memperbarui data asesmen awal medis IGD dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Memperbarui data asesmen awal medis Gawat Darurat (IGD).
+                - Hanya dokter pembuat yang berhak memperbarui data asesmen.
+                - Batas waktu perubahan maksimal 48 jam sejak waktu registrasi IGD.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari perubahan.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -298,113 +854,327 @@ paths:
                             $ref: "#/components/schemas/UpdatePenilaianMedisIGDRequest"
             responses:
                 "200":
-                    description: Berhasil memperbarui penilaian awal medis IGD
+                    description: Berhasil memperbarui penilaian awal medis Gawat Darurat (IGD)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil memperbarui penilaian awal medis IGD
+                                        example: Berhasil memperbarui penilaian awal medis gawat darurat (igd)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisIGD"
                 "400":
-                    description: Validasi input gagal
+                    description: Parameter URL tidak valid, validasi input gagal, atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data penilaian medis tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat diubah
                 "404":
-                    description: Data penilaian awal medis IGD tidak ditemukan
+                    description: Data penilaian awal medis Gawat Darurat (IGD) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis gawat darurat (igd) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
+            tags: [Penilaian Medis]
             summary: Hapus Penilaian Awal Medis Gawat Darurat (IGD)
-            description: Menghapus data asesmen awal medis IGD dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menghapus data asesmen awal medis Gawat Darurat (IGD) dari database.
+                - Hanya dokter pembuat yang berhak menghapus data asesmen.
+                - Batas waktu penghapusan maksimal 48 jam sejak waktu registrasi IGD.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari penghapusan.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil menghapus penilaian awal medis IGD
+                    description: Berhasil menghapus penilaian awal medis Gawat Darurat (IGD)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menghapus penilaian awal medis IGD
+                                        example: Berhasil menghapus penilaian awal medis gawat darurat (igd)
+                "400":
+                    description: Token ID kunjungan tidak valid atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat dihapus
                 "404":
-                    description: Data penilaian awal medis IGD tidak ditemukan
+                    description: Data penilaian awal medis Gawat Darurat (IGD) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis gawat darurat (igd) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/igd/pasien/{id_pasien}:
         get:
+            tags: [Penilaian Medis]
             summary: Riwayat Penilaian Awal Medis Gawat Darurat (IGD) Pasien
-            description: Mengambil seluruh riwayat asesmen awal medis IGD pasien berdasarkan nomor rekam medis terenkripsi.
-            tags:
-                - Penilaian Medis
+            description: Mengambil seluruh riwayat asesmen awal medis Gawat Darurat (IGD) pasien lintas kunjungan berdasarkan nomor rekam medis terenkripsi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  description: Token terenkripsi ID Pasien (Nomor Rekam Medis)
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat penilaian awal medis IGD pasien
+                    description: Berhasil mengambil riwayat penilaian awal medis Gawat Darurat (IGD) pasien
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil riwayat penilaian awal medis IGD pasien
+                                        example: Berhasil mengambil riwayat penilaian awal medis gawat darurat (igd) pasien
                                     data:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisIGD"
+                "400":
+                    description: Token ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ranap/{id_kunjungan}:
         get:
-            summary: Detail Penilaian Awal Medis Rawat Inap (Ranap)
-            description: Mengambil data asesmen awal medis rawat inap pasien berdasarkan nomor rawat kunjungan terenkripsi.
-            tags:
-                - Penilaian Medis
+            tags: [Penilaian Medis]
+            summary: Detail Penilaian Awal Medis Rawat Inap
+            description: Mengambil data asesmen awal medis Rawat Inap (Ranap) lengkap berdasarkan token terenkripsi ID kunjungan (nomor rawat).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil detail penilaian awal medis rawat inap
+                    description: Berhasil mengambil detail penilaian awal medis Rawat Inap
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -415,23 +1185,87 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanap"
                 "400":
-                    description: ID kunjungan tidak valid
+                    description: Token ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data penilaian awal medis rawat inap tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
-            summary: Simpan Penilaian Awal Medis Rawat Inap (Ranap)
-            description: Menyimpan asesmen awal medis rawat inap baru oleh dokter. Pasien wajib terdaftar dan aktif di kamar inap.
-            tags:
-                - Penilaian Medis
+            tags: [Penilaian Medis]
+            summary: Simpan Penilaian Awal Medis Rawat Inap
+            description: |
+                Menyimpan data asesmen awal medis Rawat Inap (Ranap) baru untuk kunjungan pasien.
+                - `no_rawat` pada request body harus cocok dengan token `id_kunjungan` di path URL.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Pasien wajib terdaftar dan berstatus aktif di kamar rawat inap (belum checkout).
+                - Pasien yang belum terdaftar di kamar inap ditolak (gunakan unit pelayanan rawat jalan).
+                - Pasien BPJS tetap dapat diinputkan asesmen awalnya walaupun billing klaim sudah berstatus lunas bayar.
+                - Pencegahan duplikasi: hanya diizinkan 1 asesmen awal medis rawat inap per nomor rawat.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -442,11 +1276,15 @@ paths:
                             $ref: "#/components/schemas/SimpanPenilaianMedisRanapRequest"
             responses:
                 "201":
-                    description: Berhasil menyimpan penilaian awal medis rawat inap
+                    description: Berhasil menyimpan penilaian awal medis Rawat Inap
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -457,21 +1295,84 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanap"
                 "400":
-                    description: Validasi gagal, nomor rawat tidak cocok, belum terdaftar kamar inap, atau data sudah ada
+                    description: Validasi input gagal, nomor rawat tidak cocok, duplikasi data, atau aturan kamar inap dilanggar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis rawat inap untuk kunjungan ini sudah ada
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
-            summary: Update Penilaian Awal Medis Rawat Inap (Ranap)
-            description: Memperbarui data penilaian awal medis rawat inap. Hanya dokter pembuat yang berhak memperbarui dan pasien masih aktif di kamar inap.
-            tags:
-                - Penilaian Medis
+            tags: [Penilaian Medis]
+            summary: Update Penilaian Awal Medis Rawat Inap
+            description: |
+                Memperbarui data asesmen awal medis Rawat Inap (Ranap).
+                - Hanya dokter pembuat yang berhak memperbarui data asesmen.
+                - Pasien wajib masih berstatus aktif di kamar inap (belum checkout/pulang).
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -482,11 +1383,15 @@ paths:
                             $ref: "#/components/schemas/UpdatePenilaianMedisRanapRequest"
             responses:
                 "200":
-                    description: Berhasil memperbarui penilaian awal medis rawat inap
+                    description: Berhasil memperbarui penilaian awal medis Rawat Inap
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -497,34 +1402,111 @@ paths:
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanap"
                 "400":
-                    description: Validasi gagal atau pasien sudah checkout dari kamar inap
+                    description: Parameter URL tidak valid, validasi input gagal, atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data penilaian medis tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat diubah
                 "404":
-                    description: Data penilaian awal medis rawat inap tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
-            summary: Hapus Penilaian Awal Medis Rawat Inap (Ranap)
-            description: Menghapus data penilaian awal medis rawat inap. Hanya dokter pembuat yang berhak menghapus.
-            tags:
-                - Penilaian Medis
+            tags: [Penilaian Medis]
+            summary: Hapus Penilaian Awal Medis Rawat Inap
+            description: |
+                Menghapus data asesmen awal medis Rawat Inap (Ranap) dari database.
+                - Hanya dokter pembuat yang berhak menghapus data asesmen.
+                - Pasien wajib masih berstatus aktif di kamar inap (belum checkout/pulang).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil menghapus penilaian awal medis rawat inap
+                    description: Berhasil menghapus penilaian awal medis Rawat Inap
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
@@ -533,35 +1515,110 @@ paths:
                                         type: string
                                         example: Berhasil menghapus penilaian awal medis rawat inap
                 "400":
-                    description: Pasien sudah checkout dari kamar inap
+                    description: Token ID kunjungan tidak valid atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat dihapus
                 "404":
-                    description: Data penilaian awal medis rawat inap tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ranap/pasien/{id_pasien}:
         get:
-            summary: Riwayat Penilaian Awal Medis Rawat Inap (Ranap) Pasien
-            description: Mengambil seluruh riwayat asesmen awal medis rawat inap pasien berdasarkan nomor rekam medis terenkripsi.
-            tags:
-                - Penilaian Medis
+            tags: [Penilaian Medis]
+            summary: Riwayat Penilaian Awal Medis Rawat Inap Pasien
+            description: Mengambil seluruh riwayat asesmen awal medis Rawat Inap (Ranap) pasien lintas kunjungan berdasarkan nomor rekam medis terenkripsi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  description: Token terenkripsi ID Pasien (Nomor Rekam Medis)
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat penilaian awal medis rawat inap pasien
+                    description: Berhasil mengambil riwayat penilaian awal medis Rawat Inap pasien
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
@@ -574,58 +1631,169 @@ paths:
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisRanap"
                 "400":
-                    description: ID pasien tidak valid
+                    description: Token ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ralan-kandungan/{id_kunjungan}:
         get:
+            tags: [Penilaian Medis]
             summary: Detail Penilaian Awal Medis Rawat Jalan Kandungan (Obgyn)
-            description: Mengambil data asesmen awal medis rawat jalan kebidanan dan kandungan lengkap per kunjungan pasien.
-            tags:
-                - Penilaian Medis
+            description: Mengambil data asesmen awal medis Rawat Jalan Kebidanan & Kandungan (Obgyn) lengkap berdasarkan token terenkripsi ID kunjungan (nomor rawat).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil detail penilaian awal medis rawat jalan kandungan
+                    description: Berhasil mengambil detail penilaian awal medis Rawat Jalan Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil detail penilaian awal medis rawat jalan kandungan
+                                        example: Berhasil mengambil detail penilaian awal medis rawat jalan kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalanKandungan"
                 "400":
-                    description: ID kunjungan tidak valid
+                    description: Token ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data penilaian awal medis rawat jalan kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
+            tags: [Penilaian Medis]
             summary: Simpan Penilaian Awal Medis Rawat Jalan Kandungan (Obgyn)
-            description: Menyimpan data asesmen awal medis kebidanan & kandungan baru dengan proteksi 48 jam rawat jalan dan pencegahan duplikasi per kunjungan.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menyimpan data asesmen awal medis Rawat Jalan Kebidanan & Kandungan (Obgyn) baru untuk kunjungan pasien.
+                - `no_rawat` pada request body harus cocok dengan token `id_kunjungan` di path URL.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Batas waktu pengisian maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan kandungan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak.
+                - Pasien BPJS tetap dapat diinputkan asesmen awalnya walaupun billing klaim sudah berstatus lunas bayar.
+                - Pencegahan duplikasi: hanya diizinkan 1 asesmen awal medis rawat jalan kandungan (obgyn) per nomor rawat.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -636,38 +1804,120 @@ paths:
                             $ref: "#/components/schemas/SimpanPenilaianMedisRalanKandunganRequest"
             responses:
                 "201":
-                    description: Berhasil menyimpan penilaian awal medis rawat jalan kandungan
+                    description: Berhasil menyimpan penilaian awal medis Rawat Jalan Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menyimpan penilaian awal medis rawat jalan kandungan
+                                        example: Berhasil menyimpan penilaian awal medis rawat jalan kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalanKandungan"
                 "400":
-                    description: Validasi input gagal, nomor rawat tidak cocok, atau data sudah ada
+                    description: Validasi input gagal, nomor rawat tidak cocok, duplikasi data, atau aturan kamar inap dilanggar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis rawat jalan kandungan (obgyn) untuk kunjungan ini sudah ada
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Melebihi batas waktu 48 jam
+                    description: Melewati batas waktu 48 jam dari waktu registrasi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
+            tags: [Penilaian Medis]
             summary: Update Penilaian Awal Medis Rawat Jalan Kandungan (Obgyn)
-            description: Memperbarui data asesmen awal medis kebidanan & kandungan dengan proteksi kepemilikan dokter pembuat dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Memperbarui data asesmen awal medis Rawat Jalan Kebidanan & Kandungan (Obgyn).
+                - Hanya dokter pembuat yang berhak memperbarui data asesmen.
+                - Batas waktu perubahan maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan kandungan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari perubahan.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -678,150 +1928,418 @@ paths:
                             $ref: "#/components/schemas/UpdatePenilaianMedisRalanKandunganRequest"
             responses:
                 "200":
-                    description: Berhasil memperbarui penilaian awal medis rawat jalan kandungan
+                    description: Berhasil memperbarui penilaian awal medis Rawat Jalan Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil memperbarui penilaian awal medis rawat jalan kandungan
+                                        example: Berhasil memperbarui penilaian awal medis rawat jalan kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRalanKandungan"
                 "400":
-                    description: Validasi input gagal
+                    description: Parameter URL tidak valid, validasi input gagal, atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data penilaian medis tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat diubah
                 "404":
-                    description: Data penilaian awal medis rawat jalan kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
+            tags: [Penilaian Medis]
             summary: Hapus Penilaian Awal Medis Rawat Jalan Kandungan (Obgyn)
-            description: Menghapus data asesmen awal medis kebidanan & kandungan dengan proteksi kepemilikan dokter dan batas waktu 48 jam.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menghapus data asesmen awal medis Rawat Jalan Kebidanan & Kandungan (Obgyn) dari database.
+                - Hanya dokter pembuat yang berhak menghapus data asesmen.
+                - Batas waktu penghapusan maksimal 48 jam sejak waktu registrasi kunjungan rawat jalan kandungan.
+                - Pasien berstatus rawat inap yang telah keluar/checkout kamar inap ditolak dari penghapusan.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil menghapus penilaian awal medis rawat jalan kandungan
+                    description: Berhasil menghapus penilaian awal medis Rawat Jalan Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menghapus penilaian awal medis rawat jalan kandungan
+                                        example: Berhasil menghapus penilaian awal medis rawat jalan kandungan (obgyn)
                 "400":
-                    description: ID kunjungan tidak valid
+                    description: Token ID kunjungan tidak valid atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat dihapus
                 "404":
-                    description: Data penilaian awal medis rawat jalan kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Jalan Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat jalan kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ralan-kandungan/pasien/{id_pasien}:
         get:
+            tags: [Penilaian Medis]
             summary: Riwayat Penilaian Awal Medis Rawat Jalan Kandungan (Obgyn) Pasien
-            description: Mengambil seluruh riwayat asesmen awal medis rawat jalan kebidanan dan kandungan pasien berdasarkan nomor rekam medis terenkripsi.
-            tags:
-                - Penilaian Medis
+            description: Mengambil seluruh riwayat asesmen awal medis Rawat Jalan Kebidanan & Kandungan (Obgyn) pasien lintas kunjungan berdasarkan nomor rekam medis terenkripsi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  description: Token terenkripsi ID Pasien (Nomor Rekam Medis)
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat penilaian awal medis rawat jalan kandungan pasien
+                    description: Berhasil mengambil riwayat penilaian awal medis Rawat Jalan Kandungan (Obgyn) pasien
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil riwayat penilaian awal medis rawat jalan kandungan pasien
+                                        example: Berhasil mengambil riwayat penilaian awal medis rawat jalan kandungan (obgyn) pasien
                                     data:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisRalanKandungan"
                 "400":
-                    description: ID pasien tidak valid
+                    description: Token ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ranap-kandungan/{id_kunjungan}:
         get:
+            tags: [Penilaian Medis]
             summary: Detail Penilaian Awal Medis Rawat Inap Kandungan (Obgyn)
-            description: Mengambil data asesmen awal medis rawat inap kebidanan dan kandungan lengkap per kunjungan pasien.
-            tags:
-                - Penilaian Medis
+            description: Mengambil data asesmen awal medis Rawat Inap Kebidanan & Kandungan (Obgyn) lengkap berdasarkan token terenkripsi ID kunjungan (nomor rawat).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil detail penilaian awal medis rawat inap kandungan
+                    description: Berhasil mengambil detail penilaian awal medis Rawat Inap Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil detail penilaian awal medis rawat inap kandungan
+                                        example: Berhasil mengambil detail penilaian awal medis rawat inap kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanapKandungan"
                 "400":
-                    description: ID kunjungan tidak valid
+                    description: Token ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "404":
-                    description: Data penilaian awal medis rawat inap kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         post:
+            tags: [Penilaian Medis]
             summary: Simpan Penilaian Awal Medis Rawat Inap Kandungan (Obgyn)
-            description: Menyimpan data asesmen awal medis rawat inap kebidanan & kandungan baru. Pasien wajib terdaftar dan aktif di kamar inap.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menyimpan data asesmen awal medis Rawat Inap Kebidanan & Kandungan (Obgyn) baru untuk kunjungan pasien.
+                - `no_rawat` pada request body harus cocok dengan token `id_kunjungan` di path URL.
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Pasien wajib terdaftar dan berstatus aktif di kamar rawat inap (belum checkout).
+                - Pasien yang belum terdaftar di kamar inap ditolak (gunakan unit pelayanan ralan kandungan).
+                - Pasien BPJS tetap dapat diinputkan asesmen awalnya walaupun billing klaim sudah berstatus lunas bayar.
+                - Pencegahan duplikasi: hanya diizinkan 1 asesmen awal medis rawat inap kandungan (obgyn) per nomor rawat.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -832,36 +2350,103 @@ paths:
                             $ref: "#/components/schemas/SimpanPenilaianMedisRanapKandunganRequest"
             responses:
                 "201":
-                    description: Berhasil menyimpan penilaian awal medis rawat inap kandungan
+                    description: Berhasil menyimpan penilaian awal medis Rawat Inap Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menyimpan penilaian awal medis rawat inap kandungan
+                                        example: Berhasil menyimpan penilaian awal medis rawat inap kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanapKandungan"
                 "400":
-                    description: Validasi input gagal, nomor rawat tidak cocok, belum terdaftar kamar inap, atau data sudah ada
+                    description: Validasi input gagal, nomor rawat tidak cocok, duplikasi data, atau aturan kamar inap dilanggar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis rawat inap kandungan (obgyn) untuk kunjungan ini sudah ada
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         put:
+            tags: [Penilaian Medis]
             summary: Update Penilaian Awal Medis Rawat Inap Kandungan (Obgyn)
-            description: Memperbarui data asesmen awal medis rawat inap kebidanan & kandungan. Hanya dokter pembuat yang berhak memperbarui dan pasien masih aktif di kamar inap.
-            tags:
-                - Penilaian Medis
+            description: |
+                Memperbarui data asesmen awal medis Rawat Inap Kebidanan & Kandungan (Obgyn).
+                - Hanya dokter pembuat yang berhak memperbarui data asesmen.
+                - Pasien wajib masih berstatus aktif di kamar inap (belum checkout/pulang).
+                - Waktu penilaian medis tidak boleh sebelum registrasi pasien dan tidak boleh melebihi waktu saat ini.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             requestBody:
@@ -872,101 +2457,301 @@ paths:
                             $ref: "#/components/schemas/UpdatePenilaianMedisRanapKandunganRequest"
             responses:
                 "200":
-                    description: Berhasil memperbarui penilaian awal medis rawat inap kandungan
+                    description: Berhasil memperbarui penilaian awal medis Rawat Inap Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil memperbarui penilaian awal medis rawat inap kandungan
+                                        example: Berhasil memperbarui penilaian awal medis rawat inap kandungan (obgyn)
                                     data:
                                         $ref: "#/components/schemas/PenilaianMedisRanapKandungan"
                 "400":
-                    description: Validasi input gagal atau pasien sudah checkout dari kamar inap
+                    description: Parameter URL tidak valid, validasi input gagal, atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data penilaian medis tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat diubah
                 "404":
-                    description: Data penilaian awal medis rawat inap kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
         delete:
+            tags: [Penilaian Medis]
             summary: Hapus Penilaian Awal Medis Rawat Inap Kandungan (Obgyn)
-            description: Menghapus data asesmen awal medis rawat inap kebidanan & kandungan. Hanya dokter pembuat yang berhak menghapus.
-            tags:
-                - Penilaian Medis
+            description: |
+                Menghapus data asesmen awal medis Rawat Inap Kebidanan & Kandungan (Obgyn) dari database.
+                - Hanya dokter pembuat yang berhak menghapus data asesmen.
+                - Pasien wajib masih berstatus aktif di kamar inap (belum checkout/pulang).
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_kunjungan
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rawat Kunjungan
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil menghapus penilaian awal medis rawat inap kandungan
+                    description: Berhasil menghapus penilaian awal medis Rawat Inap Kandungan (Obgyn)
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil menghapus penilaian awal medis rawat inap kandungan
+                                        example: Berhasil menghapus penilaian awal medis rawat inap kandungan (obgyn)
                 "400":
-                    description: ID kunjungan tidak valid atau pasien sudah checkout dari kamar inap
+                    description: Token ID kunjungan tidak valid atau pasien sudah checkout
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
                 "403":
-                    description: Bukan dokter pembuat
+                    description: Bukan dokter pembuat data atau melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Penilaian medis dokter lain tidak dapat dihapus
                 "404":
-                    description: Data penilaian awal medis rawat inap kandungan tidak ditemukan
+                    description: Data penilaian awal medis Rawat Inap Kandungan (Obgyn) tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data penilaian awal medis rawat inap kandungan (obgyn) tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
     /api/v1/penilaian-medis/ranap-kandungan/pasien/{id_pasien}:
         get:
+            tags: [Penilaian Medis]
             summary: Riwayat Penilaian Awal Medis Rawat Inap Kandungan (Obgyn) Pasien
-            description: Mengambil seluruh riwayat asesmen awal medis rawat inap kebidanan dan kandungan pasien berdasarkan nomor rekam medis terenkripsi.
-            tags:
-                - Penilaian Medis
+            description: Mengambil seluruh riwayat asesmen awal medis Rawat Inap Kebidanan & Kandungan (Obgyn) pasien lintas kunjungan berdasarkan nomor rekam medis terenkripsi.
             security:
                 - BearerAuth: []
             parameters:
                 - name: id_pasien
                   in: path
                   required: true
-                  description: Encrypted ID Nomor Rekam Medis Pasien
+                  description: Token terenkripsi ID Pasien (Nomor Rekam Medis)
                   schema:
                     type: string
             responses:
                 "200":
-                    description: Berhasil mengambil riwayat penilaian awal medis rawat inap kandungan pasien
+                    description: Berhasil mengambil riwayat penilaian awal medis Rawat Inap Kandungan (Obgyn) pasien
                     content:
                         application/json:
                             schema:
                                 type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
                                 properties:
                                     success:
                                         type: boolean
                                         example: true
                                     message:
                                         type: string
-                                        example: Berhasil mengambil riwayat penilaian awal medis rawat inap kandungan pasien
+                                        example: Berhasil mengambil riwayat penilaian awal medis rawat inap kandungan (obgyn) pasien
                                     data:
                                         type: array
                                         items:
                                             $ref: "#/components/schemas/PenilaianMedisRanapKandungan"
                 "400":
-                    description: ID pasien tidak valid
+                    description: Token ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
                 "401":
-                    description: Token autentikasi tidak valid atau kedaluwarsa
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
 components:
     schemas:
         ReferensiPenilaianMedis:
@@ -1029,7 +2814,7 @@ components:
                 riwayat_pengobatan:
                     type: string
                     example: "Sudah minum Paracetamol namun demam masih naik"
-                riwayat_alergi:
+                alergi:
                     type: string
                     example: "Tidak ada riwayat alergi obat/makanan"
                 keadaan:
@@ -1153,7 +2938,7 @@ components:
                 riwayat_pengobatan:
                     type: string
                     example: "Paracetamol 500mg"
-                riwayat_alergi:
+                alergi:
                     type: string
                     example: "Tidak ada"
                 keadaan:
@@ -1272,7 +3057,7 @@ components:
                 riwayat_pengobatan:
                     type: string
                     example: "Paracetamol 500mg"
-                riwayat_alergi:
+                alergi:
                     type: string
                     example: "Tidak ada"
                 keadaan:

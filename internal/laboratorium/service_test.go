@@ -1001,8 +1001,8 @@ func TestService_PermintaanLabPK_BusinessScenarios(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected BusinessError when inpatient already checked out, got nil")
 		}
-		if !strings.Contains(err.Error(), "sudah keluar / checkout") {
-			t.Errorf("Expected error to mention checkout, got: %v", err)
+		if !strings.Contains(err.Error(), "sudah keluar") {
+			t.Errorf("Expected error to mention sudah keluar, got: %v", err)
 		}
 	})
 

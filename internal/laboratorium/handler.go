@@ -25,30 +25,30 @@ func NewHandler(service Service, encryptionKey string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, timeoutMiddleware func(http.HandlerFunc) http.HandlerFunc) {
-	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarHasilLab)))
-	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarHasilLabByRM)))
-	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/{id_kunjungan}/{status_lanjut}/{id_hasil}", authMiddleware(timeoutMiddleware(h.DetailHasilLab)))
+	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DaftarHasilLab)))
+	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.DaftarHasilLabByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/{id_kunjungan}/{id_hasil}", authMiddleware(timeoutMiddleware(h.DetailHasilLab)))
 
-	mux.HandleFunc("POST /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPK)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPK)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPKByRM)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPK)))
-	mux.HandleFunc("PUT /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPK)))
-	mux.HandleFunc("DELETE /api/v1/laboratorium/pk/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPK)))
+	mux.HandleFunc("POST /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPK)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPK)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{status_lanjut}/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPKByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pk/permintaan/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPK)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPK)))
+	mux.HandleFunc("DELETE /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPK)))
 
-	mux.HandleFunc("POST /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPA)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPA)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPAByRM)))
-	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPA)))
-	mux.HandleFunc("PUT /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPA)))
-	mux.HandleFunc("DELETE /api/v1/laboratorium/pa/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPA)))
+	mux.HandleFunc("POST /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabPA)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPA)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{status_lanjut}/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabPAByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/pa/permintaan/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabPA)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabPA)))
+	mux.HandleFunc("DELETE /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabPA)))
 
-	mux.HandleFunc("POST /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabMB)))
-	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMB)))
-	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/pasien/{id_pasien}/{status_lanjut}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMBByRM)))
-	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabMB)))
-	mux.HandleFunc("PUT /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabMB)))
-	mux.HandleFunc("DELETE /api/v1/laboratorium/mb/permintaan/{id_kunjungan}/{status_lanjut}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabMB)))
+	mux.HandleFunc("POST /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.SimpanPermintaanLabMB)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMB)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{status_lanjut}/pasien/{id_pasien}", authMiddleware(timeoutMiddleware(h.DaftarPermintaanLabMBByRM)))
+	mux.HandleFunc("GET /api/v1/laboratorium/mb/permintaan/{id_permintaan}", authMiddleware(timeoutMiddleware(h.DetailPermintaanLabMB)))
+	mux.HandleFunc("PUT /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.UpdatePermintaanLabMB)))
+	mux.HandleFunc("DELETE /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}", authMiddleware(timeoutMiddleware(h.HapusPermintaanLabMB)))
 }
 
 func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
@@ -71,19 +71,18 @@ func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
-	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Semua, Ralan, Ranap)"))
+	statusLanjut, ok := shared.ParseStatusLanjutWithSemua(r.PathValue("status_lanjut"))
+	if !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	tanggal := r.URL.Query().Get("tanggal")
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	filter := FilterRiwayatLab{
-		Tanggal: tanggal,
+		Tanggal: q.Get("tanggal"),
 		Page:    page,
 		Limit:   limit,
 	}
@@ -101,7 +100,7 @@ func (h *Handler) DaftarHasilLab(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if data != nil {
-		h.encryptHasilLabList(data.HasilPemeriksaan)
+		h.encryptHasilLabList(data.HasilPemeriksaan, idKunjungan)
 		h.encryptBerkasDigitalList(data.BerkasDigital)
 	}
 
@@ -128,19 +127,18 @@ func (h *Handler) DaftarHasilLabByRM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
-	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
-	if statusLanjut != "Semua" && !statusLanjut.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Semua, Ralan, Ranap)"))
+	statusLanjut, ok := shared.ParseStatusLanjutWithSemua(r.PathValue("status_lanjut"))
+	if !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	tanggal := r.URL.Query().Get("tanggal")
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	filter := FilterRiwayatLab{
-		Tanggal: tanggal,
+		Tanggal: q.Get("tanggal"),
 		Page:    page,
 		Limit:   limit,
 	}
@@ -157,7 +155,7 @@ func (h *Handler) DaftarHasilLabByRM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.encryptHasilLabList(data)
+	h.encryptHasilLabList(data, "")
 	response.SuccessWithMeta(w, "Berhasil mengambil riwayat hasil laboratorium pasien", data, meta)
 }
 
@@ -169,10 +167,8 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statusLanjutRaw := strings.TrimSpace(r.PathValue("status_lanjut"))
-	statusLanjut := shared.StatusLanjut(statusLanjutRaw)
-	if !statusLanjut.IsValid() {
-		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid (pilihan: Ralan, Ranap)"))
+	if _, ok := shared.ParseStatusLanjut(r.PathValue("status_lanjut")); !ok {
+		apperror.HandleError(w, apperror.NewBusinessError("Status lanjut tidak valid"))
 		return
 	}
 
@@ -222,21 +218,20 @@ func (h *Handler) DetailHasilLab(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if data != nil && !strings.EqualFold(data.Status, string(statusLanjut)) {
-		apperror.HandleError(w, apperror.NewNotFoundError("Data hasil laboratorium tidak ditemukan"))
-		return
-	}
-
-	h.encryptHasilLab(data)
+	h.encryptHasilLab(data, idKunjungan)
 	response.Success(w, "Berhasil mengambil detail hasil laboratorium", data)
 }
 
-func (h *Handler) encryptHasilLab(item *HasilLaboratorium) {
+func (h *Handler) encryptHasilLab(item *HasilLaboratorium, defaultIdKunjungan string) {
 	if item == nil {
 		return
 	}
 	item.Id, _ = crypto.Encrypt(item.NoRawat+"~"+item.KodeTindakan+"~"+item.TanggalPeriksa+"~"+item.JamPeriksa, h.encryptionKey)
-	item.IdKunjungan, _ = crypto.Encrypt(item.NoRawat, h.encryptionKey)
+	if defaultIdKunjungan != "" {
+		item.IdKunjungan = defaultIdKunjungan
+	} else if encKunjungan, err := crypto.Encrypt(item.NoRawat, h.encryptionKey); err == nil {
+		item.IdKunjungan = encKunjungan
+	}
 	for i := range item.DetailPK {
 		if item.DetailPK[i].IdTemplate != "" {
 			item.DetailPK[i].IdTemplate, _ = crypto.Encrypt(item.DetailPK[i].IdTemplate, h.encryptionKey)
@@ -244,9 +239,21 @@ func (h *Handler) encryptHasilLab(item *HasilLaboratorium) {
 	}
 }
 
-func (h *Handler) encryptHasilLabList(items []HasilLaboratorium) {
+func (h *Handler) encryptHasilLabList(items []HasilLaboratorium, defaultIdKunjungan string) {
 	for i := range items {
-		h.encryptHasilLab(&items[i])
+		h.encryptHasilLab(&items[i], defaultIdKunjungan)
+	}
+}
+
+func (h *Handler) encryptPermintaanLabHeader(header *PermintaanLabHeader, defaultIdKunjungan string) {
+	if header == nil {
+		return
+	}
+	header.Id, _ = crypto.Encrypt(header.NoPermintaan, h.encryptionKey)
+	if defaultIdKunjungan != "" {
+		header.IdKunjungan = defaultIdKunjungan
+	} else if encKunjungan, err := crypto.Encrypt(header.NoRawat, h.encryptionKey); err == nil {
+		header.IdKunjungan = encKunjungan
 	}
 }
 

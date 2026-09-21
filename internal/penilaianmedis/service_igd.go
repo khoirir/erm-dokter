@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
+	"erm-dokter/internal/shared"
 	"erm-dokter/internal/shared/apperror"
 )
 
@@ -33,7 +33,7 @@ func (s *service) RiwayatPenilaianMedisIGDByNoRM(ctx context.Context, noRM strin
 }
 
 func (s *service) SimpanPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, noRawat string, req SimpanPenilaianMedisIGDRequest) (*PenilaianMedisIGD, error) {
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian, shared.StatusLanjutRawatJalan, "disimpan"); err != nil {
 		return nil, err
 	}
 
@@ -66,13 +66,11 @@ func (s *service) UpdatePenilaianMedisIGD(ctx context.Context, kodeDokterLogin, 
 		return nil, err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Percobaan mengubah penilaian medis IGD no_rawat %s ditolak: dibuat oleh dokter %s (%s), dicoba oleh %s",
-			noRawat, existing.KodeDokter, existing.NamaDokter, kodeDokterLogin)
-		return nil, apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk mengubah penilaian medis ini karena dibuat oleh dokter lain (%s)", existing.NamaDokter))
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "diubah"); err != nil {
+		return nil, err
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, req.TanggalPenilaian, shared.StatusLanjutRawatJalan, "diubah"); err != nil {
 		return nil, err
 	}
 
@@ -95,13 +93,11 @@ func (s *service) HapusPenilaianMedisIGD(ctx context.Context, kodeDokterLogin, n
 		return err
 	}
 
-	if existing.KodeDokter != kodeDokterLogin {
-		s.log.Warn("Percobaan menghapus penilaian medis IGD no_rawat %s ditolak: dibuat oleh dokter %s (%s), dicoba oleh %s",
-			noRawat, existing.KodeDokter, existing.NamaDokter, kodeDokterLogin)
-		return apperror.NewForbiddenError(fmt.Sprintf("Anda tidak memiliki hak akses untuk menghapus penilaian medis ini karena dibuat oleh dokter lain (%s)", existing.NamaDokter))
+	if err := s.validasiKepemilikanDokter(existing.KodeDokter, existing.NamaDokter, kodeDokterLogin, noRawat, "dihapus"); err != nil {
+		return err
 	}
 
-	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, ""); err != nil {
+	if err := s.validasiRegistrasiDanStatus(ctx, noRawat, "", shared.StatusLanjutRawatJalan, "dihapus"); err != nil {
 		return err
 	}
 
