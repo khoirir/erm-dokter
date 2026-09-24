@@ -1,0 +1,503 @@
+paths:
+    /api/v1/tindakan/laboratorium/{kategori}:
+        get:
+            summary: Daftar & Pencarian Master Tindakan Laboratorium
+            description: Mengambil daftar tindakan / paket pemeriksaan laboratorium berdasarkan kategori (PK, PA, MB) dengan pencarian keyword dan paginasi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  description: Kategori laboratorium (PK, PA, MB)
+                  schema:
+                    type: string
+                    enum: [PK, PA, MB]
+                    example: PK
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian nama pemeriksaan (minimal 3 karakter)
+                  schema:
+                    type: string
+                    example: Darah
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                    type: integer
+                    default: 1
+                    example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                    type: integer
+                    default: 20
+                    example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar tindakan laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar tindakan laboratorium
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/TindakanLab"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Kategori laboratorium tidak valid atau validasi parameter pencarian gagal (minimal 3 karakter)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            keyword:
+                                                type: string
+                                                example: Pencarian tindakan laboratorium minimal 3 karakter
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/tindakan/laboratorium/{kategori}/{id_tindakan}:
+        get:
+            summary: Detail Tindakan Laboratorium & Template Sub-Item
+            description: Mengambil detail tarif tindakan laboratorium beserta sub-item parameter pengujian dan nilai rujukannya.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: kategori
+                  in: path
+                  required: true
+                  description: Kategori laboratorium (PK, PA, MB)
+                  schema:
+                    type: string
+                    enum: [PK, PA, MB]
+                    example: PK
+                - name: id_tindakan
+                  in: path
+                  required: true
+                  description: Identifier tindakan laboratorium terenkripsi URL-safe
+                  schema:
+                    type: string
+                    example: "wVf8s0p..."
+            responses:
+                "200":
+                    description: Berhasil mengambil detail tindakan laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail tindakan laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/DetailTindakanLab"
+                "400":
+                    description: Kategori laboratorium tidak valid atau identifier tindakan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID tindakan laboratorium tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Tindakan laboratorium tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Tindakan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/tindakan/radiologi:
+        get:
+            summary: Daftar & Pencarian Master Tindakan Radiologi
+            description: Mengambil daftar tindakan / pemeriksaan radiologi dengan pencarian keyword dan paginasi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: keyword
+                  in: query
+                  required: false
+                  description: Kata kunci pencarian nama pemeriksaan (minimal 3 karakter)
+                  schema:
+                    type: string
+                    example: Thorax
+                - name: page
+                  in: query
+                  required: false
+                  description: Nomor halaman
+                  schema:
+                    type: integer
+                    default: 1
+                    example: 1
+                - name: limit
+                  in: query
+                  required: false
+                  description: Jumlah data per halaman (maksimal 100)
+                  schema:
+                    type: integer
+                    default: 20
+                    example: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar tindakan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar tindakan radiologi
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/TindakanRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Validasi parameter pencarian tindakan radiologi gagal (minimal 3 karakter)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            keyword:
+                                                type: string
+                                                example: Pencarian tindakan radiologi minimal 3 karakter
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/tindakan/radiologi/{id_tindakan}:
+        get:
+            summary: Detail Tindakan Radiologi
+            description: Mengambil detail tarif tindakan radiologi berdasarkan ID terenkripsi.
+            tags:
+                - Tindakan
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_tindakan
+                  in: path
+                  required: true
+                  description: Identifier tindakan radiologi terenkripsi URL-safe
+                  schema:
+                    type: string
+                    example: "tX9kL2..."
+            responses:
+                "200":
+                    description: Berhasil mengambil detail tindakan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail tindakan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/TindakanRadiologi"
+                "400":
+                    description: Identifier tindakan radiologi tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID tindakan radiologi tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Tindakan radiologi tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Tindakan radiologi tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+components:
+    schemas:
+        TindakanRadiologi:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier terenkripsi URL-safe
+                    example: "wVf8s0p..."
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan radiologi di database
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan / pemeriksaan radiologi
+                    example: "RONTGEN THORAX AP/PA"
+                biaya:
+                    type: number
+                    format: double
+                    description: Total tarif pemeriksaan radiologi
+                    example: 125000
+        TindakanLab:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier terenkripsi URL-safe
+                    example: "wVf8s0p..."
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan lab di database
+                    example: "PK001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan / pemeriksaan laboratorium
+                    example: "DARAH LENGKAP"
+                biaya:
+                    type: number
+                    format: double
+                    description: Total tarif pemeriksaan
+                    example: 75000
+        TemplateLab:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pemeriksaan terenkripsi URL-safe
+                    example: "tX9kL2..."
+                nama_pemeriksaan:
+                    type: string
+                    description: Nama sub-item parameter pengujian
+                    example: "Hemoglobin"
+                satuan:
+                    type: string
+                    description: Satuan hasil lab
+                    example: "g/dL"
+                nilai_rujukan_ld:
+                    type: string
+                    description: Nilai rujukan normal Laki-laki Dewasa
+                    example: "13.5 - 17.5"
+                nilai_rujukan_la:
+                    type: string
+                    description: Nilai rujukan normal Laki-laki Anak
+                    example: "11.5 - 15.5"
+                nilai_rujukan_pd:
+                    type: string
+                    description: Nilai rujukan normal Perempuan Dewasa
+                    example: "12.0 - 16.0"
+                nilai_rujukan_pa:
+                    type: string
+                    description: Nilai rujukan normal Perempuan Anak
+                    example: "11.5 - 15.5"
+        DetailTindakanLab:
+            allOf:
+                - $ref: "#/components/schemas/TindakanLab"
+                - type: object
+                  properties:
+                    templates:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/TemplateLab"

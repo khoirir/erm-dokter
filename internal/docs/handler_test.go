@@ -1,0 +1,242 @@
+package docs_test
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"erm-dokter/internal/docs"
+)
+
+func TestDocsHandler_ServeUI(t *testing.T) {
+	handler := docs.NewHandler()
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/docs", nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		t.Errorf("expected Content-Type text/html, got '%s'", contentType)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "@scalar/api-reference") {
+		t.Error("expected body to contain @scalar/api-reference")
+	}
+	if !strings.Contains(body, "/docs/openapi.yaml") {
+		t.Error("expected body to reference /docs/openapi.yaml")
+	}
+	if !strings.Contains(body, "initLiveReload") {
+		t.Error("expected body to contain live reload script")
+	}
+}
+
+func TestDocsHandler_ServeOpenAPISpec(t *testing.T) {
+	handler := docs.NewHandler()
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/openapi.yaml", nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/yaml") {
+		t.Errorf("expected Content-Type application/yaml, got '%s'", contentType)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "openapi: 3.1.0") {
+		t.Error("expected body to contain 'openapi: 3.1.0'")
+	}
+	if !strings.Contains(body, "title: ERM Dokter API") {
+		t.Error("expected body to contain 'title: ERM Dokter API'")
+	}
+
+	if !strings.Contains(body, "/api/v1/auth/login:") {
+		t.Error("expected body to contain auth path")
+	}
+	if !strings.Contains(body, "/api/v1/penilaian-medis/ranap-kandungan/{id_kunjungan}:") {
+		t.Error("expected body to contain ranap kandungan path")
+	}
+
+}
+
+func TestDocsHandler_ServeOpenAPISpec_EmbeddedFallback(t *testing.T) {
+	handler := docs.NewHandlerWithDir("folder_tidak_ada")
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/openapi.yaml", nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "openapi: 3.1.0") {
+		t.Error("expected embedded spec to contain 'openapi: 3.1.0'")
+	}
+	if !strings.Contains(body, "title: ERM Dokter API") {
+		t.Error("expected embedded spec to contain 'title: ERM Dokter API'")
+	}
+}
+
+func TestDocsHandler_ServeOpenAPISpec_CustomFileAndHead(t *testing.T) {
+	tempDir := t.TempDir()
+	specFile := filepath.Join(tempDir, "custom_spec.yaml")
+	expectedContent := "openapi: 3.1.0\ninfo:\n  title: Custom Spec\n"
+	if err := os.WriteFile(specFile, []byte(expectedContent), 0644); err != nil {
+		t.Fatalf("failed to write test spec file: %v", err)
+	}
+
+	handler := docs.NewHandlerWithFilePath(specFile)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/openapi.yaml", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	if w.Body.String() != expectedContent {
+		t.Errorf("expected body '%s', got '%s'", expectedContent, w.Body.String())
+	}
+
+	reqHead := httptest.NewRequest(http.MethodHead, "/docs/openapi.yaml", nil)
+	wHead := httptest.NewRecorder()
+	mux.ServeHTTP(wHead, reqHead)
+
+	if wHead.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wHead.Code)
+	}
+	if wHead.Body.Len() != 0 {
+		t.Errorf("expected empty body for HEAD request, got %d bytes", wHead.Body.Len())
+	}
+}
+
+func TestDocsHandler_ServeLiveReload(t *testing.T) {
+	tempDir := t.TempDir()
+	specFile := filepath.Join(tempDir, "test_spec.yaml")
+	if err := os.WriteFile(specFile, []byte("initial spec"), 0644); err != nil {
+		t.Fatalf("failed to write test spec file: %v", err)
+	}
+
+	handler := docs.NewHandlerWithFilePath(specFile)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/live-reload", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		mux.ServeHTTP(w, req)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	time.Sleep(100 * time.Millisecond)
+	newModTime := time.Now().Add(1 * time.Second)
+	if err := os.WriteFile(specFile, []byte("updated spec"), 0644); err != nil {
+		t.Fatalf("failed to update spec file: %v", err)
+	}
+	_ = os.Chtimes(specFile, newModTime, newModTime)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("timed out waiting for live reload notification")
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, ": ping") {
+		t.Errorf("expected stream to contain ': ping', got: %s", body)
+	}
+	if !strings.Contains(body, "data: reload") {
+		t.Errorf("expected stream to contain 'data: reload', got: %s", body)
+	}
+}
+
+func TestDocsHandler_ServeLiveReload_ModularDir(t *testing.T) {
+	tempDir := t.TempDir()
+	baseFile := filepath.Join(tempDir, "base.yaml")
+	modulesDir := filepath.Join(tempDir, "modules")
+	if err := os.MkdirAll(modulesDir, 0755); err != nil {
+		t.Fatalf("failed to create modules dir: %v", err)
+	}
+
+	if err := os.WriteFile(baseFile, []byte("openapi: 3.1.0\ninfo:\n  title: Modular Test\n"), 0644); err != nil {
+		t.Fatalf("failed to write base file: %v", err)
+	}
+
+	modFile := filepath.Join(modulesDir, "test.yaml")
+	if err := os.WriteFile(modFile, []byte("paths:\n  /test:\n    get:\n      summary: Test\n"), 0644); err != nil {
+		t.Fatalf("failed to write mod file: %v", err)
+	}
+
+	handler := docs.NewHandlerWithDir(tempDir)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/docs/live-reload", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		mux.ServeHTTP(w, req)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	time.Sleep(100 * time.Millisecond)
+	newModTime := time.Now().Add(1 * time.Second)
+	if err := os.WriteFile(modFile, []byte("paths:\n  /test:\n    get:\n      summary: Updated Test\n"), 0644); err != nil {
+		t.Fatalf("failed to update mod file: %v", err)
+	}
+	_ = os.Chtimes(modFile, newModTime, newModTime)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("timed out waiting for live reload notification from modular file")
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "data: reload") {
+		t.Errorf("expected stream to contain 'data: reload', got: %s", body)
+	}
+}

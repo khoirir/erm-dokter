@@ -1,0 +1,66 @@
+package shared
+
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"erm-dokter/internal/shared/apperror"
+)
+
+func ValidasiRentangTanggal(tanggal string, errs apperror.ValidationError) {
+	const layout = "2006-01-02"
+	parts := strings.Split(tanggal, ",")
+
+	if len(parts) != 2 {
+		errs["tanggal"] = "Format tanggal harus rentang 2 tanggal (YYYY-MM-DD,YYYY-MM-DD)"
+		return
+	}
+
+	tglAwal, err := time.Parse(layout, strings.TrimSpace(parts[0]))
+	if err != nil {
+		errs["tanggal"] = "Format tanggal awal tidak valid (YYYY-MM-DD)"
+		return
+	}
+
+	tglAkhir, err := time.Parse(layout, strings.TrimSpace(parts[1]))
+	if err != nil {
+		errs["tanggal"] = "Format tanggal akhir tidak valid (YYYY-MM-DD)"
+		return
+	}
+
+	if tglAwal.After(tglAkhir) {
+		errs["tanggal"] = "Tanggal awal harus ≤ tanggal akhir"
+	}
+}
+
+func ParseWaktu(tanggal, jam string) (time.Time, error) {
+	tanggal = strings.TrimSpace(tanggal)
+	jam = strings.TrimSpace(jam)
+	if tanggal == "" {
+		return time.Time{}, errors.New("Tanggal tidak boleh kosong")
+	}
+
+	tgl, err := time.Parse("2006-01-02", tanggal)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("Format tanggal tidak valid (YYYY-MM-DD): %w", err)
+	}
+
+	hour, min, sec := 0, 0, 0
+	if jam != "" {
+		jamParts := strings.Split(jam, ":")
+		if len(jamParts) >= 1 {
+			hour, _ = strconv.Atoi(jamParts[0])
+		}
+		if len(jamParts) >= 2 {
+			min, _ = strconv.Atoi(jamParts[1])
+		}
+		if len(jamParts) >= 3 {
+			sec, _ = strconv.Atoi(jamParts[2])
+		}
+	}
+
+	return time.Date(tgl.Year(), tgl.Month(), tgl.Day(), hour, min, sec, 0, time.Local), nil
+}

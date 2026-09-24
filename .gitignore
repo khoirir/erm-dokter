@@ -1,0 +1,39 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+tmp/
+logs/
+*.log
+monitoring/grafana-data/
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Environment files
+.env
+.env.local
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.codebase-memory/
+
+# HTTP Client scratch files
+*.http
+
+# Load testing scratch files
+k6-script.js
+
+# AI Agent internal instructions
+AGENTS.md

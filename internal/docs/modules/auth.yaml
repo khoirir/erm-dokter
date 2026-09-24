@@ -1,0 +1,198 @@
+paths:
+    /api/v1/auth/login:
+        post:
+            tags: [Auth]
+            summary: Login Dokter
+            description: Otentikasi menggunakan username dan password dokter Khanza. Mengembalikan token JWT yang berlaku 24 jam.
+            security: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LoginRequest"
+            responses:
+                "200":
+                    description: Login berhasil
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Login berhasil
+                                    data:
+                                        $ref: "#/components/schemas/LoginData"
+                "400":
+                    description: Validasi input gagal atau payload JSON tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            username:
+                                                type: string
+                                                example: Username wajib diisi
+                                            password:
+                                                type: string
+                                                example: Password wajib diisi
+                "401":
+                    description: Kredensial login tidak valid (username atau password salah)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Username atau password salah
+                "429":
+                    description: Terlalu banyak percobaan login (Rate limit 10 req/menit)
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terlalu banyak percobaan. Silakan coba lagi nanti.
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/auth/logout:
+        post:
+            tags: [Auth]
+            summary: Logout Dokter
+            description: |
+                Endpoint logout untuk mengakhiri sesi dokter dan menginstruksikan client untuk membersihkan Bearer Token JWT.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Logout berhasil
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Logout berhasil
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+components:
+    schemas:
+        LoginRequest:
+            type: object
+            required:
+                - username
+                - password
+            properties:
+                username:
+                    type: string
+                    description: Username / ID Dokter di Khanza
+                    example: DR001
+                password:
+                    type: string
+                    description: Password akun dokter
+                    example: "123456"
+        LoginData:
+            type: object
+            required:
+                - token
+                - kode_dokter
+                - nama_dokter
+            properties:
+                token:
+                    type: string
+                    description: JWT Access Token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                kode_dokter:
+                    type: string
+                    description: Kode Dokter di Khanza
+                    example: DR001
+                nama_dokter:
+                    type: string
+                    description: Nama Lengkap Dokter
+                    example: dr. Budi, Sp.PD

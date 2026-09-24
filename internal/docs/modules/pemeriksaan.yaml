@@ -1,0 +1,1039 @@
+paths:
+    /api/v1/pemeriksaan/kesadaran:
+        get:
+            tags: [Pemeriksaan]
+            summary: Referensi Tingkat Kesadaran Pasien
+            description: Mengambil daftar tingkat kesadaran valid (GCS/AVPU) yang didukung sistem.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil referensi tingkat kesadaran
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil referensi tingkat kesadaran
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/OpsiReferensi"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/pemeriksaan/{status_lanjut}/{id_kunjungan}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan per Kunjungan
+            description: Mengambil riwayat catatan pemeriksaan SOAP & TTV pada 1 kunjungan pasien tertentu berdasarkan token terenkripsi `id_kunjungan`.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status lanjut (semua, ralan, ranap)
+                  schema:
+                    type: string
+                    enum: [semua, ralan, ranap]
+                    example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan
+                  schema:
+                    type: string
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar pemeriksaan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Parameter status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        post:
+            tags: [Pemeriksaan]
+            summary: Simpan Catatan Pemeriksaan Baru
+            description: |
+                Menyimpan catatan pemeriksaan SOAP & TTV baru pada kunjungan pasien.
+                - `no_rawat` di body harus cocok dengan `id_kunjungan`.
+                - Waktu pemeriksaan tidak boleh mendahului waktu registrasi pasien dan tidak boleh melebihi waktu saat ini.
+                - Dibatasi maksimal 48 jam dari waktu registrasi untuk kunjungan rawat jalan.
+                - Memerlukan status kamar aktif untuk kunjungan rawat inap.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pasien (ralan atau ranap)
+                  schema:
+                    type: string
+                    enum: [ralan, ranap]
+                    example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan
+                  schema:
+                    type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPemeriksaanRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan data pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi input klinis gagal, duplikasi waktu pemeriksaan, atau status kamar inap tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            suhu_tubuh:
+                                                type: string
+                                                example: Suhu tubuh harus berada dalam rentang 25.0 - 45.0 °C
+                                            tensi:
+                                                type: string
+                                                example: Format tensi harus Sistolik/Diastolik (contoh 120/80)
+                                            jam_pemeriksaan:
+                                                type: string
+                                                example: Pemeriksaan pada 2026-08-24 10:30:00 sudah ada
+                                            tanggal_pemeriksaan:
+                                                type: string
+                                                example: Waktu pemeriksaan tidak boleh sebelum registrasi (2026-08-24 08:00:00)
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu maksimal 48 jam rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pemeriksaan tidak dapat disimpan, melebihi batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan pasien tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/pemeriksaan/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Riwayat Pemeriksaan Pasien (Lintas Kunjungan)
+            description: Mengambil seluruh riwayat catatan pemeriksaan SOAP & TTV seorang pasien dari semua kunjungan berdasarkan token terenkripsi `id_pasien`.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Filter status lanjut (semua, ralan, ranap)
+                  schema:
+                    type: string
+                    enum: [semua, ralan, ranap]
+                    example: semua
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pasien
+                  schema:
+                    type: string
+                - name: tanggal
+                  in: query
+                  description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD)
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    default: 1
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    default: 20
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat pemeriksaan pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat pemeriksaan pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/Pemeriksaan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Parameter status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/pemeriksaan/{status_lanjut}/{id_kunjungan}/{id_pemeriksaan}:
+        get:
+            tags: [Pemeriksaan]
+            summary: Detail Catatan Pemeriksaan
+            description: Mengambil detail satu catatan pemeriksaan SOAP & TTV berdasarkan ID Pemeriksaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pasien (ralan atau ranap)
+                  schema:
+                    type: string
+                    enum: [ralan, ranap]
+                    example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan
+                  schema:
+                    type: string
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pemeriksaan
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil mengambil detail pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Parameter URL tidak valid atau ID pemeriksaan tidak sesuai dengan ID kunjungan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pemeriksaan tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data pemeriksaan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        put:
+            tags: [Pemeriksaan]
+            summary: Update Catatan Pemeriksaan
+            description: |
+                Memperbarui catatan pemeriksaan SOAP & TTV.
+                - Hanya dokter pembuat yang berhak memperbarui.
+                - Batas waktu perubahan rekam medis maksimal 48 jam sejak waktu registrasi pasien (rawat jalan).
+                - Memerlukan status kamar aktif (rawat inap).
+                - Tanggal dan jam pemeriksaan juga dapat diperbarui selama valid dan tidak duplikat.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pasien (ralan atau ranap)
+                  schema:
+                    type: string
+                    enum: [ralan, ranap]
+                    example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan
+                  schema:
+                    type: string
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pemeriksaan
+                  schema:
+                    type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdatePemeriksaanRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui data pemeriksaan
+                                    data:
+                                        $ref: "#/components/schemas/Pemeriksaan"
+                "400":
+                    description: Validasi input gagal, duplikasi waktu pemeriksaan, atau status kamar inap tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Validasi gagal
+                                    error:
+                                        type: object
+                                        properties:
+                                            suhu_tubuh:
+                                                type: string
+                                                example: Suhu tubuh harus berada dalam rentang 25.0 - 45.0 °C
+                                            jam_pemeriksaan:
+                                                type: string
+                                                example: Pemeriksaan pada 2026-08-24 10:30:00 sudah ada
+                                            tanggal_pemeriksaan:
+                                                type: string
+                                                example: Waktu pemeriksaan tidak boleh sebelum registrasi (2026-08-24 08:00:00)
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau telah melewati batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data pemeriksaan ini diinput oleh dokter/petugas lain (dr. Budi Santoso, Sp.PD)
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data pemeriksaan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Pemeriksaan]
+            summary: Hapus Catatan Pemeriksaan
+            description: |
+                Menghapus catatan pemeriksaan dari database.
+                - Hanya dokter pembuat yang berhak menghapus.
+                - Batas waktu maksimal penghapusan 48 jam sejak waktu registrasi pasien (rawat jalan).
+                - Memerlukan status kamar aktif (rawat inap).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: status_lanjut
+                  in: path
+                  required: true
+                  description: Status lanjut pasien (ralan atau ranap)
+                  schema:
+                    type: string
+                    enum: [ralan, ranap]
+                    example: ralan
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Kunjungan
+                  schema:
+                    type: string
+                - name: id_pemeriksaan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Pemeriksaan
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Berhasil menghapus data pemeriksaan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus data pemeriksaan
+                "400":
+                    description: Parameter URL tidak valid atau ID pemeriksaan tidak sesuai dengan ID kunjungan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pemeriksaan tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Ditolak karena bukan dokter pembuat atau melebihi batas waktu 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data pemeriksaan ini diinput oleh dokter/petugas lain (dr. Budi Santoso, Sp.PD)
+                "404":
+                    description: Data pemeriksaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data pemeriksaan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+components:
+    schemas:
+        OpsiReferensi:
+            type: object
+            required:
+                - value
+                - label
+            properties:
+                value:
+                    type: string
+                    example: Compos Mentis
+                label:
+                    type: string
+                    example: Compos Mentis
+        DataPemeriksaanPayload:
+            type: object
+            required:
+                - kesadaran
+                - keluhan
+                - pemeriksaan
+                - penilaian
+                - rencana_tindak_lanjut
+                - instruksi
+                - evaluasi
+            properties:
+                tanggal_pemeriksaan:
+                    type: string
+                    description: Format YYYY-MM-DD. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    description: Format HH:mm:ss. Kosong saat simpan akan diisi otomatis waktu sekarang.
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    description: Rentang 25.0 - 45.0 °C
+                    example: "36.5"
+                tensi:
+                    type: string
+                    description: Format Sistolik/Diastolik (sistolik > diastolik, mmHg)
+                    example: "120/80"
+                nadi:
+                    type: string
+                    description: 20 - 300 x/menit
+                    example: "80"
+                respirasi:
+                    type: string
+                    description: 5 - 100 x/menit
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    description: 20 - 250 cm
+                    example: "170"
+                berat_badan:
+                    type: string
+                    description: 0.5 - 500 kg
+                    example: "65"
+                spo2:
+                    type: string
+                    description: 0 - 100 %
+                    example: "98"
+                gcs:
+                    type: string
+                    description: Glasgow Coma Scale (maks 10 karakter)
+                    example: "15"
+                kesadaran:
+                    type: string
+                    enum: [Compos Mentis, Somnolence, Sopor, Coma, Alert, Confusion, Voice, Pain, Unresponsive, Apatis, Delirium]
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    description: Anamnesis / Subjective (S)
+                    example: Pasien mengeluh demam sejak 3 hari yang lalu disertai pusing
+                pemeriksaan:
+                    type: string
+                    description: Pemeriksaan Fisik / Objective (O)
+                    example: Keadaan umum sedang, faring hiperemis, ronki -/-, wheezing -/-
+                alergi:
+                    type: string
+                    description: Riwayat Alergi Obat/Makanan
+                    example: Tidak ada riwayat alergi obat
+                lingkar_perut:
+                    type: string
+                    description: Khusus Rawat Jalan (cm)
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    description: Plan / Rencana Tindak Lanjut (P)
+                    example: Kontrol poli 3 hari kemudian jika demam belum turun
+                penilaian:
+                    type: string
+                    description: Diagnosis / Assessment (A)
+                    example: Febris H-3 e.c Susp. Viral Infection
+                instruksi:
+                    type: string
+                    description: Instruksi Medis
+                    example: Paracetamol 3x500mg prn demam, perbanyak minum air putih
+                evaluasi:
+                    type: string
+                    description: Evaluasi Perkembangan Pasien
+                    example: Keadaan umum stabil, tanda vital dalam batas normal
+        SimpanPemeriksaanRequest:
+            allOf:
+                - type: object
+                  required:
+                    - no_rawat
+                  properties:
+                    no_rawat:
+                        type: string
+                        description: Nomor Rawat Pasien
+                        example: 2026/04/22/036934
+                - $ref: "#/components/schemas/DataPemeriksaanPayload"
+        UpdatePemeriksaanRequest:
+            $ref: "#/components/schemas/DataPemeriksaanPayload"
+        Pemeriksaan:
+            type: object
+            required:
+                - id
+                - id_kunjungan
+                - no_rawat
+                - tanggal_pemeriksaan
+                - jam_pemeriksaan
+                - suhu_tubuh
+                - tensi
+                - nadi
+                - respirasi
+                - tinggi_badan
+                - berat_badan
+                - spo2
+                - gcs
+                - kesadaran
+                - keluhan
+                - pemeriksaan
+                - alergi
+                - rencana_tindak_lanjut
+                - penilaian
+                - instruksi
+                - evaluasi
+                - kode_dokter_petugas
+                - nama_dokter_petugas
+                - status_lanjut
+            properties:
+                id:
+                    type: string
+                    description: Token terenkripsi ID Pemeriksaan (Composite Key)
+                    example: 0OtIQUN58_TX288rUimqIL-JwoAcmb0jHhKwvI3ENmOhgKYk1Nvo36U26mjhY-Ki_Sb7cFjXgvQXxjWCnCWNaxs
+                id_kunjungan:
+                    type: string
+                    description: Token terenkripsi ID Kunjungan
+                    example: cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_
+                no_rawat:
+                    type: string
+                    example: 2026/04/22/036934
+                tanggal_pemeriksaan:
+                    type: string
+                    example: "2026-08-24"
+                jam_pemeriksaan:
+                    type: string
+                    example: "10:30:00"
+                suhu_tubuh:
+                    type: string
+                    example: "36.5"
+                tensi:
+                    type: string
+                    example: "120/80"
+                nadi:
+                    type: string
+                    example: "80"
+                respirasi:
+                    type: string
+                    example: "20"
+                tinggi_badan:
+                    type: string
+                    example: "170"
+                berat_badan:
+                    type: string
+                    example: "65"
+                spo2:
+                    type: string
+                    example: "98"
+                gcs:
+                    type: string
+                    example: "15"
+                kesadaran:
+                    type: string
+                    example: Compos Mentis
+                keluhan:
+                    type: string
+                    example: Pasien mengeluh demam
+                pemeriksaan:
+                    type: string
+                    example: Faring hiperemis
+                alergi:
+                    type: string
+                    example: Tidak ada
+                lingkar_perut:
+                    type: string
+                    example: "80"
+                rencana_tindak_lanjut:
+                    type: string
+                    example: Kontrol 3 hari
+                penilaian:
+                    type: string
+                    example: Febris H-3
+                instruksi:
+                    type: string
+                    example: Paracetamol 3x500mg
+                evaluasi:
+                    type: string
+                    example: Stabil
+                kode_dokter_petugas:
+                    type: string
+                    example: DR001
+                nama_dokter_petugas:
+                    type: string
+                    example: dr. Budi, Sp.PD
+                status_lanjut:
+                    type: string
+                    enum: [Ralan, Ranap]
+                    example: Ralan

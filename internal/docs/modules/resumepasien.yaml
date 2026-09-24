@@ -1,0 +1,1823 @@
+paths:
+    # ==================== RESUME RAWAT JALAN (RALAN) ====================
+    /api/v1/resume/ralan/referensi:
+        get:
+            tags: [Resume Rawat Jalan]
+            summary: Daftar Referensi Opsi Pilihan Resume Pasien Rawat Jalan
+            description: Mengambil opsi referensi dropdown `keadaan_pulang` (Hidup, Meninggal) untuk formulir resume medis rawat jalan pasien.
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil data referensi resume ralan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil opsi referensi resume ralan
+                                    data:
+                                        $ref: "#/components/schemas/ReferensiResumeRalanResponse"
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+    /api/v1/resume/ralan/{id_kunjungan}:
+        get:
+            tags: [Resume Rawat Jalan]
+            summary: Detail Resume Medis Rawat Jalan per Kunjungan
+            description: Mengambil rincian data resume medis rawat jalan pasien (tabel `resume_pasien`) berdasarkan token terenkripsi nomor rawat kunjungan (`id_kunjungan`).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil mengambil detail resume pasien rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail resume pasien rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRalan"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        post:
+            tags: [Resume Rawat Jalan]
+            summary: Simpan Resume Medis Rawat Jalan Baru
+            description: |
+                Menyimpan catatan resume medis pasien rawat jalan baru.
+
+                ### Aturan Bisnis & Validasi:
+                - **Isolasi Rawat Jalan**: Pasien yang sudah terdaftar di rawat inap ditolak. Resume medis rawat jalan hanya untuk kunjungan rawat jalan.
+                - **Batas Waktu Relatif 48 Jam**: Pembuatan resume medis ditolak jika waktu sekarang telah melampaui batas 48 jam sejak waktu registrasi kunjungan poliklinik.
+                - **Integritas Entitas Induk**: Nilai `no_rawat` pada request body wajib cocok dengan ID kunjungan pada parameter URL.
+                - **Satu Resume per Kunjungan**: Jika sudah ada resume pada kunjungan tersebut, sistem mengembalikan error 400 (duplikasi data).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanResumePasienRalanRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan resume pasien rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan resume pasien rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRalan"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume medis rawat jalan untuk kunjungan ini sudah ada
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Akses ditolak karena bukan dokter pembuat atau melewati batas waktu
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume pasien rawat jalan tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        put:
+            tags: [Resume Rawat Jalan]
+            summary: Update Resume Medis Rawat Jalan
+            description: |
+                Memperbarui catatan resume medis pasien rawat jalan yang telah dibuat sebelumnya.
+
+                ### Aturan Bisnis & Validasi:
+                - **Proteksi Kepemilikan Dokter Pembuat (403 Forbidden)**: Hanya dokter yang membuat resume awal yang berhak melakukan pembaruan data.
+                - **Proteksi Batas Waktu 48 Jam**: Pembaruan ditolak jika kunjungan rawat jalan telah melewati batas waktu 48 jam sejak waktu registrasi.
+                - **Isolasi Rawat Jalan**: Pasien yang sudah terdaftar di rawat inap ditolak.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateResumePasienRalanRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui resume pasien rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui resume pasien rawat jalan
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRalan"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data resume tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Akses ditolak karena bukan dokter pembuat atau melewati batas waktu
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume pasien dokter lain tidak dapat diubah
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Resume Rawat Jalan]
+            summary: Hapus Resume Medis Rawat Jalan
+            description: |
+                Menghapus catatan resume medis rawat jalan pasien.
+
+                ### Aturan Bisnis & Validasi:
+                - **Proteksi Kepemilikan Dokter Pembuat (403 Forbidden)**: Hanya dokter pembuat yang berhak menghapus resume.
+                - **Proteksi Batas Waktu 48 Jam**: Penghapusan ditolak jika kunjungan ralan telah melewati batas waktu 48 jam sejak waktu registrasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil menghapus resume pasien rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus resume pasien rawat jalan
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Akses ditolak karena bukan dokter pembuat atau melewati batas waktu
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume pasien dokter lain tidak dapat dihapus
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat jalan tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+    /api/v1/resume/ralan/pasien/{id_pasien}:
+        get:
+            tags: [Resume Rawat Jalan]
+            summary: Riwayat Resume Pasien Rawat Jalan Berdasarkan No. RM
+            description: |
+                Mengambil seluruh riwayat resume medis rawat jalan pasien berdasarkan token terenkripsi Nomor Rekam Medis (`id_pasien`).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rekam Medis Pasien
+                  schema:
+                      type: string
+                      example: "e2LNmOiewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat resume pasien rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat resume pasien rawat jalan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/ResumePasienRalan"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+    # ==================== RESUME RAWAT INAP (RANAP) ====================
+    /api/v1/resume/ranap/referensi:
+        get:
+            tags: [Resume Rawat Inap]
+            summary: Daftar Referensi Opsi Pilihan Resume Pasien Rawat Inap
+            description: Mengambil opsi referensi dropdown `cara_keluar`, `keadaan_pulang`, dan status `dilanjutkan` untuk formulir resume medis rawat inap (*discharge summary*).
+            security:
+                - BearerAuth: []
+            responses:
+                "200":
+                    description: Berhasil mengambil data referensi resume ranap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil opsi referensi resume ranap
+                                    data:
+                                        $ref: "#/components/schemas/ReferensiResumeRanapResponse"
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+    /api/v1/resume/ranap/{id_kunjungan}:
+        get:
+            tags: [Resume Rawat Inap]
+            summary: Detail Resume Medis Rawat Inap per Kunjungan
+            description: Mengambil rincian data resume medis rawat inap pasien (tabel `resume_pasien_ranap`) berdasarkan token terenkripsi nomor rawat kunjungan (`id_kunjungan`).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil mengambil detail resume pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail resume pasien rawat inap
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRanap"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        post:
+            tags: [Resume Rawat Inap]
+            summary: Simpan Resume Medis Rawat Inap Baru
+            description: |
+                Menyimpan data resume medis pasien rawat inap baru (*discharge summary*).
+
+                ### Aturan Bisnis & Validasi:
+                - **Isolasi Rawat Inap**: Pasien wajib pernah terdaftar di kamar inap (`hasRecordKamar = true`).
+                - **Penyelesaian Pasca Rawat (*Discharge Summary*)**: Dapat disimpan baik saat masih dirawat maupun setelah checkout pulang.
+                - **Integritas Entitas Induk**: Nilai `no_rawat` pada request body wajib cocok dengan ID kunjungan pada parameter URL.
+                - **Satu Resume per Kunjungan**: Jika sudah ada resume pada kunjungan tersebut, sistem mengembalikan error 400 (duplikasi data).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanResumePasienRanapRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan resume pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan resume pasien rawat inap
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRanap"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume medis rawat inap untuk kunjungan ini sudah ada
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        put:
+            tags: [Resume Rawat Inap]
+            summary: Update Resume Medis Rawat Inap
+            description: |
+                Memperbarui catatan resume medis pasien rawat inap yang telah dibuat sebelumnya.
+
+                ### Aturan Bisnis & Validasi:
+                - **Proteksi Kepemilikan Dokter Pembuat (403 Forbidden)**: Hanya dokter yang membuat resume awal yang berhak melakukan pembaruan data.
+                - **Riwayat Rawat Inap**: Pasien wajib memiliki riwayat kamar inap.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/UpdateResumePasienRanapRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui resume pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui resume pasien rawat inap
+                                    data:
+                                        $ref: "#/components/schemas/ResumePasienRanap"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Format data resume tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Akses ditolak karena bukan dokter pembuat atau melewati batas waktu
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume pasien dokter lain tidak dapat diubah
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Resume Rawat Inap]
+            summary: Hapus Resume Medis Rawat Inap
+            description: |
+                Menghapus catatan resume medis rawat inap pasien.
+
+                ### Aturan Bisnis & Validasi:
+                - **Proteksi Kepemilikan Dokter Pembuat (403 Forbidden)**: Hanya dokter pembuat yang berhak menghapus resume medis pasien.
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_kunjungan
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rawat Kunjungan
+                  schema:
+                      type: string
+                      example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil menghapus resume pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menghapus resume pasien rawat inap
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID kunjungan tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Akses ditolak karena bukan dokter pembuat atau melewati batas waktu
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Resume pasien dokter lain tidak dapat dihapus
+                "404":
+                    description: Data tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data resume pasien rawat inap tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+    /api/v1/resume/ranap/pasien/{id_pasien}:
+        get:
+            tags: [Resume Rawat Inap]
+            summary: Riwayat Resume Pasien Rawat Inap Berdasarkan No. RM
+            description: |
+                Mengambil seluruh riwayat resume medis rawat inap pasien berdasarkan token terenkripsi Nomor Rekam Medis (`id_pasien`).
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: id_pasien
+                  in: path
+                  required: true
+                  description: Token terenkripsi ID Nomor Rekam Medis Pasien
+                  schema:
+                      type: string
+                      example: "e2LNmOiewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5" 
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat resume pasien rawat inap
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat resume pasien rawat inap
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/ResumePasienRanap"
+                "400":
+                    description: Validasi data gagal atau token ID tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token autentikasi tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+
+components:
+    schemas:
+        OpsiReferensi:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: "Atas Izin Dokter"
+                label:
+                    type: string
+                    example: "Atas Izin Dokter"
+
+        ReferensiResumeRalanResponse:
+            type: object
+            properties:
+                keadaan_pulang:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+
+        ReferensiResumeRanapResponse:
+            type: object
+            properties:
+                cara_keluar:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                keadaan_pulang:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+                dilanjutkan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/OpsiReferensi"
+
+        ResumePasienRalan:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
+                no_rawat:
+                    type: string
+                    example: "2026/09/07/000001"
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Budi Pratama, Sp.A"
+                keluhan_utama:
+                    type: string
+                    example: "Batuk pilek sejak 3 hari yang lalu disertai demam ringan"
+                jalannya_penyakit:
+                    type: string
+                    example: "Pasien mengeluhkan demam naik turun, batuk berdahak, nafsu makan menurun"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "Foto Thorax: Cor dan pulmo dalam batas normal"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Lab Darah Lengkap: Hb 13.2, Leukosit 11.200, Trombosit 245.000"
+                diagnosa_utama:
+                    type: string
+                    example: "Infeksi Saluran Pernapasan Akut (ISPA)"
+                kode_diagnosa_utama:
+                    type: string
+                    example: "J06.9"
+                diagnosa_sekunder:
+                    type: string
+                    example: "Faringitis Akut"
+                kode_diagnosa_sekunder:
+                    type: string
+                    example: "J02.9"
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                kode_diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                kode_diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                kode_diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Nebulisasi Ventolin 1 respule"
+                kode_prosedur_utama:
+                    type: string
+                    example: "93.94"
+                prosedur_sekunder:
+                    type: string
+                    example: ""
+                kode_prosedur_sekunder:
+                    type: string
+                    example: ""
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                kode_prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                kode_prosedur_sekunder3:
+                    type: string
+                    example: ""
+                keadaan_pulang:
+                    type: string
+                    enum: [Hidup, Meninggal]
+                    example: "Hidup"
+                obat_atau_instruksi:
+                    type: string
+                    example: "Amoxicillin syr 3x1 cth, Paracetamol syr 3x1 cth prn, Ambroxol syr 3x1/2 cth. Istirahat cukup, minum air hangat, kontrol ulang jika demam menetap > 3 hari."
+
+        ResumePasienRanap:
+            type: object
+            properties:
+                id_kunjungan:
+                    type: string
+                    description: Encrypted ID Nomor Rawat Kunjungan
+                    example: "uLmCNtewkyBm2RkSXMbI0Ug066Nw-qzDqcst6KgJGV0grSwOYspdyzWtiWU5"
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Budi Pratama, Sp.PD"
+                tanggal_masuk:
+                    type: string
+                    example: "2026-09-01"
+                jam_masuk:
+                    type: string
+                    example: "10:15:00"
+                tanggal_keluar:
+                    type: string
+                    example: "2026-09-05"
+                jam_keluar:
+                    type: string
+                    example: "14:00:00"
+                kamar:
+                    type: string
+                    example: "VIP A"
+                diagnosa_awal:
+                    type: string
+                    example: "Chest Pain Susp. STEMI"
+                alasan_rawat:
+                    type: string
+                    example: "Nyeri dada menjalar ke punggung dan sesak napas"
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada kiri seperti tertimpa beban berat"
+                pemeriksaan_fisik:
+                    type: string
+                    example: "GCS 456, TD 130/80, HR 92 bpm, RR 22 x/m, SpO2 98%"
+                jalannya_penyakit:
+                    type: string
+                    example: "Dirawat 4 hari di ICCU kemudian pindah ruang perawatan biasa"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "EKG: ST Elevasi di Lead V1-V4, Ro Thorax: CTR 52%"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Troponin I: 2.8 ng/mL, CK-MB: 48 U/L"
+                tindakan_atau_operasi:
+                    type: string
+                    example: "Angiografi Koroner & Pemasangan Stent DES di LAD"
+                obat_selama_perawatan:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Atorvastatin 1x40mg"
+                diagnosa_utama:
+                    type: string
+                    example: "Acute Anteroseptal Myocardial Infarction"
+                kd_diagnosa_utama:
+                    type: string
+                    example: ""
+                diagnosa_sekunder:
+                    type: string
+                    example: "Hypertensive Heart Disease"
+                kd_diagnosa_sekunder:
+                    type: string
+                    example: ""
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                kd_diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                kd_diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                kd_diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Percutaneous Transluminal Coronary Angioplasty (PTCA)"
+                kd_prosedur_utama:
+                    type: string
+                    example: ""
+                prosedur_sekunder:
+                    type: string
+                    example: "Coronary Arteriography"
+                kd_prosedur_sekunder:
+                    type: string
+                    example: ""
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                kd_prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                kd_prosedur_sekunder3:
+                    type: string
+                    example: ""
+                alergi:
+                    type: string
+                    example: "Tidak ada alergi obat/makanan"
+                diet:
+                    type: string
+                    example: "Diet Rendah Garam dan Rendah Lemak"
+                hasil_laboratorium_pending:
+                    type: string
+                    example: "-"
+                instruksi_atau_edukasi:
+                    type: string
+                    example: "Hindari aktivitas berat, kontrol rutin, minum obat teratur"
+                cara_keluar:
+                    type: string
+                    enum: [Atas Izin Dokter, Pindah RS, Pulang Atas Permintaan Sendiri, Lainnya]
+                    example: "Atas Izin Dokter"
+                keterangan_keluar:
+                    type: string
+                    example: "-"
+                keadaan_pulang:
+                    type: string
+                    enum: [Membaik, Sembuh, Rujuk, Keadaan Khusus, Meninggal]
+                    example: "Membaik"
+                keterangan_keadaan_pulang:
+                    type: string
+                    example: "-"
+                dilanjutkan:
+                    type: string
+                    enum: [Kembali Ke RS, RS Lain, Dokter Luar, Puskesmes, Lainnya]
+                    example: "Kembali Ke RS"
+                keterangan_dilanjutkan:
+                    type: string
+                    example: "-"
+                waktu_kontrol:
+                    type: string
+                    example: "2026-09-12 09:00:00"
+                obat_pulang:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Bisoprolol 1x2.5mg, Ramipril 1x5mg"
+
+        SimpanResumePasienRalanRequest:
+            type: object
+            required:
+                - no_rawat
+                - keluhan_utama
+                - diagnosa_utama
+                - keadaan_pulang
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan (harus cocok dengan ID kunjungan)
+                    example: "2026/09/07/000001"
+                keluhan_utama:
+                    type: string
+                    example: "Batuk pilek sejak 3 hari yang lalu disertai demam ringan"
+                jalannya_penyakit:
+                    type: string
+                    example: "Pasien mengeluhkan demam naik turun, batuk berdahak, nafsu makan menurun"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "Foto Thorax: Cor dan pulmo dalam batas normal"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Lab Darah Lengkap: Hb 13.2, Leukosit 11.200, Trombosit 245.000"
+                diagnosa_utama:
+                    type: string
+                    example: "Infeksi Saluran Pernapasan Akut (ISPA)"
+                diagnosa_sekunder:
+                    type: string
+                    example: "Faringitis Akut"
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Nebulisasi Ventolin 1 respule"
+                prosedur_sekunder:
+                    type: string
+                    example: ""
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                keadaan_pulang:
+                    type: string
+                    enum: [Hidup, Meninggal]
+                    example: "Hidup"
+                obat_atau_instruksi:
+                    type: string
+                    example: "Amoxicillin syr 3x1 cth, Paracetamol syr 3x1 cth prn, Ambroxol syr 3x1/2 cth. Istirahat cukup, minum air hangat, kontrol ulang jika demam menetap > 3 hari."
+
+        SimpanResumePasienRanapRequest:
+            type: object
+            required:
+                - no_rawat
+                - diagnosa_awal
+                - alasan_rawat
+                - keluhan_utama
+                - diagnosa_utama
+                - cara_keluar
+                - keadaan_pulang
+                - dilanjutkan
+                - waktu_kontrol
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan (harus cocok dengan ID kunjungan)
+                    example: "2026/09/07/000002"
+                diagnosa_awal:
+                    type: string
+                    example: "Chest Pain Susp. STEMI"
+                alasan_rawat:
+                    type: string
+                    example: "Nyeri dada menjalar ke punggung dan sesak napas"
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada kiri seperti tertimpa beban berat"
+                pemeriksaan_fisik:
+                    type: string
+                    example: "GCS 456, TD 130/80, HR 92 bpm, RR 22 x/m, SpO2 98%"
+                jalannya_penyakit:
+                    type: string
+                    example: "Dirawat 4 hari di ICCU kemudian pindah ruang perawatan biasa"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "EKG: ST Elevasi di Lead V1-V4, Ro Thorax: CTR 52%"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Troponin I: 2.8 ng/mL, CK-MB: 48 U/L"
+                tindakan_atau_operasi:
+                    type: string
+                    example: "Angiografi Koroner & Pemasangan Stent DES di LAD"
+                obat_selama_perawatan:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Atorvastatin 1x40mg"
+                diagnosa_utama:
+                    type: string
+                    example: "Acute Anteroseptal Myocardial Infarction"
+                diagnosa_sekunder:
+                    type: string
+                    example: "Hypertensive Heart Disease"
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Percutaneous Transluminal Coronary Angioplasty (PTCA)"
+                prosedur_sekunder:
+                    type: string
+                    example: "Coronary Arteriography"
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                alergi:
+                    type: string
+                    example: "Tidak ada alergi obat/makanan"
+                diet:
+                    type: string
+                    example: "Diet Rendah Garam dan Rendah Lemak"
+                hasil_laboratorium_pending:
+                    type: string
+                    example: "-"
+                instruksi_atau_edukasi:
+                    type: string
+                    example: "Hindari aktivitas berat, kontrol rutin, minum obat teratur"
+                cara_keluar:
+                    type: string
+                    enum: [Atas Izin Dokter, Pindah RS, Pulang Atas Permintaan Sendiri, Lainnya]
+                    example: "Atas Izin Dokter"
+                keterangan_keluar:
+                    type: string
+                    example: "-"
+                keadaan_pulang:
+                    type: string
+                    enum: [Membaik, Sembuh, Rujuk, Keadaan Khusus, Meninggal]
+                    example: "Membaik"
+                keterangan_keadaan_pulang:
+                    type: string
+                    example: "-"
+                dilanjutkan:
+                    type: string
+                    enum: [Kembali Ke RS, RS Lain, Dokter Luar, Puskesmes, Lainnya]
+                    example: "Kembali Ke RS"
+                keterangan_dilanjutkan:
+                    type: string
+                    example: "-"
+                waktu_kontrol:
+                    type: string
+                    description: "Waktu kontrol (format YYYY-MM-DD HH:mm:ss, jam harus < 14:00. Jika keadaan pulang Meninggal atau Rujuk, sistem menerima string kosong atau disanitize ke 0000-00-00 00:00:00)"
+                    example: "2026-09-12 09:00:00"
+                obat_pulang:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Bisoprolol 1x2.5mg, Ramipril 1x5mg"
+
+        UpdateResumePasienRalanRequest:
+            type: object
+            required:
+                - keluhan_utama
+                - diagnosa_utama
+                - keadaan_pulang
+            properties:
+                keluhan_utama:
+                    type: string
+                    example: "Batuk pilek sejak 3 hari yang lalu disertai demam ringan"
+                jalannya_penyakit:
+                    type: string
+                    example: "Pasien mengeluhkan demam naik turun, batuk berdahak, nafsu makan menurun"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "Foto Thorax: Cor dan pulmo dalam batas normal"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Lab Darah Lengkap: Hb 13.2, Leukosit 11.200, Trombosit 245.000"
+                diagnosa_utama:
+                    type: string
+                    example: "Infeksi Saluran Pernapasan Akut (ISPA)"
+                diagnosa_sekunder:
+                    type: string
+                    example: "Faringitis Akut"
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Nebulisasi Ventolin 1 respule"
+                prosedur_sekunder:
+                    type: string
+                    example: ""
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                keadaan_pulang:
+                    type: string
+                    enum: [Hidup, Meninggal]
+                    example: "Hidup"
+                obat_atau_instruksi:
+                    type: string
+                    example: "Amoxicillin syr 3x1 cth, Paracetamol syr 3x1 cth prn, Ambroxol syr 3x1/2 cth. Istirahat cukup, minum air hangat, kontrol ulang jika demam menetap > 3 hari."
+
+        UpdateResumePasienRanapRequest:
+            type: object
+            required:
+                - diagnosa_awal
+                - alasan_rawat
+                - keluhan_utama
+                - diagnosa_utama
+                - cara_keluar
+                - keadaan_pulang
+                - dilanjutkan
+                - waktu_kontrol
+            properties:
+                diagnosa_awal:
+                    type: string
+                    example: "Chest Pain Susp. STEMI"
+                alasan_rawat:
+                    type: string
+                    example: "Nyeri dada menjalar ke punggung dan sesak napas"
+                keluhan_utama:
+                    type: string
+                    example: "Nyeri dada berkurang"
+                pemeriksaan_fisik:
+                    type: string
+                    example: "GCS 456, TD 120/80, HR 80 bpm, RR 18 x/m, SpO2 99%"
+                jalannya_penyakit:
+                    type: string
+                    example: "Perawatan membaik, hemodinamik stabil"
+                hasil_pemeriksaan_radiologi:
+                    type: string
+                    example: "EKG Evaluasi: Normal Sinus Rhythm"
+                hasil_pemeriksaan_laboratorium:
+                    type: string
+                    example: "Troponin I: 0.8 ng/mL"
+                tindakan_atau_operasi:
+                    type: string
+                    example: "Angiografi Koroner & Pemasangan Stent DES di LAD"
+                obat_selama_perawatan:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Atorvastatin 1x40mg"
+                diagnosa_utama:
+                    type: string
+                    example: "Acute Anteroseptal Myocardial Infarction (Resolving)"
+                diagnosa_sekunder:
+                    type: string
+                    example: "Hypertensive Heart Disease"
+                diagnosa_sekunder2:
+                    type: string
+                    example: ""
+                diagnosa_sekunder3:
+                    type: string
+                    example: ""
+                diagnosa_sekunder4:
+                    type: string
+                    example: ""
+                prosedur_utama:
+                    type: string
+                    example: "Percutaneous Transluminal Coronary Angioplasty (PTCA)"
+                prosedur_sekunder:
+                    type: string
+                    example: "Coronary Arteriography"
+                prosedur_sekunder2:
+                    type: string
+                    example: ""
+                prosedur_sekunder3:
+                    type: string
+                    example: ""
+                alergi:
+                    type: string
+                    example: "Tidak ada alergi obat/makanan"
+                diet:
+                    type: string
+                    example: "Diet Rendah Garam dan Rendah Lemak"
+                hasil_laboratorium_pending:
+                    type: string
+                    example: "-"
+                instruksi_atau_edukasi:
+                    type: string
+                    example: "Kontrol poli jantung tepat waktu, patuhi dosis obat"
+                cara_keluar:
+                    type: string
+                    enum: [Atas Izin Dokter, Pindah RS, Pulang Atas Permintaan Sendiri, Lainnya]
+                    example: "Atas Izin Dokter"
+                keterangan_keluar:
+                    type: string
+                    example: "-"
+                keadaan_pulang:
+                    type: string
+                    enum: [Membaik, Sembuh, Rujuk, Keadaan Khusus, Meninggal]
+                    example: "Membaik"
+                keterangan_keadaan_pulang:
+                    type: string
+                    example: "-"
+                dilanjutkan:
+                    type: string
+                    enum: [Kembali Ke RS, RS Lain, Dokter Luar, Puskesmes, Lainnya]
+                    example: "Kembali Ke RS"
+                keterangan_dilanjutkan:
+                    type: string
+                    example: "-"
+                waktu_kontrol:
+                    type: string
+                    description: "Waktu kontrol (format YYYY-MM-DD HH:mm:ss, jam harus < 14:00. Jika keadaan pulang Meninggal atau Rujuk, sistem menerima string kosong atau disanitize ke 0000-00-00 00:00:00)"
+                    example: "2026-09-12 09:00:00"
+                obat_pulang:
+                    type: string
+                    example: "Aspilet 1x80mg, Clopidogrel 1x75mg, Bisoprolol 1x2.5mg, Ramipril 1x5mg"

@@ -1,0 +1,2790 @@
+paths:
+    /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/{id_kunjungan}:
+        get:
+            tags: [Laboratorium]
+            summary: Riwayat Hasil Laboratorium per Kunjungan
+            description: Mengambil riwayat hasil pemeriksaan laboratorium pada 1 kunjungan pasien berdasarkan kategori (PK, PA, MB) dan status lanjut (Semua, Ralan, Ranap).
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabKategori"
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabTanggalFilter"
+                - $ref: "#/components/parameters/LabPageFilter"
+                - $ref: "#/components/parameters/LabLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/HasilLaboratoriumKunjungan"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Kategori, status lanjut, atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: "Kategori laboratorium tidak valid (pilihan: PK, PA, MB)"
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Laboratorium]
+            summary: Riwayat Hasil Laboratorium Pasien (Semua Kunjungan by RM)
+            description: Mengambil riwayat hasil pemeriksaan laboratorium seluruh kunjungan pasien berdasarkan No RM, kategori, dan status pelayanan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabKategori"
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdPasien"
+                - $ref: "#/components/parameters/LabTanggalFilter"
+                - $ref: "#/components/parameters/LabPageFilter"
+                - $ref: "#/components/parameters/LabLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil laboratorium pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil laboratorium pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilLaboratorium"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Kategori, status lanjut, atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/{kategori}/hasil/{status_lanjut}/{id_kunjungan}/{id_hasil}:
+        get:
+            tags: [Laboratorium]
+            summary: Detail Hasil Pemeriksaan Laboratorium
+            description: Mengambil detail 1 pemeriksaan laboratorium beserta hasil lab PK (parameter pengujian) dan/atau PA (makroskopis, mikroskopis, kesimpulan) menggunakan composite identifier terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabKategori"
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdHasil"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail hasil laboratorium
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail hasil laboratorium
+                                    data:
+                                        $ref: "#/components/schemas/HasilLaboratorium"
+                "400":
+                    description: Parameter atau token tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID hasil laboratorium tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data hasil pemeriksaan laboratorium tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data hasil pemeriksaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    # ═══════════════════════════════════════════════════════════════════════
+    # Permintaan Laboratorium PK (Patologi Klinik)
+    # ═══════════════════════════════════════════════════════════════════════
+    /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}:
+        post:
+            tags: [Laboratorium]
+            summary: Simpan Permintaan Laboratorium PK Baru
+            description: Membuat order permintaan pemeriksaan laboratorium Patologi Klinik (PK) baru untuk kunjungan rawat jalan atau rawat inap dengan proteksi batas waktu 48 jam dan kamar inap aktif.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabPKRequest"
+            responses:
+                "201":
+                    description: Berhasil mengirim permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengirim permintaan laboratorium PK
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPK"
+                "400":
+                    description: Validasi input gagal, BPJS sudah bayar, atau ranap tidak aktif
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu 48 jam rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        get:
+            tags: [Laboratorium]
+            summary: Daftar Permintaan Laboratorium PK per Kunjungan
+            description: Mengambil seluruh riwayat permintaan laboratorium PK untuk satu kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium PK
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPK"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pk/permintaan/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Laboratorium]
+            summary: Riwayat Permintaan Laboratorium PK Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan laboratorium PK pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdPasien"
+                - $ref: "#/components/parameters/LabTanggalFilter"
+                - $ref: "#/components/parameters/LabPageFilter"
+                - $ref: "#/components/parameters/LabLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan laboratorium PK pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium PK pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPK"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pk/permintaan/{id_permintaan}:
+        get:
+            tags: [Laboratorium]
+            summary: Detail Permintaan Laboratorium PK
+            description: Mengambil rincian lengkap 1 order permintaan laboratorium PK beserta daftar item tindakan dan sub-template pengujian berdasarkan ID permintaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium PK
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPK"
+                "400":
+                    description: ID permintaan laboratorium tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID permintaan laboratorium tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Permintaan laboratorium PK tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pk/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}:
+        put:
+            tags: [Laboratorium]
+            summary: Perbarui Permintaan Laboratorium PK
+            description: Memperbarui order permintaan laboratorium PK sebelum sampel diambil oleh petugas laboratorium dan hanya dapat diperbarui oleh dokter pembuat order.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabPKRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui permintaan laboratorium PK
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPK"
+                "400":
+                    description: Format payload tidak valid, nomor rawat tidak cocok, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang mengubah order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat diubah
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Laboratorium]
+            summary: Batalkan Permintaan Laboratorium PK
+            description: Menghapus order permintaan laboratorium PK sebelum sampel diambil oleh petugas laboratorium dan hanya dapat dibatalkan oleh dokter yang membuat order tersebut.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan laboratorium PK
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium PK
+                "400":
+                    description: Status lanjut atau ID tidak valid, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang membatalkan order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat dihapus
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    # ═══════════════════════════════════════════════════════════════════════
+    # Permintaan Laboratorium PA (Patologi Anatomi)
+    # ═══════════════════════════════════════════════════════════════════════
+    /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}:
+        post:
+            tags: [Laboratorium]
+            summary: Simpan Permintaan Laboratorium PA Baru
+            description: Membuat order permintaan pemeriksaan laboratorium Patologi Anatomi (PA) baru untuk kunjungan rawat jalan atau rawat inap dengan proteksi batas waktu 48 jam dan kamar inap aktif.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabPARequest"
+            responses:
+                "201":
+                    description: Berhasil mengirim permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengirim permintaan laboratorium PA
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPA"
+                "400":
+                    description: Validasi input gagal, BPJS sudah bayar, atau ranap tidak aktif
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu 48 jam rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        get:
+            tags: [Laboratorium]
+            summary: Daftar Permintaan Laboratorium PA per Kunjungan
+            description: Mengambil seluruh riwayat permintaan laboratorium PA untuk satu kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium PA
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPA"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pa/permintaan/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Laboratorium]
+            summary: Riwayat Permintaan Laboratorium PA Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan laboratorium PA pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdPasien"
+                - $ref: "#/components/parameters/LabTanggalFilter"
+                - $ref: "#/components/parameters/LabPageFilter"
+                - $ref: "#/components/parameters/LabLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan laboratorium PA pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium PA pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabPA"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pa/permintaan/{id_permintaan}:
+        get:
+            tags: [Laboratorium]
+            summary: Detail Permintaan Laboratorium PA
+            description: Mengambil rincian lengkap 1 order permintaan laboratorium PA beserta daftar item tindakan berdasarkan ID permintaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium PA
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPA"
+                "400":
+                    description: ID permintaan laboratorium tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID permintaan laboratorium tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Permintaan laboratorium PA tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/pa/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}:
+        put:
+            tags: [Laboratorium]
+            summary: Perbarui Permintaan Laboratorium PA
+            description: Memperbarui order permintaan laboratorium PA sebelum sampel diambil oleh petugas laboratorium dan hanya dapat diperbarui oleh dokter pembuat order.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabPARequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui permintaan laboratorium PA
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabPA"
+                "400":
+                    description: Format payload tidak valid, nomor rawat tidak cocok, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang mengubah order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat diubah
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Laboratorium]
+            summary: Batalkan Permintaan Laboratorium PA
+            description: Menghapus order permintaan laboratorium PA sebelum sampel diambil oleh petugas laboratorium dan hanya dapat dibatalkan oleh dokter yang membuat order tersebut.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan laboratorium PA
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium PA
+                "400":
+                    description: Status lanjut atau ID tidak valid, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang membatalkan order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat dihapus
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    # ═══════════════════════════════════════════════════════════════════════
+    # Permintaan Laboratorium MB (Mikrobiologi)
+    # ═══════════════════════════════════════════════════════════════════════
+    /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}:
+        post:
+            tags: [Laboratorium]
+            summary: Simpan Permintaan Laboratorium MB Baru
+            description: Membuat order permintaan pemeriksaan laboratorium Mikrobiologi (MB) baru untuk kunjungan rawat jalan atau rawat inap dengan proteksi batas waktu 48 jam dan kamar inap aktif.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabMBRequest"
+            responses:
+                "201":
+                    description: Berhasil mengirim permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengirim permintaan laboratorium MB
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabMB"
+                "400":
+                    description: Validasi input gagal, BPJS sudah bayar, atau ranap tidak aktif
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu 48 jam rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        get:
+            tags: [Laboratorium]
+            summary: Daftar Permintaan Laboratorium MB per Kunjungan
+            description: Mengambil seluruh riwayat permintaan laboratorium MB untuk satu kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar permintaan laboratorium MB
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabMB"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/mb/permintaan/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Laboratorium]
+            summary: Riwayat Permintaan Laboratorium MB Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan laboratorium MB pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjutSemua"
+                - $ref: "#/components/parameters/LabIdPasien"
+                - $ref: "#/components/parameters/LabTanggalFilter"
+                - $ref: "#/components/parameters/LabPageFilter"
+                - $ref: "#/components/parameters/LabLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan laboratorium MB pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan laboratorium MB pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/PermintaanLabMB"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/mb/permintaan/{id_permintaan}:
+        get:
+            tags: [Laboratorium]
+            summary: Detail Permintaan Laboratorium MB
+            description: Mengambil rincian lengkap 1 order permintaan laboratorium MB beserta daftar item tindakan dan sub-template pengujian berdasarkan ID permintaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail permintaan laboratorium MB
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabMB"
+                "400":
+                    description: ID permintaan laboratorium tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID permintaan laboratorium tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Permintaan laboratorium MB tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/laboratorium/mb/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}:
+        put:
+            tags: [Laboratorium]
+            summary: Perbarui Permintaan Laboratorium MB
+            description: Memperbarui order permintaan laboratorium MB sebelum sampel diambil oleh petugas laboratorium dan hanya dapat diperbarui oleh dokter pembuat order.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanLabMBRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui permintaan laboratorium MB
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanLabMB"
+                "400":
+                    description: Format payload tidak valid, nomor rawat tidak cocok, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan laboratorium tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang mengubah order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat diubah
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Laboratorium]
+            summary: Batalkan Permintaan Laboratorium MB
+            description: Menghapus order permintaan laboratorium MB sebelum sampel diambil oleh petugas laboratorium dan hanya dapat dibatalkan oleh dokter yang membuat order tersebut.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/LabStatusLanjut"
+                - $ref: "#/components/parameters/LabIdKunjungan"
+                - $ref: "#/components/parameters/LabIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan laboratorium MB
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan laboratorium MB
+                "400":
+                    description: Status lanjut atau ID tidak valid, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang membatalkan order dokter lain, sudah diproses petugas, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan laboratorium dokter lain tidak dapat dihapus
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan laboratorium tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+components:
+    parameters:
+        LabKategori:
+            name: kategori
+            in: path
+            required: true
+            description: Kategori laboratorium (PK = Patologi Klinik, PA = Patologi Anatomi, MB = Mikrobiologi)
+            schema:
+                type: string
+                enum: [PK, PA, MB]
+                example: PK
+        LabStatusLanjutSemua:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status pelayanan kunjungan (semua, ralan, ranap)
+            schema:
+                type: string
+                enum: [semua, ralan, ranap]
+                example: ralan
+        LabStatusLanjut:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status pelayanan kunjungan (ralan, ranap)
+            schema:
+                type: string
+                enum: [ralan, ranap]
+                example: ralan
+        LabIdKunjungan:
+            name: id_kunjungan
+            in: path
+            required: true
+            description: Identifier kunjungan pasien terenkripsi URL-safe
+            schema:
+                type: string
+        LabIdPasien:
+            name: id_pasien
+            in: path
+            required: true
+            description: Identifier pasien (nomor rekam medis) terenkripsi URL-safe
+            schema:
+                type: string
+        LabIdHasil:
+            name: id_hasil
+            in: path
+            required: true
+            description: Composite identifier hasil pemeriksaan laboratorium terenkripsi URL-safe (noRawat~kodeTindakan~tanggalPeriksa~jamPeriksa)
+            schema:
+                type: string
+        LabIdPermintaan:
+            name: id_permintaan
+            in: path
+            required: true
+            description: Identifier nomor order permintaan laboratorium terenkripsi URL-safe
+            schema:
+                type: string
+        LabTanggalFilter:
+            name: tanggal
+            in: query
+            required: false
+            description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD atau YYYY-MM-DD)
+            schema:
+                type: string
+                example: "2026-09-01,2026-09-30"
+        LabPageFilter:
+            name: page
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 1
+        LabLimitFilter:
+            name: limit
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 5
+    schemas:
+        DokterInfo:
+            type: object
+            properties:
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Budi, Sp.PK"
+        PetugasInfo:
+            type: object
+            properties:
+                nip:
+                    type: string
+                    example: "P001"
+                nama:
+                    type: string
+                    example: "Siti Analis"
+        ItemPemeriksaanLabPKRequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium PK terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_template:
+                    type: array
+                    description: Daftar identifier sub-template pengujian terenkripsi (opsional, pilih parameter spesifik)
+                    items:
+                        type: string
+                    example: ["j7Nx1...", "b3K9m..."]
+        SimpanPermintaanLabPKRequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - diagnosa_klinis
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien
+                    example: "2026/09/03/000001"
+                tanggal_permintaan:
+                    type: string
+                    description: Tanggal order permintaan (YYYY-MM-DD)
+                    example: "2026-09-03"
+                jam_permintaan:
+                    type: string
+                    description: Jam order permintaan (HH:mm:ss)
+                    example: "10:00:00"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    description: Diagnosa klinis / indikasi pemeriksaan
+                    example: "Febris H-3 suspect DHF"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    description: Informasi tambahan / catatan klinis untuk analis lab (default '-')
+                    example: "Cito segera"
+                pemeriksaan:
+                    type: array
+                    description: Daftar tindakan lab dan sub-template pengujian yang dipesan
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanLabPKRequest"
+        DetailTemplateLabPKItem:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pengujian terenkripsi URL-safe
+                    example: "j7Nx1..."
+                nama_pemeriksaan:
+                    type: string
+                    example: "Hemoglobin"
+                satuan:
+                    type: string
+                    example: "g/dL"
+                nilai_rujukan:
+                    type: string
+                    example: "12-16"
+                status_bayar:
+                    type: string
+                    example: "Belum"
+        PemeriksaanLabPKItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium PK terenkripsi URL-safe
+                    example: "cEHMe-..."
+                kode_tindakan:
+                    type: string
+                    description: Kode master tindakan laboratorium di SIMRS Khanza
+                    example: "LAB001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan pemeriksaan laboratorium
+                    example: "Darah Lengkap"
+                status_bayar:
+                    type: string
+                    description: Status bayar kasir SIMRS Khanza (Sudah / Belum)
+                    example: "Belum"
+                detail_template:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/DetailTemplateLabPKItem"
+        PermintaanLabPK:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier permintaan laboratorium PK terenkripsi URL-safe
+                    example: "p1K8x..."
+                no_permintaan:
+                    type: string
+                    example: "PK202609030001"
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "w9K2m1..."
+                no_rawat:
+                    type: string
+                    example: "2026/09/03/000001"
+                tanggal_permintaan:
+                    type: string
+                    example: "2026-09-03"
+                jam_permintaan:
+                    type: string
+                    example: "10:00:00"
+                tanggal_sampel:
+                    type: string
+                    example: ""
+                jam_sampel:
+                    type: string
+                    example: ""
+                tanggal_hasil:
+                    type: string
+                    example: ""
+                jam_hasil:
+                    type: string
+                    example: ""
+                kode_dokter_perujuk:
+                    type: string
+                    example: "DR01"
+                nama_dokter_perujuk:
+                    type: string
+                    example: "dr. Budi, Sp.PK"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "-"
+                diagnosa_klinis:
+                    type: string
+                    example: "Febris H-3"
+                status_proses:
+                    type: string
+                    description: Status proses permintaan (Menunggu Sampel / Sampel Diambil / Selesai)
+                    example: "Menunggu Sampel"
+        DetailPermintaanLabPK:
+            allOf:
+                - $ref: "#/components/schemas/PermintaanLabPK"
+                - type: object
+                  properties:
+                    pemeriksaan:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/PemeriksaanLabPKItem"
+        ItemPemeriksaanLabPARequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium PA terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+        SimpanPermintaanLabPARequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - diagnosa_klinis
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    description: Tanggal order permintaan (YYYY-MM-DD)
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    description: Jam order permintaan (HH:mm:ss)
+                    example: "08:30:00"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    description: Diagnosa klinis / indikasi pemeriksaan PA
+                    example: "Susp. Ca Mammae"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    description: Catatan / informasi tambahan klinis (default '-')
+                    example: "-"
+                pengambilan_bahan:
+                    type: string
+                    description: Tanggal pengambilan bahan/jaringan (YYYY-MM-DD, opsional)
+                    example: "2026-09-04"
+                diperoleh_dengan:
+                    type: string
+                    maxLength: 40
+                    description: Cara perolehan jaringan/spesimen (opsional)
+                    example: "Biopsi Eksisi"
+                lokasi_jaringan:
+                    type: string
+                    maxLength: 40
+                    description: Lokasi pengambilan jaringan (opsional)
+                    example: "Mammae Dextra"
+                diawetkan_dengan:
+                    type: string
+                    maxLength: 40
+                    description: Larutan fiksatif pengawet (opsional)
+                    example: "Formalin Buffer 10%"
+                pernah_dilakukan_di:
+                    type: string
+                    maxLength: 100
+                    description: Riwayat pemeriksaan PA sebelumnya di faskes (opsional)
+                    example: "RSUD Lain"
+                tanggal_pa_sebelumnya:
+                    type: string
+                    description: Tanggal PA sebelumnya (YYYY-MM-DD, opsional)
+                    example: "2025-01-10"
+                nomor_pa_sebelumnya:
+                    type: string
+                    maxLength: 20
+                    description: Nomor register PA sebelumnya (opsional)
+                    example: "PA250001"
+                diagnosa_pa_sebelumnya:
+                    type: string
+                    maxLength: 100
+                    description: Diagnosa / hasil PA sebelumnya (opsional)
+                    example: "Fibroadenoma Mammae"
+                pemeriksaan:
+                    type: array
+                    description: Daftar tindakan laboratorium PA yang diminta
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanLabPARequest"
+        PemeriksaanLabPAItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium PA terenkripsi URL-safe
+                    example: "cEHMe-..."
+                kode_tindakan:
+                    type: string
+                    description: Kode master tindakan laboratorium PA di SIMRS Khanza
+                    example: "PA00001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan pemeriksaan laboratorium PA
+                    example: "Pemeriksaan PA untuk Sediaan Kecil"
+                biaya:
+                    type: number
+                    format: double
+                    description: Tarif biaya pemeriksaan
+                    example: 250000
+                status_bayar:
+                    type: string
+                    description: Status bayar kasir SIMRS Khanza (Sudah / Belum)
+                    example: "Belum"
+        PermintaanLabPA:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier permintaan laboratorium PA terenkripsi URL-safe
+                    example: "p1K8x..."
+                no_permintaan:
+                    type: string
+                    example: "PA202609040001"
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "w9K2m1..."
+                no_rawat:
+                    type: string
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    example: "08:30:00"
+                tanggal_sampel:
+                    type: string
+                    example: ""
+                jam_sampel:
+                    type: string
+                    example: ""
+                tanggal_hasil:
+                    type: string
+                    example: ""
+                jam_hasil:
+                    type: string
+                    example: ""
+                kode_dokter_perujuk:
+                    type: string
+                    example: "DR01"
+                nama_dokter_perujuk:
+                    type: string
+                    example: "dr. Budi, Sp.B"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "-"
+                diagnosa_klinis:
+                    type: string
+                    example: "Susp. Ca Mammae"
+                pengambilan_bahan:
+                    type: string
+                    example: "2026-09-04"
+                diperoleh_dengan:
+                    type: string
+                    example: "Biopsi Eksisi"
+                lokasi_jaringan:
+                    type: string
+                    example: "Mammae Dextra"
+                diawetkan_dengan:
+                    type: string
+                    example: "Formalin Buffer 10%"
+                pernah_dilakukan_di:
+                    type: string
+                    example: "RSUD Lain"
+                tanggal_pa_sebelumnya:
+                    type: string
+                    example: "2025-01-10"
+                nomor_pa_sebelumnya:
+                    type: string
+                    example: "PA250001"
+                diagnosa_pa_sebelumnya:
+                    type: string
+                    example: "Fibroadenoma Mammae"
+                status_proses:
+                    type: string
+                    description: Status proses permintaan (Menunggu Sampel / Sampel Diambil / Selesai)
+                    example: "Menunggu Sampel"
+        DetailPermintaanLabPA:
+            allOf:
+                - $ref: "#/components/schemas/PermintaanLabPA"
+                - type: object
+                  properties:
+                    pemeriksaan:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/PemeriksaanLabPAItem"
+        ItemPemeriksaanLabMBRequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium MB terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                id_template:
+                    type: array
+                    description: Daftar identifier sub-template pengujian MB terenkripsi (opsional)
+                    items:
+                        type: string
+                    example: ["j7Nx1..."]
+        SimpanPermintaanLabMBRequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - diagnosa_klinis
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    description: Tanggal order permintaan (YYYY-MM-DD)
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    description: Jam order permintaan (HH:mm:ss)
+                    example: "08:30:00"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    description: Diagnosa klinis / indikasi pemeriksaan MB
+                    example: "Susp. Infeksi Bakteri / Kultur"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    description: Catatan / informasi tambahan klinis (default '-')
+                    example: "-"
+                pemeriksaan:
+                    type: array
+                    description: Daftar tindakan lab dan sub-template pengujian MB yang dipesan
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanLabMBRequest"
+        DetailTemplateLabMBItem:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pengujian MB terenkripsi URL-safe
+                    example: "j7Nx1..."
+                nama_pemeriksaan:
+                    type: string
+                    example: "Kultur Darah"
+                satuan:
+                    type: string
+                    example: "-"
+                nilai_rujukan:
+                    type: string
+                    example: "Steril / Negatif"
+                status_bayar:
+                    type: string
+                    example: "Belum"
+        PemeriksaanLabMBItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan laboratorium MB terenkripsi URL-safe
+                    example: "cEHMe-..."
+                kode_tindakan:
+                    type: string
+                    description: Kode master tindakan laboratorium MB di SIMRS Khanza
+                    example: "MB00001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan pemeriksaan laboratorium MB
+                    example: "Kultur & Resistensi Bakteri"
+                status_bayar:
+                    type: string
+                    description: Status bayar kasir SIMRS Khanza (Sudah / Belum)
+                    example: "Belum"
+                detail_template:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/DetailTemplateLabMBItem"
+        PermintaanLabMB:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identifier permintaan laboratorium MB terenkripsi URL-safe
+                    example: "p1K8x..."
+                no_permintaan:
+                    type: string
+                    example: "MB202609040001"
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "w9K2m1..."
+                no_rawat:
+                    type: string
+                    example: "2026/09/04/000001"
+                tanggal_permintaan:
+                    type: string
+                    example: "2026-09-04"
+                jam_permintaan:
+                    type: string
+                    example: "08:30:00"
+                tanggal_sampel:
+                    type: string
+                    example: ""
+                jam_sampel:
+                    type: string
+                    example: ""
+                tanggal_hasil:
+                    type: string
+                    example: ""
+                jam_hasil:
+                    type: string
+                    example: ""
+                kode_dokter_perujuk:
+                    type: string
+                    example: "DR01"
+                nama_dokter_perujuk:
+                    type: string
+                    example: "dr. Budi, Sp.MK"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "-"
+                diagnosa_klinis:
+                    type: string
+                    example: "Susp. Sepsis"
+                status_proses:
+                    type: string
+                    description: Status proses permintaan (Menunggu Sampel / Sampel Diambil / Selesai)
+                    example: "Menunggu Sampel"
+        DetailPermintaanLabMB:
+            allOf:
+                - $ref: "#/components/schemas/PermintaanLabMB"
+                - type: object
+                  properties:
+                    pemeriksaan:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/PemeriksaanLabMBItem"
+        ItemHasilLabPK:
+            type: object
+            properties:
+                id_template:
+                    type: string
+                    description: Identifier template pemeriksaan terenkripsi URL-safe
+                    example: "tX9kL2..."
+                nama_pemeriksaan:
+                    type: string
+                    description: Nama parameter pemeriksaan
+                    example: "Hemoglobin"
+                nilai:
+                    type: string
+                    description: Nilai hasil pengujian
+                    example: "14.2"
+                satuan:
+                    type: string
+                    description: Satuan hasil lab
+                    example: "g/dL"
+                nilai_rujukan:
+                    type: string
+                    description: Nilai rujukan normal
+                    example: "13.5 - 17.5"
+                keterangan:
+                    type: string
+                    description: Keterangan status hasil
+                    example: "Normal"
+        HasilLabPA:
+            type: object
+            properties:
+                diagnosa_klinik:
+                    type: string
+                    description: Diagnosa klinis pengirim
+                    example: "Tumor Mammae Dextra"
+                makroskopis:
+                    type: string
+                    description: Deskripsi makroskopis jaringan
+                    example: "Diterima 1 potong jaringan kenyal..."
+                mikroskopis:
+                    type: string
+                    description: Deskripsi mikroskopis jaringan
+                    example: "Menunjukkan proliferasi sel duktus..."
+                kesimpulan:
+                    type: string
+                    description: Kesimpulan diagnosis patologi
+                    example: "Invasive Ductal Carcinoma"
+                kesan:
+                    type: string
+                    description: Kesan keganasan
+                    example: "Maligna"
+        HasilLaboratorium:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Composite identifier hasil lab terenkripsi URL-safe (noRawat~kodeTindakan~tanggalPeriksa~jamPeriksa)
+                    example: "hS8xP1..."
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "kR2mZ9..."
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan
+                    example: "2026/04/22/000001"
+                kode_tindakan:
+                    type: string
+                    description: Kode pemeriksaan laboratorium
+                    example: "LAB001"
+                nama_tindakan:
+                    type: string
+                    description: Nama pemeriksaan laboratorium
+                    example: "DARAH LENGKAP"
+                kategori:
+                    type: string
+                    description: Kategori laboratorium (PK, PA, MB)
+                    example: "PK"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                tanggal_periksa:
+                    type: string
+                    format: date
+                    example: "2026-04-22"
+                jam_periksa:
+                    type: string
+                    example: "10:00:00"
+                dokter_perujuk:
+                    $ref: "#/components/schemas/DokterInfo"
+                dokter_pj:
+                    $ref: "#/components/schemas/DokterInfo"
+                petugas:
+                    $ref: "#/components/schemas/PetugasInfo"
+                detail_pk:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/ItemHasilLabPK"
+                detail_pa:
+                    $ref: "#/components/schemas/HasilLabPA"
+        HasilLaboratoriumKunjungan:
+            type: object
+            properties:
+                hasil_pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/HasilLaboratorium"
+                berkas_digital:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/BerkasDigital"

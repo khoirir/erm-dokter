@@ -1,0 +1,30 @@
+paths:
+    /health:
+        get:
+            tags: [Health]
+            summary: Health Check Server
+            description: Endpoint untuk memverifikasi ketersediaan dan status server.
+            security: []
+            responses:
+                "200":
+                    description: Server berjalan normal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Service is up and running
+                                    data:
+                                        type: object
+                                        properties:
+                                            status:
+                                                type: string
+                                                example: healthy
+                                            service:
+                                                type: string
+                                                example: erm-dokter

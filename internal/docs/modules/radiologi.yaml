@@ -1,0 +1,1111 @@
+paths:
+    /api/v1/radiologi/hasil/{status_lanjut}/{id_kunjungan}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Hasil Radiologi per Kunjungan
+            description: Mengambil seluruh riwayat hasil pemeriksaan radiologi dan link PACS DICOM pasien untuk 1 kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjutSemua"
+                - $ref: "#/components/parameters/RadiologiIdKunjungan"
+                - $ref: "#/components/parameters/RadiologiTanggalFilter"
+                - $ref: "#/components/parameters/RadiologiPageFilter"
+                - $ref: "#/components/parameters/RadiologiLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil radiologi kunjungan
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/hasil/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Hasil Radiologi Pasien (Lintas Kunjungan)
+            description: Mengambil seluruh riwayat hasil pemeriksaan radiologi dan link PACS DICOM pasien dari seluruh kunjungan sebelumnya berdasarkan nomor rekam medis.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjutSemua"
+                - $ref: "#/components/parameters/RadiologiIdPasien"
+                - $ref: "#/components/parameters/RadiologiTanggalFilter"
+                - $ref: "#/components/parameters/RadiologiPageFilter"
+                - $ref: "#/components/parameters/RadiologiLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat hasil radiologi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat hasil radiologi pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/HasilRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/hasil/{id_radiologi}:
+        get:
+            tags: [Radiologi]
+            summary: Detail Hasil Pemeriksaan Radiologi
+            description: Mengambil detail 1 pemeriksaan radiologi, hasil teks ekspertise, dan daftar link gambar PACS DICOM menggunakan identifier unik terenkripsi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiIdRadiologi"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail hasil radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail hasil radiologi
+                                    data:
+                                        $ref: "#/components/schemas/HasilRadiologi"
+                "400":
+                    description: Parameter atau token tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID hasil radiologi tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Data hasil pemeriksaan radiologi tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data hasil pemeriksaan radiologi tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/permintaan/{status_lanjut}/{id_kunjungan}:
+        post:
+            tags: [Radiologi]
+            summary: Simpan Permintaan Radiologi Baru
+            description: Membuat order permintaan pemeriksaan radiologi baru untuk kunjungan rawat jalan atau rawat inap dengan proteksi batas waktu 48 jam dan kamar inap aktif.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjut"
+                - $ref: "#/components/parameters/RadiologiIdKunjungan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanRadiologiRequest"
+            responses:
+                "201":
+                    description: Berhasil menyimpan permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil menyimpan permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Validasi input gagal, BPJS sudah bayar, atau ranap tidak aktif
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pasien BPJS sudah bayar, permintaan radiologi tidak dapat disimpan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Melebihi batas waktu 48 jam rawat jalan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan radiologi tidak dapat disimpan, melewati batas 48 jam
+                "404":
+                    description: Data registrasi kunjungan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data registrasi kunjungan pasien tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        get:
+            tags: [Radiologi]
+            summary: Daftar Permintaan Radiologi per Kunjungan
+            description: Mengambil seluruh riwayat permintaan radiologi untuk satu kunjungan tertentu.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjutSemua"
+                - $ref: "#/components/parameters/RadiologiIdKunjungan"
+            responses:
+                "200":
+                    description: Berhasil mengambil daftar permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil daftar permintaan radiologi
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Status lanjut atau ID kunjungan tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Status lanjut tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/permintaan/{status_lanjut}/pasien/{id_pasien}:
+        get:
+            tags: [Radiologi]
+            summary: Riwayat Permintaan Radiologi Pasien by No. RM
+            description: Mengambil riwayat seluruh permintaan radiologi pasien dari seluruh kunjungan sebelumnya dengan filter status pelayanan, rentang tanggal, dan paginasi.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjutSemua"
+                - $ref: "#/components/parameters/RadiologiIdPasien"
+                - $ref: "#/components/parameters/RadiologiTanggalFilter"
+                - $ref: "#/components/parameters/RadiologiPageFilter"
+                - $ref: "#/components/parameters/RadiologiLimitFilter"
+            responses:
+                "200":
+                    description: Berhasil mengambil riwayat permintaan radiologi pasien
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                    - meta
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil riwayat permintaan radiologi pasien
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                                    meta:
+                                        $ref: "#/components/schemas/PaginationMeta"
+                "400":
+                    description: Status lanjut atau ID pasien tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID pasien tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/permintaan/{id_permintaan}:
+        get:
+            tags: [Radiologi]
+            summary: Detail Permintaan Radiologi
+            description: Mengambil rincian lengkap 1 order permintaan radiologi beserta daftar item tindakannya berdasarkan ID permintaan.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil mengambil detail permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil mengambil detail permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: ID permintaan radiologi tidak valid
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: ID permintaan radiologi tidak valid
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "404":
+                    description: Permintaan radiologi tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan radiologi tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+    /api/v1/radiologi/permintaan/{status_lanjut}/{id_kunjungan}/{id_permintaan}:
+        put:
+            tags: [Radiologi]
+            summary: Perbarui Permintaan Radiologi
+            description: Memperbarui order permintaan radiologi sebelum sampel/periksa dilakukan oleh petugas radiologi dan hanya dapat diperbarui oleh dokter pembuat order.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjut"
+                - $ref: "#/components/parameters/RadiologiIdKunjungan"
+                - $ref: "#/components/parameters/RadiologiIdPermintaan"
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SimpanPermintaanRadiologiRequest"
+            responses:
+                "200":
+                    description: Berhasil memperbarui permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                    - data
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil memperbarui permintaan radiologi
+                                    data:
+                                        $ref: "#/components/schemas/DetailPermintaanRadiologi"
+                "400":
+                    description: Format payload tidak valid, nomor rawat tidak cocok, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Nomor rawat permintaan radiologi tidak sesuai dengan ID kunjungan
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang mengubah order dokter lain, sudah diproses petugas, sudah dibayar, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan radiologi dokter lain tidak dapat diubah
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan radiologi tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+        delete:
+            tags: [Radiologi]
+            summary: Batalkan Permintaan Radiologi
+            description: Menghapus order permintaan radiologi sebelum sampel/periksa dilakukan dan hanya dapat dibatalkan oleh dokter yang membuat order tersebut.
+            security:
+                - BearerAuth: []
+            parameters:
+                - $ref: "#/components/parameters/RadiologiStatusLanjut"
+                - $ref: "#/components/parameters/RadiologiIdKunjungan"
+                - $ref: "#/components/parameters/RadiologiIdPermintaan"
+            responses:
+                "200":
+                    description: Berhasil membatalkan permintaan radiologi
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: Berhasil membatalkan permintaan radiologi
+                "400":
+                    description: Status lanjut atau ID tidak valid, atau pasien BPJS sudah bayar
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Pasien BPJS sudah bayar, permintaan radiologi tidak dapat dihapus
+                "401":
+                    description: Token tidak ada atau telah kedaluwarsa
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Kredensial login tidak valid atau telah kedaluwarsa
+                "403":
+                    description: Dilarang membatalkan order dokter lain, sudah diproses petugas, sudah dibayar, atau melebihi 48 jam
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Permintaan radiologi dokter lain tidak dapat dihapus
+                "404":
+                    description: Permintaan tidak ditemukan
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Data permintaan radiologi tidak ditemukan
+                "500":
+                    description: Terjadi kesalahan pada server internal
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required:
+                                    - success
+                                    - message
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: false
+                                    message:
+                                        type: string
+                                        example: Terjadi kesalahan pada server
+components:
+    parameters:
+        RadiologiStatusLanjutSemua:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status pelayanan kunjungan (semua, ralan, ranap)
+            schema:
+                type: string
+                enum: [semua, ralan, ranap]
+                example: ralan
+        RadiologiStatusLanjut:
+            name: status_lanjut
+            in: path
+            required: true
+            description: Status pelayanan kunjungan (ralan, ranap)
+            schema:
+                type: string
+                enum: [ralan, ranap]
+                example: ralan
+        RadiologiIdKunjungan:
+            name: id_kunjungan
+            in: path
+            required: true
+            description: Identifier kunjungan pasien terenkripsi URL-safe
+            schema:
+                type: string
+        RadiologiIdPasien:
+            name: id_pasien
+            in: path
+            required: true
+            description: Identifier pasien (nomor rekam medis) terenkripsi URL-safe
+            schema:
+                type: string
+        RadiologiIdRadiologi:
+            name: id_radiologi
+            in: path
+            required: true
+            description: ID hasil pemeriksaan radiologi composite terenkripsi URL-safe
+            schema:
+                type: string
+        RadiologiIdPermintaan:
+            name: id_permintaan
+            in: path
+            required: true
+            description: Identifier nomor order permintaan radiologi terenkripsi URL-safe
+            schema:
+                type: string
+        RadiologiTanggalFilter:
+            name: tanggal
+            in: query
+            required: false
+            description: Filter rentang tanggal (YYYY-MM-DD,YYYY-MM-DD atau YYYY-MM-DD)
+            schema:
+                type: string
+                example: "2026-08-01,2026-08-27"
+        RadiologiPageFilter:
+            name: page
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 1
+        RadiologiLimitFilter:
+            name: limit
+            in: query
+            required: false
+            schema:
+                type: integer
+                default: 5
+    schemas:
+        DokterInfo:
+            type: object
+            properties:
+                kode_dokter:
+                    type: string
+                    example: "DR001"
+                nama_dokter:
+                    type: string
+                    example: "dr. Budi, Sp.Rad"
+        PetugasInfo:
+            type: object
+            properties:
+                nip:
+                    type: string
+                    example: "P001"
+                nama:
+                    type: string
+                    example: "Radiografer"
+        ItemPemeriksaanRadiologiRequest:
+            type: object
+            required:
+                - id_tindakan
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan radiologi terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+        SimpanPermintaanRadiologiRequest:
+            type: object
+            required:
+                - no_rawat
+                - tanggal_permintaan
+                - jam_permintaan
+                - pemeriksaan
+            properties:
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan pasien
+                    example: "2026/09/05/000001"
+                tanggal_permintaan:
+                    type: string
+                    description: Tanggal order permintaan (YYYY-MM-DD)
+                    example: "2026-09-05"
+                jam_permintaan:
+                    type: string
+                    description: Jam order permintaan (HH:mm:ss)
+                    example: "10:00:00"
+                informasi_tambahan:
+                    type: string
+                    maxLength: 60
+                    description: Informasi klinis tambahan (maksimal 60 karakter, default '-')
+                    example: "Thorax AP"
+                diagnosa_klinis:
+                    type: string
+                    maxLength: 80
+                    description: Indikasi atau dugaan diagnosa klinis (maksimal 80 karakter, default '-')
+                    example: "Susp. Pneumonia"
+                pemeriksaan:
+                    type: array
+                    description: Daftar tindakan pemeriksaan radiologi yang diminta
+                    items:
+                        $ref: "#/components/schemas/ItemPemeriksaanRadiologiRequest"
+        PemeriksaanRadiologiItem:
+            type: object
+            properties:
+                id_tindakan:
+                    type: string
+                    description: Identifier tindakan radiologi terenkripsi URL-safe
+                    example: "cEHMe-_JrJhDixVUHb0x3VBd8JblVj6FJ8EHaKiZX05gOuGYm7SBxLka84U_"
+                kode_tindakan:
+                    type: string
+                    description: Kode master tindakan radiologi di SIMRS Khanza
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    description: Nama tindakan pemeriksaan radiologi
+                    example: "Rontgen Thorax AP/PA"
+                biaya:
+                    type: number
+                    description: Tarif biaya pemeriksaan
+                    example: 125000
+                status_bayar:
+                    type: string
+                    description: Status bayar kasir SIMRS Khanza (Sudah / Belum)
+                    example: "Belum"
+        DetailPermintaanRadiologi:
+            type: object
+            properties:
+                id_permintaan:
+                    type: string
+                    description: Identifier permintaan radiologi terenkripsi URL-safe
+                    example: "rAd9X2..."
+                tanggal_permintaan:
+                    type: string
+                    example: "2026-09-05"
+                jam_permintaan:
+                    type: string
+                    example: "10:00:00"
+                tanggal_sampel:
+                    type: string
+                    example: "0000-00-00"
+                jam_sampel:
+                    type: string
+                    example: "00:00:00"
+                tanggal_hasil:
+                    type: string
+                    example: "0000-00-00"
+                jam_hasil:
+                    type: string
+                    example: "00:00:00"
+                dokter_perujuk:
+                    $ref: "#/components/schemas/DokterInfo"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                informasi_tambahan:
+                    type: string
+                    example: "Thorax AP"
+                diagnosa_klinis:
+                    type: string
+                    example: "Susp. Pneumonia"
+                pemeriksaan:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PemeriksaanRadiologiItem"
+        HasilRadiologi:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Composite identifier hasil radiologi terenkripsi URL-safe (noRawat~kodeTindakan~tanggalPeriksa~jamPeriksa)
+                    example: "hS8xP1..."
+                id_kunjungan:
+                    type: string
+                    description: Identifier kunjungan terenkripsi URL-safe
+                    example: "kR2mZ9..."
+                no_rawat:
+                    type: string
+                    description: Nomor rawat kunjungan
+                    example: "2026/04/22/000001"
+                kode_tindakan:
+                    type: string
+                    description: Kode master tindakan radiologi
+                    example: "RAD001"
+                nama_tindakan:
+                    type: string
+                    description: Nama pemeriksaan radiologi
+                    example: "Rontgen Thorax AP/PA"
+                status:
+                    type: string
+                    description: Status pelayanan (Ralan / Ranap)
+                    example: "Ralan"
+                tanggal_periksa:
+                    type: string
+                    format: date
+                    example: "2026-04-22"
+                jam_periksa:
+                    type: string
+                    example: "10:00:00"
+                dokter_perujuk:
+                    $ref: "#/components/schemas/DokterInfo"
+                dokter_radiologi:
+                    $ref: "#/components/schemas/DokterInfo"
+                petugas:
+                    $ref: "#/components/schemas/PetugasInfo"
+                hasil:
+                    type: string
+                    description: Teks bacaan atau ekspertise hasil pemeriksaan radiologi
+                    example: "Cor dan pulmo dalam batas normal. Tidak tampak infiltrat aktif."
+                gambar_pacs:
+                    type: array
+                    items:
+                        type: string
+                    description: Daftar URL viewer PACS DICOM pasien
+                    example: ["http://pacs.example.com/viewer?token=xyz..."]

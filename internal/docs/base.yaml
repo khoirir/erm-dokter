@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+    title: ERM Dokter API
+    version: 1.0.0
+    description: |
+        Dokumentasi API Elektronik Rekam Medis (ERM) Dokter untuk Rumah Sakit dan Fasilitas Pelayanan Kesehatan.
+
+        ### Fitur Utama:
+        - **Autentikasi & Sesi**: Otentikasi dokter berbasis token JWT untuk pengamanan akses layanan klinis.
+        - **Pelayanan Rawat Jalan**: Pemantauan antrean pasien, status pemeriksaan poliklinik, dan detail data kunjungan rawat jalan.
+        - **Pelayanan Rawat Inap**: Manajemen dan pemantauan daftar pasien kamar inap beserta status perawatan aktif.
+        - **Pemeriksaan Klinis (SOAP & TTV)**: Pencatatan rekam medis harian (Subjective, Objective, Assessment, Plan), pemantauan tanda-tanda vital, dan riwayat pemeriksaan fisik pasien.
+        - **Penilaian Awal Medis**: Formulir asesmen awal medis lengkap untuk unit Rawat Jalan, Instalasi Gawat Darurat (IGD), dan Rawat Inap (termasuk spesialisasi kebidanan dan kandungan).
+        - **Peresepan Obat**: Pengelolaan resep obat dokter (non-racikan dan racikan), katalog master obat, ketersediaan stok depo farmasi, aturan pakai, dan metode peracikan.
+        - **Layanan Penunjang Medis**: Permintaan order dan riwayat hasil pengujian laboratorium (Patologi Klinik, Patologi Anatomi, Mikrobiologi) serta hasil pembacaan ekspertise dan dokumen radiologi.
+        - **Rujukan Internal**: Konsultasi dan delegasi perawatan pasien antar-poliklinik maupun antar-dokter spesialis di lingkungan rumah sakit.
+        - **Resume Medis Pasien**: Penyusunan resume medis pasien rawat jalan dan ringkasan kepulangan pasien rawat inap (discharge summary).
+        - **Berkas Digital Rekam Medis**: Integrasi dan akses berkas dokumen pendukung rekam medis pasien.
+        - **Master Data**: Referensi penjamin/asuransi, poliklinik rawat jalan, depo farmasi, bangsal, dan kelas perawatan.
+        - **Keamanan Data**: Penggunaan identifier publik yang aman dan terproteksi untuk perlindungan privasi data pasien dan rekam medis.
+    contact:
+        name: Tim Pengembang ERM Dokter
+servers:
+    - url: http://localhost:8082
+      description: Local Development Server
+    - url: /
+      description: Current Host Server
+security:
+    - BearerAuth: []
+tags:
+    - name: Health
+      description: Server Health Check
+    - name: Auth
+      description: Autentikasi Dokter & Manajemen Sesi
+    - name: Master
+      description: Master Data Referensi (Penjamin, Depo Farmasi, Poliklinik, Bangsal, Kelas)
+    - name: Obat
+      description: Katalog Obat & Ketersediaan Stok Depo Farmasi
+    - name: Rawat Jalan
+      description: Antrean Pasien & Detail Kunjungan Rawat Jalan
+    - name: Pemeriksaan
+      description: Rekam Medis Klinis Pasien (SOAP & Tanda-Tanda Vital)
+    - name: Resep
+      description: Pelayanan Resep Obat Pasien (Non-Racikan & Racikan)
+    - name: Rujukan Internal
+      description: Konsultasi & Rujukan Antar Poliklinik / Dokter Internal RS
+    - name: Penilaian Medis
+      description: Asesmen & Penilaian Awal Medis Pasien (Rawat Jalan, IGD, Rawat Inap)
+    - name: Tindakan
+      description: Katalog Tindakan Medis & Tarif Pengujian Penunjang
+    - name: Laboratorium
+      description: Permintaan Order & Hasil Pengujian Laboratorium Pasien (PK, PA, MB)
+    - name: Radiologi
+      description: Permintaan Order & Hasil Ekspertise Radiologi Pasien
+    - name: Berkas Digital
+      description: Berkas Dokumen Digital Perawatan Pasien
+    - name: Resume Rawat Jalan
+      description: Resume Medis Pasien Rawat Jalan (Ralan)
+    - name: Resume Rawat Inap
+      description: Resume Medis Pasien Rawat Inap (Ranap / Discharge Summary)
+    - name: Rawat Inap
+      description: Daftar Pasien & Informasi Kamar Rawat Inap
+    - name: Pasien
+      description: Riwayat Kunjungan & Profil Pasien
+    - name: Diagnosa & Prosedur
+      description: Diagnosa ICD-10 & Prosedur Medis ICD-9-CM Pasien (Rawat Jalan & Rawat Inap)
+components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: Masukkan JWT Token yang didapatkan dari endpoint login (/api/v1/auth/login).
+        ApiKeyAuth:
+            type: apiKey
+            in: header
+            name: X-API-Key
+            description: API Key untuk integrasi Machine-to-Machine (aplikasi eksternal).
+    schemas:
+        BaseResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                message:
+                    type: string
+                    example: Berhasil memproses data
+        ErrorResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: false
+                message:
+                    type: string
+                    example: Terjadi kesalahan validasi atau bisnis
+                error:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    example:
+                        field: "Keterangan pesan kesalahan validasi"
+        PaginationMeta:
+            type: object
+            properties:
+                total_records:
+                    type: integer
+                    example: 45
+                total_pages:
+                    type: integer
+                    example: 3
+                current_page:
+                    type: integer
+                    example: 1
+                per_page:
+                    type: integer
+                    example: 20
